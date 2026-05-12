@@ -312,3 +312,24 @@ on marketing_campaign_logs(campaign_id);
 create index if not exists marketing_logs_status_idx
 on marketing_campaign_logs(status);
 
+
+create table if not exists marketing_tracking_events (
+  id uuid primary key default gen_random_uuid(),
+
+  campaign_id uuid,
+
+  lead_id uuid,
+
+  event_type text,
+
+  metadata jsonb default '{}'::jsonb,
+
+  created_at timestamptz default now()
+);
+
+create index if not exists marketing_tracking_campaign_idx
+on marketing_tracking_events(campaign_id);
+
+create index if not exists marketing_tracking_event_idx
+on marketing_tracking_events(event_type);
+
