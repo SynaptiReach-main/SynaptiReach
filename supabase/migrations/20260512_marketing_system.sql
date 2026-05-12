@@ -287,3 +287,28 @@ on marketing_campaigns(workspace_id);
 create index if not exists marketing_campaigns_status_idx
 on marketing_campaigns(status);
 
+
+create table if not exists marketing_campaign_logs (
+  id uuid primary key default gen_random_uuid(),
+
+  campaign_id uuid,
+
+  lead_id uuid,
+
+  status text,
+
+  error text,
+
+  retry_count integer default 0,
+
+  created_at timestamptz default now(),
+
+  updated_at timestamptz default now()
+);
+
+create index if not exists marketing_logs_campaign_idx
+on marketing_campaign_logs(campaign_id);
+
+create index if not exists marketing_logs_status_idx
+on marketing_campaign_logs(status);
+
