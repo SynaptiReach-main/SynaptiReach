@@ -333,3 +333,16 @@ on marketing_tracking_events(campaign_id);
 create index if not exists marketing_tracking_event_idx
 on marketing_tracking_events(event_type);
 
+
+alter table marketing_campaigns
+add column if not exists sent_count integer default 0;
+
+alter table marketing_campaigns
+add column if not exists delivered_count integer default 0;
+
+alter table marketing_campaigns
+add column if not exists failed_count integer default 0;
+
+alter table marketing_campaigns
+add column if not exists engagement_score integer default 0;
+
