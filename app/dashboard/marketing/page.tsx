@@ -22,6 +22,7 @@ import EmailCampaignModal from "@/components/marketing/modals/EmailCampaignModal
 import SMSCampaignModal from "@/components/marketing/modals/SMSCampaignModal";
 import SocialCampaignModal from "@/components/marketing/modals/SocialCampaignModal";
 import AnalyticsCharts from "@/components/marketing/analytics/AnalyticsCharts";
+import WorkflowBuilder from "@/components/marketing/workflows/WorkflowBuilder";
 
 export default function MarketingPage() {
   const [
@@ -684,6 +685,12 @@ export default function MarketingPage() {
 
         </section>
       )}
+
+      <section className="mt-10">
+
+        <WorkflowBuilder />
+
+      </section>
 
     </main>
   );
