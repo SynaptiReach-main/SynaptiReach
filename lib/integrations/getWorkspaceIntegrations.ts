@@ -4,14 +4,29 @@ import {
   decrypt,
 } from "@/lib/security/encryption";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabaseUrl =
+  process.env
+    .NEXT_PUBLIC_SUPABASE_URL ||
+  "";
+
+const supabaseKey =
+  process.env
+    .SUPABASE_SERVICE_ROLE_KEY ||
+  "";
+
+const supabase =
+  createClient(
+    supabaseUrl,
+    supabaseKey
+  );
 
 export async function getWorkspaceIntegrations(
   workspaceId: string
 ) {
+  if (!workspaceId) {
+    return null;
+  }
+
   const {
     data,
     error,
@@ -24,46 +39,42 @@ export async function getWorkspaceIntegrations(
       "workspace_id",
       workspaceId
     )
-    .single();
+    .maybeSingle();
 
   if (error) {
-    throw error;
+    console.error(error);
+
+    return null;
+  }
+
+  if (!data) {
+    return null;
   }
 
   return {
     resend_api_key:
-      data?.resend_api_key
-        ? decrypt(
-            data.resend_api_key
-          )
-        : null,
+      decrypt(
+        data.resend_api_key
+      ),
 
     twilio_sid:
-      data?.twilio_sid
-        ? decrypt(
-            data.twilio_sid
-          )
-        : null,
+      decrypt(
+        data.twilio_sid
+      ),
 
     twilio_token:
-      data?.twilio_token
-        ? decrypt(
-            data.twilio_token
-          )
-        : null,
+      decrypt(
+        data.twilio_token
+      ),
 
     ayrshare_key:
-      data?.ayrshare_key
-        ? decrypt(
-            data.ayrshare_key
-          )
-        : null,
+      decrypt(
+        data.ayrshare_key
+      ),
 
     gemini_key:
-      data?.gemini_key
-        ? decrypt(
-            data.gemini_key
-          )
-        : null,
+      decrypt(
+        data.gemini_key
+      ),
   };
 }

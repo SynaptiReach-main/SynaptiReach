@@ -3,25 +3,42 @@ import crypto from "crypto";
 const algorithm =
   "aes-256-cbc";
 
-const secret =
-  process.env.ENCRYPTION_SECRET ||
-  "fallback-dev-secret";
+function getSecret() {
+  const envSecret =
+    process.env.ENCRYPTION_SECRET;
 
-const key = crypto
-  .createHash("sha256")
-  .update(secret)
-  .digest();
+  if (
+    typeof envSecret ===
+      "string" &&
+    envSecret.trim().length > 0
+  ) {
+    return envSecret;
+  }
+
+  return "synaptireach-dev-fallback-secret";
+}
+
+function getKey() {
+  return crypto
+    .createHash("sha256")
+    .update(getSecret())
+    .digest();
+}
 
 export function encrypt(
   text: string
 ) {
+  if (!text) {
+    return "";
+  }
+
   const iv =
     crypto.randomBytes(16);
 
   const cipher =
     crypto.createCipheriv(
       algorithm,
-      key,
+      getKey(),
       iv
     );
 
@@ -41,15 +58,37 @@ export function encrypt(
 }
 
 export function decrypt(
-  encryptedText: string
+  encryptedText?: string
 ) {
+  if (
+    !encryptedText ||
+    typeof encryptedText !==
+      "string"
+  ) {
+    return "";
+  }
+
+  if (
+    !encryptedText.includes(":")
+  ) {
+    return "";
+  }
+
   const parts =
     encryptedText.split(":");
 
-  const iv = Buffer.from(
-    parts.shift()!,
-    "hex"
-  );
+  const ivHex =
+    parts.shift();
+
+  if (!ivHex) {
+    return "";
+  }
+
+  const iv =
+    Buffer.from(
+      ivHex,
+      "hex"
+    );
 
   const encrypted =
     parts.join(":");
@@ -57,7 +96,7 @@ export function decrypt(
   const decipher =
     crypto.createDecipheriv(
       algorithm,
-      key,
+      getKey(),
       iv
     );
 
