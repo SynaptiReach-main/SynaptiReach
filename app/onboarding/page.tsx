@@ -229,7 +229,7 @@ export default function OnboardingPage() {
 
   function set(field: keyof FormState, value: unknown) {
     setForm((prev) => ({ ...prev, [field]: value }));
-    setErrors((prev) => { const e = { ...prev }; delete e[field]; return e; });
+    setErrors((prev) => { const errs = { ...prev }; delete errs[field]; return errs; });
   }
 
   function validateStep(): boolean {
