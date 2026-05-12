@@ -21,6 +21,7 @@ import {
 import EmailCampaignModal from "@/components/marketing/modals/EmailCampaignModal";
 import SMSCampaignModal from "@/components/marketing/modals/SMSCampaignModal";
 import SocialCampaignModal from "@/components/marketing/modals/SocialCampaignModal";
+import AnalyticsCharts from "@/components/marketing/analytics/AnalyticsCharts";
 
 export default function MarketingPage() {
   const [
@@ -54,6 +55,11 @@ export default function MarketingPage() {
   ] = useState<any[]>([]);
 
   const [
+    analytics,
+    setAnalytics,
+  ] = useState<any>(null);
+
+  const [
     loading,
     setLoading,
   ] = useState(true);
@@ -64,10 +70,12 @@ export default function MarketingPage() {
         campaignsRes,
         activityRes,
         recommendationsRes,
+        analyticsRes,
       ] = await Promise.all([
         fetch("/api/marketing/campaigns"),
         fetch("/api/marketing/activity"),
         fetch("/api/marketing/recommendations"),
+        fetch("/api/marketing/analytics"),
       ]);
 
       const campaignsData =
@@ -75,6 +83,9 @@ export default function MarketingPage() {
 
       const activityData =
         await activityRes.json();
+
+      const analyticsData =
+        await analyticsRes.json();
 
       const recommendationsData =
         await recommendationsRes.json();
@@ -85,6 +96,10 @@ export default function MarketingPage() {
 
       setActivity(
         activityData.data || []
+      );
+
+      setAnalytics(
+        analyticsData.data
       );
 
       setRecommendations(
@@ -659,6 +674,16 @@ export default function MarketingPage() {
         </div>
 
       </section>
+
+      {analytics && (
+        <section className="mt-10">
+
+          <AnalyticsCharts
+            analytics={analytics}
+          />
+
+        </section>
+      )}
 
     </main>
   );
