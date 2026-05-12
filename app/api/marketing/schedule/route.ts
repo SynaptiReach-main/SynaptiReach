@@ -1,19 +1,24 @@
 import { NextResponse } from "next/server";
 
 import {
-  getScheduledCampaigns,
-} from "@/lib/marketing/scheduler/getScheduledCampaigns";
+  createCampaign,
+} from "@/lib/marketing/scheduler/createCampaign";
 
-export async function GET() {
+export async function POST(
+  request: Request
+) {
   try {
-    const campaigns =
-      await getScheduledCampaigns();
+    const body =
+      await request.json();
+
+    const campaign =
+      await createCampaign(
+        body
+      );
 
     return NextResponse.json({
       success: true,
-      campaigns,
-      total:
-        campaigns.length,
+      campaign,
     });
   } catch (error: any) {
     return NextResponse.json(

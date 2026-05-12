@@ -254,3 +254,36 @@ before update on marketing_campaigns
 for each row
 execute function update_updated_at_column();
 
+
+create table if not exists marketing_campaigns (
+  id uuid primary key default gen_random_uuid(),
+
+  workspace_id uuid,
+
+  name text,
+
+  channel text,
+
+  status text default 'scheduled',
+
+  audience text,
+
+  subject text,
+
+  content text,
+
+  scheduled_for timestamptz,
+
+  stagger_size integer default 50,
+
+  metadata jsonb default '{}'::jsonb,
+
+  created_at timestamptz default now()
+);
+
+create index if not exists marketing_campaigns_workspace_idx
+on marketing_campaigns(workspace_id);
+
+create index if not exists marketing_campaigns_status_idx
+on marketing_campaigns(status);
+
