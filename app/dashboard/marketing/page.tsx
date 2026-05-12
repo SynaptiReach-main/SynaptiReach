@@ -1,116 +1,311 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import {
   Megaphone,
   Mail,
-  MousePointerClick,
-  TrendingUp,
-  Users,
-  Target,
-  BarChart3,
+  MessageSquare,
+  Share2,
   Sparkles,
+  TrendingUp,
+  Activity,
+  CalendarClock,
+  Target,
+  Users,
+  Zap,
+  BarChart3,
+  ArrowUpRight,
 } from "lucide-react";
 
-export default function MarketingPage() {
-  return (
-    <main className="min-h-screen text-white">
+import EmailCampaignModal from "@/components/marketing/modals/EmailCampaignModal";
+import SMSCampaignModal from "@/components/marketing/modals/SMSCampaignModal";
+import SocialCampaignModal from "@/components/marketing/modals/SocialCampaignModal";
 
-      {/* HERO */}
+export default function MarketingPage() {
+  const [
+    emailModalOpen,
+    setEmailModalOpen,
+  ] = useState(false);
+
+  const [
+    smsModalOpen,
+    setSMSModalOpen,
+  ] = useState(false);
+
+  const [
+    socialModalOpen,
+    setSocialModalOpen,
+  ] = useState(false);
+
+  const [
+    campaigns,
+    setCampaigns,
+  ] = useState<any[]>([]);
+
+  const [
+    activity,
+    setActivity,
+  ] = useState<any[]>([]);
+
+  const [
+    recommendations,
+    setRecommendations,
+  ] = useState<any[]>([]);
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  async function loadDashboard() {
+    try {
+      const [
+        campaignsRes,
+        activityRes,
+        recommendationsRes,
+      ] = await Promise.all([
+        fetch("/api/marketing/campaigns"),
+        fetch("/api/marketing/activity"),
+        fetch("/api/marketing/recommendations"),
+      ]);
+
+      const campaignsData =
+        await campaignsRes.json();
+
+      const activityData =
+        await activityRes.json();
+
+      const recommendationsData =
+        await recommendationsRes.json();
+
+      setCampaigns(
+        campaignsData.data || []
+      );
+
+      setActivity(
+        activityData.data || []
+      );
+
+      setRecommendations(
+        recommendationsData.data || []
+      );
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadDashboard();
+  }, []);
+
+  const totalCampaigns =
+    campaigns.length;
+
+  const activeCampaigns =
+    campaigns.filter(
+      (c) =>
+        c.status === "active"
+    ).length;
+
+  const delivered =
+    campaigns.reduce(
+      (acc, c) =>
+        acc +
+        (
+          c.delivered_count || 0
+        ),
+      0
+    );
+
+  const opened =
+    campaigns.reduce(
+      (acc, c) =>
+        acc +
+        (
+          c.opened_count || 0
+        ),
+      0
+    );
+
+  const openRate =
+    delivered > 0
+      ? (
+          opened /
+          delivered
+        ) * 100
+      : 0;
+
+  return (
+    <main className="min-h-screen text-white pb-20">
+
+      <EmailCampaignModal
+        open={emailModalOpen}
+        onClose={() =>
+          setEmailModalOpen(false)
+        }
+      />
+
+      <SMSCampaignModal
+        open={smsModalOpen}
+        onClose={() =>
+          setSMSModalOpen(false)
+        }
+      />
+
+      <SocialCampaignModal
+        open={socialModalOpen}
+        onClose={() =>
+          setSocialModalOpen(false)
+        }
+      />
+
       <section className="mb-10">
 
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
 
-          <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-            <Megaphone
-              className="text-cyan-400"
-              size={26}
-            />
+          <div className="flex items-center gap-4">
+
+            <div className="w-16 h-16 rounded-3xl border border-cyan-500/20 bg-cyan-500/10 flex items-center justify-center">
+
+              <Megaphone
+                className="text-cyan-300"
+                size={30}
+              />
+
+            </div>
+
+            <div>
+
+              <h1 className="text-4xl md:text-5xl font-black">
+                Marketing Command Center
+              </h1>
+
+              <p className="text-gray-400 mt-2">
+                Autonomous multi-channel campaign intelligence
+              </p>
+
+            </div>
+
           </div>
 
-          <div>
+          <div className="flex flex-wrap gap-3">
 
-            <h1 className="text-4xl font-black">
-              Marketing Command Center
-            </h1>
+            <button
+              onClick={() =>
+                setEmailModalOpen(true)
+              }
+              className="px-5 py-4 rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 text-black font-black flex items-center gap-2"
+            >
+              <Mail size={18} />
+              Email Campaign
+            </button>
 
-            <p className="text-gray-500 text-sm">
-              AI-powered campaign management and growth tracking
-            </p>
+            <button
+              onClick={() =>
+                setSMSModalOpen(true)
+              }
+              className="px-5 py-4 rounded-2xl border border-white/10 bg-white/[0.03] text-white font-bold flex items-center gap-2"
+            >
+              <MessageSquare size={18} />
+              SMS Campaign
+            </button>
+
+            <button
+              onClick={() =>
+                setSocialModalOpen(true)
+              }
+              className="px-5 py-4 rounded-2xl border border-white/10 bg-white/[0.03] text-white font-bold flex items-center gap-2"
+            >
+              <Share2 size={18} />
+              Social Campaign
+            </button>
 
           </div>
-
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-8">
-
-          {[
-            {
-              label: "Campaigns Active",
-              value: "12",
-              icon: Target,
-            },
-            {
-              label: "Lead Conversion",
-              value: "18.4%",
-              icon: TrendingUp,
-            },
-            {
-              label: "Email Open Rate",
-              value: "42%",
-              icon: Mail,
-            },
-            {
-              label: "Traffic Growth",
-              value: "+28%",
-              icon: Users,
-            },
-          ].map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <div
-                key={item.label}
-                className="rounded-3xl border border-white/10 bg-white/[0.03] p-5"
-              >
-                <div className="flex items-center justify-between mb-5">
-
-                  <div className="w-11 h-11 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-                    <Icon
-                      size={18}
-                      className="text-cyan-300"
-                    />
-                  </div>
-
-                  <Sparkles
-                    size={16}
-                    className="text-green-400"
-                  />
-
-                </div>
-
-                <div className="text-3xl font-black mb-1">
-                  {item.value}
-                </div>
-
-                <div className="text-sm text-gray-500">
-                  {item.label}
-                </div>
-
-              </div>
-            );
-          })}
 
         </div>
 
       </section>
 
-      {/* CAMPAIGNS */}
+      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-10">
+
+        {[
+          {
+            label:
+              "Total Campaigns",
+            value:
+              totalCampaigns,
+            icon: Target,
+          },
+          {
+            label:
+              "Active Campaigns",
+            value:
+              activeCampaigns,
+            icon: Zap,
+          },
+          {
+            label:
+              "Messages Delivered",
+            value:
+              delivered,
+            icon: Activity,
+          },
+          {
+            label:
+              "Open Rate",
+            value:
+              `${openRate.toFixed(1)}%`,
+            icon: TrendingUp,
+          },
+        ].map((item) => {
+          const Icon =
+            item.icon;
+
+          return (
+            <div
+              key={item.label}
+              className="rounded-3xl border border-white/10 bg-white/[0.03] p-6"
+            >
+
+              <div className="flex items-center justify-between mb-5">
+
+                <div className="w-12 h-12 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 flex items-center justify-center">
+
+                  <Icon
+                    className="text-cyan-300"
+                    size={20}
+                  />
+
+                </div>
+
+                <ArrowUpRight
+                  className="text-green-400"
+                  size={18}
+                />
+
+              </div>
+
+              <div className="text-4xl font-black">
+                {item.value}
+              </div>
+
+              <div className="text-sm text-gray-500 mt-2">
+                {item.label}
+              </div>
+
+            </div>
+          );
+        })}
+
+      </section>
+
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
-        {/* LEFT */}
         <div className="xl:col-span-2 space-y-6">
 
-          {/* ACTIVE CAMPAIGNS */}
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
 
             <div className="flex items-center justify-between mb-6">
@@ -118,143 +313,198 @@ export default function MarketingPage() {
               <div>
 
                 <h2 className="text-2xl font-black">
-                  Active Campaigns
+                  Campaign Activity
                 </h2>
 
                 <p className="text-sm text-gray-500">
-                  Live AI-managed marketing campaigns
+                  Live campaign tracking and execution
                 </p>
 
               </div>
 
               <div className="px-4 py-2 rounded-xl border border-cyan-500/20 bg-cyan-500/10 text-cyan-300 text-sm font-semibold">
-                Live Tracking
+                Live
               </div>
 
             </div>
 
             <div className="space-y-4">
 
-              {[
-                {
-                  name: "AI Outreach Funnel",
-                  progress: "84%",
-                  status: "Scaling",
-                },
-                {
-                  name: "Lead Retargeting Campaign",
-                  progress: "62%",
-                  status: "Optimizing",
-                },
-                {
-                  name: "Email Automation Blast",
-                  progress: "91%",
-                  status: "Performing",
-                },
-                {
-                  name: "Social Growth Engine",
-                  progress: "48%",
-                  status: "Learning",
-                },
-              ].map((campaign) => (
-                <div
-                  key={campaign.name}
-                  className="rounded-2xl border border-white/10 bg-black/30 p-5"
-                >
+              {loading ? (
+                <div className="text-gray-500">
+                  Loading...
+                </div>
+              ) : campaigns.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center">
 
-                  <div className="flex items-center justify-between mb-3">
-
-                    <div>
-
-                      <h3 className="font-bold text-white">
-                        {campaign.name}
-                      </h3>
-
-                      <p className="text-sm text-gray-500">
-                        Status: {campaign.status}
-                      </p>
-
-                    </div>
-
-                    <div className="text-cyan-300 font-bold">
-                      {campaign.progress}
-                    </div>
-
+                  <div className="text-lg font-bold text-white mb-2">
+                    No Campaigns Yet
                   </div>
 
-                  <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden">
-
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-green-400"
-                      style={{
-                        width: campaign.progress,
-                      }}
-                    />
-
+                  <div className="text-sm text-gray-500">
+                    Launch your first AI-powered campaign.
                   </div>
 
                 </div>
-              ))}
+              ) : (
+                campaigns.map(
+                  (campaign) => (
+                    <div
+                      key={
+                        campaign.id
+                      }
+                      className="rounded-2xl border border-white/10 bg-black/30 p-5"
+                    >
+
+                      <div className="flex items-start justify-between mb-4">
+
+                        <div>
+
+                          <div className="font-bold text-lg">
+                            {
+                              campaign.name
+                            }
+                          </div>
+
+                          <div className="text-sm text-gray-500 mt-1">
+                            {
+                              campaign.type
+                            }
+                          </div>
+
+                        </div>
+
+                        <div className="px-3 py-1 rounded-xl border border-cyan-500/20 bg-cyan-500/10 text-cyan-300 text-xs font-bold uppercase">
+                          {
+                            campaign.status
+                          }
+                        </div>
+
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">
+                            Delivered
+                          </div>
+
+                          <div className="font-black text-xl">
+                            {
+                              campaign.delivered_count || 0
+                            }
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">
+                            Opened
+                          </div>
+
+                          <div className="font-black text-xl">
+                            {
+                              campaign.opened_count || 0
+                            }
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">
+                            Clicked
+                          </div>
+
+                          <div className="font-black text-xl">
+                            {
+                              campaign.clicked_count || 0
+                            }
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">
+                            Converted
+                          </div>
+
+                          <div className="font-black text-xl">
+                            {
+                              campaign.converted_count || 0
+                            }
+                          </div>
+                        </div>
+
+                      </div>
+
+                    </div>
+                  )
+                )
+              )}
 
             </div>
 
           </div>
 
-          {/* PERFORMANCE */}
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
 
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3 mb-6">
+
+              <BarChart3
+                className="text-cyan-300"
+                size={20}
+              />
 
               <div>
 
                 <h2 className="text-2xl font-black">
-                  Performance Overview
+                  Scheduled Campaigns
                 </h2>
 
                 <p className="text-sm text-gray-500">
-                  AI marketing performance metrics
+                  Upcoming automated campaign execution
                 </p>
 
               </div>
 
-              <BarChart3
-                size={20}
-                className="text-cyan-300"
-              />
-
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-4">
 
-              {[
-                {
-                  label: "Ad Spend ROI",
-                  value: "4.8x",
-                },
-                {
-                  label: "Cost Per Lead",
-                  value: "$14",
-                },
-                {
-                  label: "Audience Reach",
-                  value: "248K",
-                },
-              ].map((metric) => (
-                <div
-                  key={metric.label}
-                  className="rounded-2xl border border-white/10 bg-black/30 p-5"
-                >
+              {campaigns
+                .filter(
+                  (c) =>
+                    c.status ===
+                    "scheduled"
+                )
+                .map((campaign) => (
+                  <div
+                    key={
+                      campaign.id
+                    }
+                    className="rounded-2xl border border-white/10 bg-black/30 p-5 flex items-center justify-between"
+                  >
 
-                  <div className="text-gray-500 text-sm mb-2">
-                    {metric.label}
+                    <div>
+
+                      <div className="font-bold">
+                        {
+                          campaign.name
+                        }
+                      </div>
+
+                      <div className="text-sm text-gray-500 mt-1">
+                        {
+                          campaign.scheduled_for
+                        }
+                      </div>
+
+                    </div>
+
+                    <CalendarClock
+                      className="text-cyan-300"
+                      size={20}
+                    />
+
                   </div>
-
-                  <div className="text-3xl font-black">
-                    {metric.value}
-                  </div>
-
-                </div>
-              ))}
+                ))}
 
             </div>
 
@@ -262,29 +512,29 @@ export default function MarketingPage() {
 
         </div>
 
-        {/* RIGHT */}
         <div className="space-y-6">
 
-          {/* AI ENGINE */}
           <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/[0.05] p-6">
 
             <div className="flex items-center gap-3 mb-5">
 
               <div className="w-12 h-12 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 flex items-center justify-center">
+
                 <Sparkles
                   className="text-cyan-300"
                   size={20}
                 />
+
               </div>
 
               <div>
 
                 <h2 className="font-black text-xl">
-                  AI Optimization
+                  AI Recommendations
                 </h2>
 
                 <p className="text-sm text-gray-400">
-                  Autonomous marketing intelligence
+                  Autonomous optimization intelligence
                 </p>
 
               </div>
@@ -293,121 +543,114 @@ export default function MarketingPage() {
 
             <div className="space-y-4">
 
-              {[
-                "AI adjusted ad targeting",
-                "Email campaign optimized",
-                "Lead scoring recalculated",
-                "Traffic spike detected",
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="flex items-center gap-3 text-sm text-gray-300"
-                >
-
-                  <div className="w-2 h-2 rounded-full bg-green-400" />
-
-                  {item}
-
+              {recommendations
+                .length === 0 ? (
+                <div className="text-sm text-gray-500">
+                  No AI recommendations available.
                 </div>
-              ))}
-
-            </div>
-
-          </div>
-
-          {/* CHANNELS */}
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-
-            <h2 className="text-xl font-black mb-5">
-              Traffic Sources
-            </h2>
-
-            <div className="space-y-4">
-
-              {[
-                {
-                  source: "Organic Search",
-                  value: "42%",
-                },
-                {
-                  source: "Email Funnels",
-                  value: "26%",
-                },
-                {
-                  source: "Paid Ads",
-                  value: "19%",
-                },
-                {
-                  source: "Social Media",
-                  value: "13%",
-                },
-              ].map((source) => (
-                <div
-                  key={source.source}
-                  className="space-y-2"
-                >
-
-                  <div className="flex items-center justify-between text-sm">
-
-                    <span className="text-gray-300">
-                      {source.source}
-                    </span>
-
-                    <span className="text-cyan-300 font-semibold">
-                      {source.value}
-                    </span>
-
-                  </div>
-
-                  <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden">
-
+              ) : (
+                recommendations.map(
+                  (
+                    recommendation
+                  ) => (
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-green-400"
-                      style={{
-                        width: source.value,
-                      }}
-                    />
+                      key={
+                        recommendation.id
+                      }
+                      className="rounded-2xl border border-white/10 bg-black/30 p-4"
+                    >
 
-                  </div>
+                      <div className="flex items-start gap-3">
 
-                </div>
-              ))}
+                        <Sparkles
+                          className="text-green-400 mt-1"
+                          size={16}
+                        />
+
+                        <div>
+
+                          <div className="font-semibold text-sm">
+                            {
+                              recommendation.title
+                            }
+                          </div>
+
+                          <div className="text-xs text-gray-500 mt-1">
+                            {
+                              recommendation.description
+                            }
+                          </div>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+                  )
+                )
+              )}
 
             </div>
 
           </div>
 
-          {/* CLICK EVENTS */}
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
 
             <div className="flex items-center gap-3 mb-5">
 
-              <MousePointerClick
+              <Users
                 className="text-cyan-300"
                 size={20}
               />
 
               <h2 className="text-xl font-black">
-                Engagement Signals
+                Live Activity Feed
               </h2>
 
             </div>
 
             <div className="space-y-4">
 
-              {[
-                "High CTR on onboarding ads",
-                "Returning visitors increased",
-                "Lead engagement up 17%",
-                "AI detected viral content",
-              ].map((signal) => (
-                <div
-                  key={signal}
-                  className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-gray-300"
-                >
-                  {signal}
+              {activity.length === 0 ? (
+                <div className="text-sm text-gray-500">
+                  No activity available.
                 </div>
-              ))}
+              ) : (
+                activity.map(
+                  (item) => (
+                    <div
+                      key={
+                        item.id
+                      }
+                      className="rounded-2xl border border-white/10 bg-black/30 p-4"
+                    >
+
+                      <div className="flex items-start gap-3">
+
+                        <div className="w-2 h-2 rounded-full bg-green-400 mt-2" />
+
+                        <div>
+
+                          <div className="text-sm font-semibold">
+                            {
+                              item.title
+                            }
+                          </div>
+
+                          <div className="text-xs text-gray-500 mt-1">
+                            {
+                              item.description
+                            }
+                          </div>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+                  )
+                )
+              )}
 
             </div>
 
