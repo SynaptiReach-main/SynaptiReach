@@ -385,3 +385,23 @@ alter table marketing_campaigns
 add column if not exists ai_send_time jsonb
 default '{}'::jsonb;
 
+
+create table if not exists marketing_media (
+  id uuid primary key default gen_random_uuid(),
+
+  workspace_id uuid,
+
+  name text,
+
+  type text,
+
+  url text,
+
+  size bigint default 0,
+
+  created_at timestamptz default now()
+);
+
+create index if not exists marketing_media_workspace_idx
+on marketing_media(workspace_id);
+

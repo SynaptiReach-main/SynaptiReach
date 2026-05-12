@@ -1,27 +1,42 @@
-import { NextResponse } from "next/server";
+import { NextResponse }
+from "next/server";
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient }
+from "@supabase/supabase-js";
+
+import {
+  getFileType,
+} from "@/lib/marketing/media/getFileType";
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env
+    .NEXT_PUBLIC_SUPABASE_URL || "",
+
+  process.env
+    .SUPABASE_SERVICE_ROLE_KEY || ""
 );
 
 export async function POST(
   request: Request
 ) {
   try {
-    const formData =
+    const form =
       await request.formData();
 
     const file =
-      formData.get(
+      form.get(
         "file"
       ) as File;
+
+    const workspaceId =
+      form.get(
+        "workspaceId"
+      ) as string;
 
     if (!file) {
       return NextResponse.json(
         {
+          success: false,
           error:
             "No file uploaded",
         },
@@ -37,18 +52,22 @@ export async function POST(
     const buffer =
       Buffer.from(bytes);
 
-    const fileName =
+    const filename =
       `${Date.now()}-${file.name}`;
 
+    const path =
+      `${workspaceId}/${filename}`;
+
     const {
-      data,
-      error,
-    } = await supabase.storage
+      error:
+        uploadError,
+    } = await supabase
+      .storage
       .from(
         "marketing-media"
       )
       .upload(
-        fileName,
+        path,
         buffer,
         {
           contentType:
@@ -56,28 +75,62 @@ export async function POST(
         }
       );
 
-    if (error) {
-      throw error;
+    if (uploadError) {
+      throw uploadError;
     }
 
     const {
-      data: publicUrl,
-    } = supabase.storage
+      data,
+    } = supabase
+      .storage
       .from(
         "marketing-media"
       )
       .getPublicUrl(
-        data.path
+        path
       );
+
+    const type =
+      getFileType(
+        file.name
+      );
+
+    const {
+      data:
+        mediaRecord,
+    } = await supabase
+      .from(
+        "marketing_media"
+      )
+      .insert({
+        workspace_id:
+          workspaceId,
+
+        name:
+          file.name,
+
+        type,
+
+        url:
+          data.publicUrl,
+
+        size:
+          file.size,
+      })
+      .select()
+      .single();
 
     return NextResponse.json({
       success: true,
-      url:
-        publicUrl.publicUrl,
+
+      media:
+        mediaRecord,
     });
   } catch (error: any) {
     return NextResponse.json(
       {
+        success: false,
+
         error:
           error.message,
       },
