@@ -233,23 +233,23 @@ export default function OnboardingPage() {
   }
 
   function validateStep(): boolean {
-    const e: Record<string, string> = {};
+    const errs: Record<string, string> = {};
     if (step === 1) {
-      if (!form.plan) e.plan = "Please select a plan.";
-      if (!form.twilioAuthorization.trim()) e.twilioAuthorization = "Authorization required.";
+      if (!form.plan) errs.plan = "Please select a plan.";
+      if (!form.twilioAuthorization.trim()) errs.twilioAuthorization = "Authorization required.";
     }
     if (step === 2) {
-      if (!form.businessName.trim()) e.businessName = "Business name is required.";
-      if (!form.industry) e.industry = "Please select an industry.";
+      if (!form.businessName.trim()) errs.businessName = "Business name is required.";
+      if (!form.industry) errs.industry = "Please select an industry.";
     }
     if (step === 3) {
-      if (!form.aiPersonality) e.aiPersonality = "Please select an AI personality.";
+      if (!form.aiPersonality) errs.aiPersonality = "Please select an AI personality.";
     }
     if (step === 4) {
-      if (!form.monthlyRevenue.trim()) e.monthlyRevenue = "Monthly revenue is required.";
+      if (!form.monthlyRevenue.trim()) errs.monthlyRevenue = "Monthly revenue is required.";
     }
-    setErrors(e);
-    return Object.keys(e).length === 0;
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
   }
 
   function next() {
