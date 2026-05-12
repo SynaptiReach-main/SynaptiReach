@@ -439,3 +439,25 @@ create table if not exists marketing_audit_logs (
 create index if not exists marketing_audit_workspace_idx
 on marketing_audit_logs(workspace_id);
 
+
+create table if not exists marketing_retry_queue (
+  id uuid primary key default gen_random_uuid(),
+
+  workspace_id uuid,
+
+  type text,
+
+  payload jsonb default '{}'::jsonb,
+
+  attempts integer default 0,
+
+  status text default 'pending',
+
+  completed_at timestamptz,
+
+  created_at timestamptz default now()
+);
+
+create index if not exists marketing_retry_status_idx
+on marketing_retry_queue(status);
+

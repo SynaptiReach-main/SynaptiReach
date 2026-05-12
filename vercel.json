@@ -1,12 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/cron/marketing",
+      "path": "/api/marketing/cron/process",
       "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron/marketing/retries",
-      "schedule": "*/15 * * * *"
     }
   ]
 }
