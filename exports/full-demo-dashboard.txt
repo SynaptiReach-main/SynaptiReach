@@ -1,0 +1,4050 @@
+
+############################################################
+# FILE: app/(marketing)/demo/ai_assistant/page.tsx
+############################################################
+"use client";
+
+import { useState } from "react";
+
+import {
+  Bot,
+  BrainCircuit,
+  Sparkles,
+  Activity,
+  Cpu,
+  Database,
+  ShieldCheck,
+  MessageSquare,
+  Mail,
+  Megaphone,
+  Workflow,
+  CheckCircle2,
+  Clock3,
+  ArrowRight,
+  TrendingUp,
+  Globe,
+  Layers3,
+  Send,
+  User,
+} from "lucide-react";
+
+export default function AIAssistantPage() {
+  const [input, setInput] = useState("");
+
+  const [messages, setMessages] = useState([
+    {
+      role: "assistant",
+      text:
+        "Welcome to SynaptiReach AI Assistant. I can help with CRM management, campaigns, workflows, automations, reporting, onboarding, lead tracking, and platform guidance.",
+    },
+  ]);
+
+  const sendMessage = () => {
+    if (!input.trim()) return;
+
+    const userMessage = {
+      role: "user",
+      text: input,
+    };
+
+    let response =
+      "I can help optimize your workflows, campaigns, lead pipeline, automations, and customer engagement across your SynaptiReach platform.";
+
+    const lower = input.toLowerCase();
+
+    if (lower.includes("lead")) {
+      response =
+        "Your current pipeline contains 842 active leads with 126 marked as hot opportunities. AI recommends immediate follow-up for 24 high-conversion prospects.";
+    }
+
+    if (
+      lower.includes("campaign") ||
+      lower.includes("marketing")
+    ) {
+      response =
+        "Your top performing campaign currently is Instagram Retargeting with a 6.8% conversion rate. AI recommends increasing spend allocation by 18%.";
+    }
+
+    if (
+      lower.includes("workflow") ||
+      lower.includes("automation")
+    ) {
+      response =
+        "Workflow automations are operating normally. 42 automations executed successfully today with a 98.4% success rate.";
+    }
+
+    if (
+      lower.includes("email") ||
+      lower.includes("sms")
+    ) {
+      response =
+        "AI communication systems are active. Email open rate is 42.8% and SMS engagement is outperforming email by 14% this week.";
+    }
+
+    setMessages((prev) => [
+      ...prev,
+      userMessage,
+      {
+        role: "assistant",
+        text: response,
+      },
+    ]);
+
+    setInput("");
+  };
+
+  const aiModules = [
+    {
+      title: "Email AI",
+      description: "Generate outreach sequences and follow-ups",
+      icon: Mail,
+      tools: [
+        "Cold Outreach Generator",
+        "Follow-Up Automation",
+        "Subject Line Optimizer",
+      ],
+    },
+    {
+      title: "SMS AI",
+      description: "Automate lead engagement messaging",
+      icon: MessageSquare,
+      tools: [
+        "Lead Follow-Up",
+        "Reminder Campaigns",
+        "Retention Messaging",
+      ],
+    },
+    {
+      title: "Marketing AI",
+      description: "Generate ads and campaign strategy",
+      icon: Megaphone,
+      tools: [
+        "Ad Copy Generator",
+        "Campaign Strategy",
+        "Audience Suggestions",
+      ],
+    },
+    {
+      title: "Workflow AI",
+      description: "Automate internal operations",
+      icon: Workflow,
+      tools: [
+        "Task Routing",
+        "Pipeline Automation",
+        "Lead Assignment",
+      ],
+    },
+  ];
+
+  return (
+    <div className="space-y-8">
+
+      {/* HEADER */}
+      <div className="flex flex-col 2xl:flex-row 2xl:items-center 2xl:justify-between gap-6">
+
+        <div className="flex items-center gap-5">
+          <div className="p-4 rounded-3xl bg-cyan-500/10 border border-cyan-500/20">
+            <Bot className="text-cyan-400" size={34} />
+          </div>
+
+          <div>
+            <h1 className="text-4xl font-bold text-white tracking-tight">
+              AI Assistant
+            </h1>
+
+            <p className="text-gray-400 mt-2 max-w-2xl">
+              Intelligent platform assistant for workflows, campaigns,
+              lead management, automation, analytics, and operational support.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+          {[
+            ["AI Actions", "4,281"],
+            ["Live Requests", "384"],
+            ["Automation Rate", "98.4%"],
+            ["Avg Response", "1.2s"],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="bg-[#0b0b0b]/90 border border-white/10 rounded-3xl p-5"
+            >
+              <p className="text-[11px] uppercase tracking-[0.25em] text-gray-500">
+                {label}
+              </p>
+
+              <p className="text-2xl font-bold text-white mt-3">
+                {value}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* LIVE AI ASSISTANT */}
+      <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] overflow-hidden">
+
+        <div className="border-b border-white/10 p-6 flex items-center justify-between">
+
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-3xl bg-cyan-500/10 border border-cyan-500/20">
+              <BrainCircuit className="text-cyan-400" size={28} />
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold text-white">
+                SynaptiReach AI Assistant
+              </h2>
+
+              <p className="text-sm text-gray-400 mt-1">
+                Ask questions about your CRM, campaigns, leads, automations, and platform tools
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm">
+            <CheckCircle2 size={14} />
+            Online
+          </div>
+        </div>
+
+        {/* CHAT */}
+        <div className="p-6 h-[500px] overflow-y-auto space-y-5 bg-gradient-to-b from-transparent to-cyan-500/[0.02]">
+
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={`flex ${
+                message.role === "user"
+                  ? "justify-end"
+                  : "justify-start"
+              }`}
+            >
+              <div
+                className={`
+                  max-w-[80%] rounded-3xl p-5 border
+                  ${
+                    message.role === "user"
+                      ? "bg-cyan-500/10 border-cyan-500/20"
+                      : "bg-black/40 border-white/10"
+                  }
+                `}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  {message.role === "assistant" ? (
+                    <Bot size={16} className="text-cyan-400" />
+                  ) : (
+                    <User size={16} className="text-white" />
+                  )}
+
+                  <span className="text-xs uppercase tracking-widest text-gray-500">
+                    {message.role === "assistant"
+                      ? "AI Assistant"
+                      : "User"}
+                  </span>
+                </div>
+
+                <p className="text-sm leading-relaxed text-gray-200">
+                  {message.text}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* INPUT */}
+        <div className="border-t border-white/10 p-5">
+
+          <div className="flex gap-4">
+
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask the AI assistant anything about your platform..."
+              className="
+                flex-1
+                bg-black/40
+                border border-white/10
+                rounded-2xl
+                px-5
+                py-4
+                text-white
+                outline-none
+                focus:border-cyan-500/40
+              "
+            />
+
+            <button
+              onClick={sendMessage}
+              className="
+                px-6
+                rounded-2xl
+                bg-cyan-500/10
+                border border-cyan-500/20
+                text-cyan-300
+                hover:bg-cyan-500/20
+                transition-all
+                flex items-center gap-2
+              "
+            >
+              <Send size={18} />
+              Send
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* AI CORE */}
+      <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-8 overflow-hidden relative">
+
+        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/5 blur-3xl rounded-full" />
+
+        <div className="relative z-10">
+
+          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6 mb-8">
+
+            <div className="flex items-center gap-5">
+
+              <div className="p-4 rounded-3xl bg-cyan-500/10 border border-cyan-500/20">
+                <Cpu className="text-cyan-400" size={30} />
+              </div>
+
+              <div>
+                <h2 className="text-3xl font-bold text-white">
+                  Athena Neural Core
+                </h2>
+
+                <p className="text-gray-400 mt-2">
+                  Real-time orchestration and AI automation layer
+                </p>
+              </div>
+            </div>
+
+            <div className="px-5 py-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm flex items-center gap-2">
+              <CheckCircle2 size={16} />
+              All Systems Operational
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+
+            {[
+              ["Inference Load", "72%"],
+              ["Memory Usage", "18.4GB"],
+              ["AI Requests", "384"],
+              ["Security Layer", "Protected"],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                className="bg-black/30 border border-white/5 rounded-3xl p-5"
+              >
+                <p className="text-xs uppercase tracking-wider text-gray-500">
+                  {label}
+                </p>
+
+                <p className="text-2xl font-bold text-white mt-3">
+                  {value}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* MODULE GRID */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+        {aiModules.map((module) => {
+          const Icon = module.icon;
+
+          return (
+            <div
+              key={module.title}
+              className="bg-[#0b0b0b]/90 border border-white/10 rounded-[30px] p-7"
+            >
+              <div className="flex items-start gap-4 mb-6">
+
+                <div className="p-4 rounded-3xl bg-white/5 border border-white/10">
+                  <Icon className="text-cyan-400" size={24} />
+                </div>
+
+                <div>
+                  <h3 className="text-2xl font-bold text-white">
+                    {module.title}
+                  </h3>
+
+                  <p className="text-gray-400 text-sm mt-2 leading-relaxed">
+                    {module.description}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+
+                {module.tools.map((tool) => (
+                  <button
+                    key={tool}
+                    className="w-full text-left flex items-center justify-between p-4 rounded-2xl bg-black/30 border border-white/5 hover:border-cyan-500/30 hover:bg-white/[0.03] transition-all"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Sparkles
+                        size={16}
+                        className="text-cyan-400"
+                      />
+
+                      <span className="text-sm text-white">
+                        {tool}
+                      </span>
+                    </div>
+
+                    <ArrowRight
+                      size={16}
+                      className="text-gray-500"
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+
+############################################################
+# FILE: app/(marketing)/demo/communications/page.tsx
+############################################################
+"use client";
+
+import {
+  MessageSquare,
+  Mail,
+  Phone,
+  Send,
+  Bot,
+  Sparkles,
+  Users,
+  Clock3,
+  CheckCircle2,
+  AlertCircle,
+  Activity,
+  TrendingUp,
+  Bell,
+  Inbox,
+  Reply,
+  Megaphone,
+  MessagesSquare,
+  Zap,
+  ShieldCheck,
+  ArrowUpRight,
+  Globe,
+} from "lucide-react";
+
+export default function CommunicationsPage() {
+  return (
+    <div className="space-y-8">
+
+      {/* HEADER */}
+      <div className="flex flex-col 2xl:flex-row 2xl:items-center 2xl:justify-between gap-6">
+
+        <div className="flex items-center gap-5">
+
+          <div className="p-4 rounded-3xl bg-cyan-500/10 border border-cyan-500/20">
+            <MessagesSquare className="text-cyan-400" size={34} />
+          </div>
+
+          <div>
+            <h1 className="text-4xl font-bold text-white tracking-tight">
+              Communications Center
+            </h1>
+
+            <p className="text-gray-400 mt-2 max-w-3xl">
+              Unified communications dashboard for email, SMS,
+              client conversations, AI-generated responses,
+              notifications, and live engagement tracking.
+            </p>
+          </div>
+        </div>
+
+        {/* METRICS */}
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+
+          {[
+            ["Unread Messages", "84"],
+            ["Response Rate", "94.2%"],
+            ["Avg Reply Time", "3m"],
+            ["Messages Today", "1,284"],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="bg-[#0b0b0b]/90 border border-white/10 rounded-3xl p-5"
+            >
+              <p className="text-[11px] uppercase tracking-[0.25em] text-gray-500">
+                {label}
+              </p>
+
+              <p className="text-2xl font-bold text-white mt-3">
+                {value}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* MAIN GRID */}
+      <div className="grid grid-cols-1 2xl:grid-cols-3 gap-8">
+
+        {/* LEFT SIDE */}
+        <div className="2xl:col-span-2 space-y-8">
+
+          {/* LIVE INBOX */}
+          <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-8">
+
+            <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5 mb-8">
+
+              <div className="flex items-center gap-4">
+                <div className="p-4 rounded-3xl bg-cyan-500/10 border border-cyan-500/20">
+                  <Inbox className="text-cyan-400" size={28} />
+                </div>
+
+                <div>
+                  <h2 className="text-3xl font-bold text-white">
+                    Unified Inbox
+                  </h2>
+
+                  <p className="text-gray-400 mt-2">
+                    Live customer conversations and support activity
+                  </p>
+                </div>
+              </div>
+
+              <button className="px-5 py-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-sm hover:bg-cyan-500/20 transition-all">
+                Open Inbox
+              </button>
+            </div>
+
+            <div className="space-y-4">
+
+              {[
+                {
+                  name: "Sarah Mitchell",
+                  channel: "Email",
+                  msg: "Need help setting up automation workflows",
+                  status: "Awaiting Reply",
+                  time: "2m ago",
+                  color: "cyan",
+                },
+                {
+                  name: "Michael Torres",
+                  channel: "SMS",
+                  msg: "Can I upgrade my subscription plan?",
+                  status: "AI Suggested Reply Ready",
+                  time: "6m ago",
+                  color: "emerald",
+                },
+                {
+                  name: "Apex Roofing",
+                  channel: "Facebook",
+                  msg: "Interested in CRM migration support",
+                  status: "Assigned to Sales",
+                  time: "11m ago",
+                  color: "purple",
+                },
+                {
+                  name: "Taylor Agency",
+                  channel: "Instagram",
+                  msg: "Need onboarding assistance for new staff",
+                  status: "Resolved",
+                  time: "18m ago",
+                  color: "orange",
+                },
+              ].map((conversation) => (
+                <div
+                  key={conversation.name}
+                  className="bg-black/30 border border-white/5 rounded-3xl p-5 hover:border-cyan-500/20 transition-all"
+                >
+                  <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
+
+                    <div className="flex items-start gap-4">
+
+                      <div
+                        className={`
+                          mt-1 w-3 h-3 rounded-full
+                          ${conversation.color === "cyan" && "bg-cyan-400"}
+                          ${conversation.color === "emerald" && "bg-emerald-400"}
+                          ${conversation.color === "purple" && "bg-purple-400"}
+                          ${conversation.color === "orange" && "bg-orange-400"}
+                        `}
+                      />
+
+                      <div>
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <h3 className="text-white font-semibold">
+                            {conversation.name}
+                          </h3>
+
+                          <span className="px-3 py-1 rounded-xl bg-white/5 border border-white/10 text-xs text-gray-400">
+                            {conversation.channel}
+                          </span>
+                        </div>
+
+                        <p className="text-gray-300 mt-3 leading-relaxed">
+                          {conversation.msg}
+                        </p>
+
+                        <p className="text-xs text-gray-500 mt-3">
+                          {conversation.time}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+
+                      <div className="px-4 py-2 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-sm">
+                        {conversation.status}
+                      </div>
+
+                      <button className="p-3 rounded-2xl bg-white/5 border border-white/10 hover:border-cyan-500/30 transition-all">
+                        <Reply size={16} className="text-gray-300" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CHANNELS */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+            {/* EMAIL */}
+            <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-7">
+
+              <div className="flex items-center gap-4 mb-7">
+
+                <div className="p-4 rounded-3xl bg-cyan-500/10 border border-cyan-500/20">
+                  <Mail className="text-cyan-400" size={24} />
+                </div>
+
+                <div>
+                  <h3 className="text-2xl font-bold text-white">
+                    Email Center
+                  </h3>
+
+                  <p className="text-gray-400 mt-1 text-sm">
+                    Campaign and support communication management
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-5">
+
+                {[
+                  ["Sent Today", "842"],
+                  ["Open Rate", "42.8%"],
+                  ["Pending Replies", "28"],
+                  ["AI Drafts Ready", "16"],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="flex items-center justify-between border-b border-white/5 pb-4"
+                  >
+                    <span className="text-gray-400 text-sm">
+                      {label}
+                    </span>
+
+                    <span className="text-white font-semibold">
+                      {value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-7 grid grid-cols-1 gap-3">
+
+                {[
+                  "Generate AI Email Reply",
+                  "Create Follow-Up Sequence",
+                  "Optimize Subject Line",
+                ].map((tool) => (
+                  <button
+                    key={tool}
+                    className="text-left p-4 rounded-2xl bg-black/30 border border-white/5 hover:border-cyan-500/30 transition-all"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Sparkles size={16} className="text-cyan-400" />
+
+                      <span className="text-white text-sm">
+                        {tool}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* SMS */}
+            <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-7">
+
+              <div className="flex items-center gap-4 mb-7">
+
+                <div className="p-4 rounded-3xl bg-emerald-500/10 border border-emerald-500/20">
+                  <MessageSquare className="text-emerald-400" size={24} />
+                </div>
+
+                <div>
+                  <h3 className="text-2xl font-bold text-white">
+                    SMS Center
+                  </h3>
+
+                  <p className="text-gray-400 mt-1 text-sm">
+                    Text communication and automated outreach
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-5">
+
+                {[
+                  ["Messages Sent", "1,482"],
+                  ["Reply Rate", "61%"],
+                  ["Pending Responses", "14"],
+                  ["Automation Triggers", "93"],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="flex items-center justify-between border-b border-white/5 pb-4"
+                  >
+                    <span className="text-gray-400 text-sm">
+                      {label}
+                    </span>
+
+                    <span className="text-white font-semibold">
+                      {value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-7 grid grid-cols-1 gap-3">
+
+                {[
+                  "Generate AI SMS Reply",
+                  "Create Reminder Sequence",
+                  "Optimize Engagement",
+                ].map((tool) => (
+                  <button
+                    key={tool}
+                    className="text-left p-4 rounded-2xl bg-black/30 border border-white/5 hover:border-emerald-500/30 transition-all"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Bot size={16} className="text-emerald-400" />
+
+                      <span className="text-white text-sm">
+                        {tool}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* AI RESPONSE ASSISTANT */}
+          <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-8 overflow-hidden relative">
+
+            <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-500/5 blur-3xl rounded-full" />
+
+            <div className="relative z-10">
+
+              <div className="flex items-center gap-4 mb-8">
+
+                <div className="p-4 rounded-3xl bg-cyan-500/10 border border-cyan-500/20">
+                  <Bot className="text-cyan-400" size={28} />
+                </div>
+
+                <div>
+                  <h2 className="text-3xl font-bold text-white">
+                    AI Communications Assistant
+                  </h2>
+
+                  <p className="text-gray-400 mt-2">
+                    AI-powered response generation and engagement assistance
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-black/30 border border-white/5 rounded-3xl p-6">
+
+                <div className="flex items-start gap-4 mb-6">
+
+                  <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+                    <Bot className="text-cyan-400" size={18} />
+                  </div>
+
+                  <div>
+                    <p className="text-white font-medium">
+                      Suggested AI Reply
+                    </p>
+
+                    <p className="text-gray-300 mt-4 leading-relaxed">
+                      “Absolutely — I can help you configure your
+                      automation workflows. Based on your current setup,
+                      I recommend enabling lead routing and onboarding
+                      sequences first. Would you like me to walk you
+                      through setup step-by-step?”
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+
+                  {[
+                    "Send Reply",
+                    "Regenerate",
+                    "Shorten Response",
+                    "Professional Tone",
+                  ].map((action) => (
+                    <button
+                      key={action}
+                      className="px-4 py-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-sm hover:bg-cyan-500/20 transition-all"
+                    >
+                      {action}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT SIDEBAR */}
+        <div className="space-y-8">
+
+          {/* LIVE ACTIVITY */}
+          <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-6">
+
+            <div className="flex items-center gap-3 mb-6">
+              <Activity className="text-cyan-400" size={20} />
+
+              <h3 className="text-2xl font-bold text-white">
+                Live Activity
+              </h3>
+            </div>
+
+            <div className="space-y-5">
+
+              {[
+                "AI replied to support request",
+                "Sales follow-up message sent",
+                "Client onboarding email triggered",
+                "SMS reminder automation executed",
+                "Instagram inquiry assigned to support",
+                "AI generated new email response",
+              ].map((item, i) => (
+                <div
+                  key={i}
+                  className="flex items-start gap-4 pb-5 border-b border-white/5 last:border-0"
+                >
+                  <div className="mt-1">
+                    <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-gray-300 leading-relaxed">
+                      {item}
+                    </p>
+
+                    <p className="text-xs text-gray-500 mt-2">
+                      {i + 1}m ago
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ALERTS */}
+          <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-6">
+
+            <div className="flex items-center gap-3 mb-6">
+              <Bell className="text-orange-400" size={20} />
+
+              <h3 className="text-2xl font-bold text-white">
+                Priority Alerts
+              </h3>
+            </div>
+
+            <div className="space-y-4">
+
+              {[
+                {
+                  title: "Hot lead awaiting response",
+                  desc: "Potential high-value client inactive for 12 minutes.",
+                },
+                {
+                  title: "Support queue increasing",
+                  desc: "Response volume up 18% in last hour.",
+                },
+                {
+                  title: "Client escalation detected",
+                  desc: "AI flagged conversation for manual review.",
+                },
+              ].map((alert) => (
+                <div
+                  key={alert.title}
+                  className="p-5 rounded-3xl bg-black/30 border border-white/5"
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <AlertCircle className="text-orange-400" size={16} />
+
+                    <p className="text-white font-medium">
+                      {alert.title}
+                    </p>
+                  </div>
+
+                  <p className="text-sm text-gray-500 leading-relaxed">
+                    {alert.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* PERFORMANCE */}
+          <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-6">
+
+            <div className="flex items-center gap-3 mb-6">
+              <TrendingUp className="text-emerald-400" size={20} />
+
+              <h3 className="text-2xl font-bold text-white">
+                Communication Performance
+              </h3>
+            </div>
+
+            <div className="space-y-5">
+
+              {[
+                ["Customer Satisfaction", "96%"],
+                ["AI Accuracy", "94.4%"],
+                ["Avg Resolution Time", "8m"],
+                ["Escalation Rate", "2.1%"],
+                ["Automation Success", "98.2%"],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="flex items-center justify-between border-b border-white/5 pb-4"
+                >
+                  <span className="text-gray-400 text-sm">
+                    {label}
+                  </span>
+
+                  <span className="text-white font-semibold">
+                    {value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+############################################################
+# FILE: app/(marketing)/demo/components/AutomationQueue.tsx
+############################################################
+"use client";
+
+const queue = [
+  {
+    task: "Lead qualification workflow",
+    status: "Running",
+  },
+  {
+    task: "Email follow-up sequence",
+    status: "Queued",
+  },
+  {
+    task: "CRM synchronization",
+    status: "Completed",
+  },
+  {
+    task: "Campaign optimization",
+    status: "Running",
+  },
+];
+
+export default function AutomationQueue() {
+  return (
+    <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-6">
+      <div className="mb-5">
+        <h3 className="text-white font-bold text-lg">
+          Automation Queue
+        </h3>
+
+        <p className="text-gray-500 text-sm">
+          Active autonomous workflows
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {queue.map((item) => (
+          <div
+            key={item.task}
+            className="flex items-center justify-between p-4 rounded-xl border border-white/5 bg-black/20"
+          >
+            <span className="text-gray-300 text-sm">
+              {item.task}
+            </span>
+
+            <span
+              className={`text-xs px-3 py-1 rounded-full border ${
+                item.status === "Running"
+                  ? "bg-cyan-500/10 text-cyan-300 border-cyan-500/20"
+                  : item.status === "Completed"
+                  ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
+                  : "bg-white/5 text-gray-400 border-white/10"
+              }`}
+            >
+              {item.status}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+############################################################
+# FILE: app/(marketing)/demo/components/CustomerHealth.tsx
+############################################################
+"use client";
+
+const clients = [
+  {
+    name: "Apex Logistics",
+    health: "Excellent",
+    usage: "92%",
+    color: "text-emerald-400",
+  },
+  {
+    name: "Nova Medical",
+    health: "Stable",
+    usage: "74%",
+    color: "text-cyan-300",
+  },
+  {
+    name: "Velocity Retail",
+    health: "At Risk",
+    usage: "41%",
+    color: "text-red-400",
+  },
+];
+
+export default function CustomerHealth() {
+  return (
+    <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-6">
+      <div className="mb-5">
+        <h3 className="text-white font-bold text-lg">
+          Customer Health
+        </h3>
+
+        <p className="text-gray-500 text-sm">
+          Client engagement and retention
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        {clients.map((client) => (
+          <div
+            key={client.name}
+            className="p-4 rounded-xl border border-white/5 bg-black/20"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-white font-medium">
+                  {client.name}
+                </p>
+
+                <p className={`text-sm ${client.color}`}>
+                  {client.health}
+                </p>
+              </div>
+
+              <div className="text-right">
+                <p className="text-white font-bold">
+                  {client.usage}
+                </p>
+
+                <p className="text-xs text-gray-500">
+                  platform usage
+                </p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+############################################################
+# FILE: app/(marketing)/demo/components/LiveActivityStream.tsx
+############################################################
+"use client";
+
+const activities = [
+  "New enterprise lead assigned to Sarah",
+  "AI responded to inbound inquiry",
+  "Healthcare campaign launched",
+  "Pipeline status updated for Apex Logistics",
+  "Client onboarding completed",
+  "Proposal sent to enterprise lead",
+];
+
+export default function LiveActivityStream() {
+  return (
+    <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-6">
+      <div className="mb-5">
+        <h3 className="text-white font-bold text-lg">
+          Live Activity
+        </h3>
+
+        <p className="text-gray-500 text-sm">
+          Real-time operational updates
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        {activities.map((activity, i) => (
+          <div
+            key={i}
+            className="flex items-start gap-3"
+          >
+            <div className="w-2 h-2 mt-2 rounded-full bg-cyan-400 animate-pulse" />
+
+            <div>
+              <p className="text-sm text-gray-300">
+                {activity}
+              </p>
+
+              <p className="text-xs text-gray-500 mt-1">
+                {i + 1}m ago
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+############################################################
+# FILE: app/(marketing)/demo/components/PipelineFunnel.tsx
+############################################################
+"use client";
+
+export default function PipelineFunnel() {
+  const stages = [
+    {
+      name: "New Leads",
+      count: 248,
+      width: "100%",
+      color: "from-cyan-500/40 to-cyan-500/10",
+    },
+    {
+      name: "Contacted",
+      count: 186,
+      width: "82%",
+      color: "from-sky-500/40 to-sky-500/10",
+    },
+    {
+      name: "Qualified",
+      count: 121,
+      width: "64%",
+      color: "from-blue-500/40 to-blue-500/10",
+    },
+    {
+      name: "Proposal Sent",
+      count: 74,
+      width: "48%",
+      color: "from-indigo-500/40 to-indigo-500/10",
+    },
+    {
+      name: "Negotiation",
+      count: 38,
+      width: "34%",
+      color: "from-violet-500/40 to-violet-500/10",
+    },
+    {
+      name: "Closed Won",
+      count: 19,
+      width: "22%",
+      color: "from-emerald-500/40 to-emerald-500/10",
+    },
+  ];
+
+  return (
+    <div className="p-6 rounded-2xl border border-white/10 bg-[#0b0b0b]">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-white text-xl font-semibold">
+            Pipeline Funnel
+          </h2>
+          <p className="text-sm text-gray-500">
+            Live sales pipeline conversion overview
+          </p>
+        </div>
+
+        <div className="text-right">
+          <p className="text-xs text-gray-500 uppercase tracking-wider">
+            Conversion Rate
+          </p>
+          <p className="text-emerald-400 text-2xl font-bold">
+            7.6%
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {stages.map((stage) => (
+          <div key={stage.name}>
+            <div className="flex justify-between mb-2">
+              <span className="text-sm text-gray-300">
+                {stage.name}
+              </span>
+
+              <span className="text-sm text-cyan-400 font-medium">
+                {stage.count} Leads
+              </span>
+            </div>
+
+            <div className="w-full bg-white/5 rounded-xl h-12 overflow-hidden">
+              <div
+                className={`h-full rounded-xl bg-gradient-to-r ${stage.color} border border-white/10 flex items-center px-4`}
+                style={{
+                  width: stage.width,
+                  transition: "width 0.6s ease",
+                }}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <span className="text-xs text-white/90">
+                    Active Prospects
+                  </span>
+
+                  <span className="text-xs text-white/70">
+                    {stage.width}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+############################################################
+# FILE: app/(marketing)/demo/components/RevenueForecast.tsx
+############################################################
+"use client";
+
+const months = [
+  { month: "Jan", value: 42 },
+  { month: "Feb", value: 51 },
+  { month: "Mar", value: 48 },
+  { month: "Apr", value: 64 },
+  { month: "May", value: 72 },
+  { month: "Jun", value: 81 },
+  { month: "Jul", value: 93 },
+  { month: "Aug", value: 108 },
+];
+
+export default function RevenueForecast() {
+  return (
+    <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-6">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-white font-semibold text-lg">
+            Revenue Forecast
+          </h3>
+
+          <p className="text-gray-500 text-sm">
+            Predicted recurring revenue growth
+          </p>
+        </div>
+
+        <div className="text-right">
+          <p className="text-emerald-400 text-xl font-bold">
+            +28.4%
+          </p>
+
+          <p className="text-gray-500 text-xs">
+            projected growth
+          </p>
+        </div>
+      </div>
+
+      <div className="h-64 flex items-end gap-3">
+        {months.map((m) => (
+          <div
+            key={m.month}
+            className="flex-1 flex flex-col items-center gap-2"
+          >
+            <div className="relative w-full flex items-end h-full">
+              <div
+                className="w-full rounded-t-xl bg-gradient-to-t from-cyan-500/30 to-cyan-400/70 border border-cyan-400/20"
+                style={{
+                  height: `${m.value}%`,
+                }}
+              />
+
+              <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] text-cyan-300">
+                ${m.value}k
+              </div>
+            </div>
+
+            <span className="text-xs text-gray-500">
+              {m.month}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+############################################################
+# FILE: app/(marketing)/demo/components/SalesHeatmap.tsx
+############################################################
+"use client";
+
+const rows = new Array(7).fill(0);
+const cols = new Array(14).fill(0);
+
+export default function SalesHeatmap() {
+  return (
+    <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-6">
+      <div className="mb-5">
+        <h3 className="text-white font-bold text-lg">
+          Sales Activity Heatmap
+        </h3>
+
+        <p className="text-gray-500 text-sm">
+          Lead engagement intensity
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        {rows.map((_, r) => (
+          <div
+            key={r}
+            className="flex gap-2"
+          >
+            {cols.map((_, c) => {
+              const level = ((r * c) + c + r) % 4;
+
+              const bg =
+                level === 0
+                  ? "bg-white/5"
+                  : level === 1
+                  ? "bg-cyan-500/20"
+                  : level === 2
+                  ? "bg-cyan-400/40"
+                  : "bg-cyan-300/70";
+
+              return (
+                <div
+                  key={c}
+                  className={`w-5 h-5 rounded-md ${bg}`}
+                />
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+############################################################
+# FILE: app/(marketing)/demo/components/TeamPerformance.tsx
+############################################################
+"use client";
+
+const reps = [
+  {
+    name: "Sarah Chen",
+    deals: 14,
+    closeRate: "32%",
+  },
+  {
+    name: "Marcus Reed",
+    deals: 11,
+    closeRate: "28%",
+  },
+  {
+    name: "Emily Carter",
+    deals: 9,
+    closeRate: "24%",
+  },
+];
+
+export default function TeamPerformance() {
+  return (
+    <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-6">
+      <div className="mb-5">
+        <h3 className="text-white font-bold text-lg">
+          Team Performance
+        </h3>
+
+        <p className="text-gray-500 text-sm">
+          Sales representative productivity
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        {reps.map((rep) => (
+          <div
+            key={rep.name}
+            className="p-4 rounded-xl border border-white/5 bg-black/20"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-white font-medium">
+                  {rep.name}
+                </p>
+
+                <p className="text-xs text-gray-500">
+                  Account Executive
+                </p>
+              </div>
+
+              <span className="text-emerald-400 text-sm">
+                {rep.closeRate}
+              </span>
+            </div>
+
+            <div className="w-full bg-black/40 rounded-full h-2 overflow-hidden">
+              <div
+                className="h-full bg-cyan-400 rounded-full"
+                style={{
+                  width: rep.closeRate,
+                }}
+              />
+            </div>
+
+            <div className="flex justify-between mt-3 text-xs">
+              <span className="text-gray-500">
+                Deals Closed
+              </span>
+
+              <span className="text-white">
+                {rep.deals}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+############################################################
+# FILE: app/(marketing)/demo/dashboard/page.tsx
+############################################################
+"use client";
+
+import PipelineFunnel from "../components/PipelineFunnel";
+import TeamPerformance from "../components/TeamPerformance";
+import LiveActivityStream from "../components/LiveActivityStream";
+import RevenueForecast from "../components/RevenueForecast";
+import CustomerHealth from "../components/CustomerHealth";
+import AutomationQueue from "../components/AutomationQueue";
+
+const stats = [
+  {
+    label: "Monthly Revenue",
+    value: "$142.5k",
+    change: "+12.4%",
+  },
+  {
+    label: "Active Leads",
+    value: "842",
+    change: "+18%",
+  },
+  {
+    label: "Open Tasks",
+    value: "37",
+    change: "-4%",
+  },
+  {
+    label: "Response Rate",
+    value: "94%",
+    change: "+6%",
+  },
+];
+
+export default function DashboardPage() {
+  return (
+    <div className="space-y-8">
+
+      {/* HEADER */}
+      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#0b0b0b]/90 backdrop-blur-xl p-8">
+
+        {/* GLOW */}
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute -top-24 left-0 w-72 h-72 bg-cyan-500/20 blur-[120px]" />
+          <div className="absolute bottom-0 right-0 w-72 h-72 bg-emerald-500/10 blur-[120px]" />
+        </div>
+
+        <div className="relative z-10 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-8">
+
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-400/20 bg-cyan-500/10 text-cyan-300 text-xs tracking-widest uppercase mb-5">
+              Live Operations
+            </div>
+
+            <h1 className="text-4xl xl:text-5xl font-black text-white leading-tight">
+              SynaptiReach
+              <span className="block bg-gradient-to-r from-cyan-300 to-emerald-300 bg-clip-text text-transparent">
+                Executive Dashboard
+              </span>
+            </h1>
+
+            <p className="text-gray-400 mt-5 max-w-2xl leading-relaxed">
+              Unified operational command center for pipeline management,
+              client activity, automation systems, communications,
+              and revenue growth tracking.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 min-w-[320px]">
+            <div className="rounded-2xl border border-white/10 bg-black/30 backdrop-blur-xl p-5">
+              <p className="text-gray-500 text-xs uppercase tracking-widest">
+                Active Automations
+              </p>
+
+              <h2 className="text-3xl font-bold text-white mt-2">
+                128
+              </h2>
+
+              <p className="text-emerald-400 text-sm mt-1">
+                +14% this week
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-black/30 backdrop-blur-xl p-5">
+              <p className="text-gray-500 text-xs uppercase tracking-widest">
+                Team Utilization
+              </p>
+
+              <h2 className="text-3xl font-bold text-white mt-2">
+                87%
+              </h2>
+
+              <p className="text-cyan-300 text-sm mt-1">
+                High productivity
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* MAIN STATS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+        {stats.map((s) => (
+          <div
+            key={s.label}
+            className="
+              group
+              relative
+              overflow-hidden
+              rounded-2xl
+              border border-white/10
+              bg-[#0b0b0b]/90
+              backdrop-blur-xl
+              p-6
+              hover:border-cyan-400/20
+              transition-all
+              duration-300
+            "
+          >
+
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent" />
+            </div>
+
+            <div className="relative z-10">
+              <p className="text-gray-500 text-xs uppercase tracking-[0.2em]">
+                {s.label}
+              </p>
+
+              <div className="flex items-end justify-between mt-4">
+                <h2 className="text-4xl font-black text-white">
+                  {s.value}
+                </h2>
+
+                <span className="text-emerald-400 text-sm font-medium">
+                  {s.change}
+                </span>
+              </div>
+
+              <div className="mt-5 h-[2px] rounded-full bg-white/5 overflow-hidden">
+                <div className="w-2/3 h-full bg-gradient-to-r from-cyan-400 to-emerald-300" />
+              </div>
+            </div>
+
+          </div>
+        ))}
+      </div>
+
+      {/* PRIMARY GRID */}
+      <div className="grid grid-cols-1 2xl:grid-cols-12 gap-6">
+
+        {/* LEFT */}
+        <div className="2xl:col-span-8 space-y-6">
+
+          <div className="
+            rounded-3xl
+            border border-white/10
+            bg-[#0b0b0b]/90
+            backdrop-blur-xl
+            p-2
+          ">
+            <PipelineFunnel />
+          </div>
+
+          <div className="
+            rounded-3xl
+            border border-white/10
+            bg-[#0b0b0b]/90
+            backdrop-blur-xl
+            p-2
+          ">
+            <RevenueForecast />
+          </div>
+
+        </div>
+
+        {/* RIGHT */}
+        <div className="2xl:col-span-4 space-y-6">
+
+          <div className="
+            rounded-3xl
+            border border-white/10
+            bg-[#0b0b0b]/90
+            backdrop-blur-xl
+            p-2
+          ">
+            <TeamPerformance />
+          </div>
+
+          <div className="
+            rounded-3xl
+            border border-white/10
+            bg-[#0b0b0b]/90
+            backdrop-blur-xl
+            p-2
+          ">
+            <LiveActivityStream />
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* LOWER GRID */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+        <div className="
+          rounded-3xl
+          border border-white/10
+          bg-[#0b0b0b]/90
+          backdrop-blur-xl
+          p-2
+        ">
+          <CustomerHealth />
+        </div>
+
+        <div className="
+          rounded-3xl
+          border border-white/10
+          bg-[#0b0b0b]/90
+          backdrop-blur-xl
+          p-2
+        ">
+          <AutomationQueue />
+        </div>
+
+        {/* NOTIFICATIONS */}
+        <div className="
+          relative
+          overflow-hidden
+          rounded-3xl
+          border border-white/10
+          bg-[#0b0b0b]/90
+          backdrop-blur-xl
+          p-6
+        ">
+
+          <div className="absolute top-0 right-0 w-40 h-40 bg-cyan-500/10 blur-[100px]" />
+
+          <div className="relative z-10">
+            <div className="mb-6">
+              <h3 className="text-white text-xl font-bold">
+                Notifications
+              </h3>
+
+              <p className="text-gray-500 text-sm mt-1">
+                Important operational alerts
+              </p>
+            </div>
+
+            <div className="space-y-4">
+
+              {[
+                {
+                  title: "Enterprise demos scheduled",
+                  detail: "3 high-value prospects confirmed today",
+                },
+                {
+                  title: "Campaign exceeded targets",
+                  detail: "CTR improved by 18.2% in healthcare vertical",
+                },
+                {
+                  title: "Client onboarding completed",
+                  detail: "Nova Medical workspace activated",
+                },
+                {
+                  title: "Pipeline conversion increase",
+                  detail: "Sales conversions rose 12% this week",
+                },
+              ].map((n) => (
+                <div
+                  key={n.title}
+                  className="
+                    rounded-2xl
+                    border border-white/5
+                    bg-black/20
+                    p-4
+                    hover:border-cyan-400/20
+                    transition-all
+                  "
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-2 h-2 rounded-full bg-cyan-400 mt-2 animate-pulse" />
+
+                    <div>
+                      <p className="text-white text-sm font-medium">
+                        {n.title}
+                      </p>
+
+                      <p className="text-gray-500 text-sm mt-1 leading-relaxed">
+                        {n.detail}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  );
+}
+
+
+############################################################
+# FILE: app/(marketing)/demo/layout.tsx
+############################################################
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  LayoutDashboard,
+  Users,
+  Megaphone,
+  Bot,
+  Workflow,
+  MessageSquare,
+  Settings,
+  Zap,
+} from "lucide-react";
+
+const navItems = [
+  {
+    label: "Dashboard",
+    href: "/demo/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    label: "Leads",
+    href: "/demo/leads",
+    icon: Users,
+  },
+  {
+    label: "Marketing",
+    href: "/demo/marketing",
+    icon: Megaphone,
+  },
+  {
+    label: "AI Assistant",
+    href: "/demo/ai_assistant",
+    icon: Bot,
+  },
+  {
+    label: "Workflow",
+    href: "/demo/workflow",
+    icon: Workflow,
+  },
+  {
+    label: "Communications",
+    href: "/demo/communications",
+    icon: MessageSquare,
+  },
+  {
+    label: "Settings",
+    href: "/demo/settings",
+    icon: Settings,
+  },
+];
+
+export default function DemoLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname();
+
+  return (
+    <div className="min-h-screen bg-[#050505] text-white flex">
+      
+      {/* SIDEBAR */}
+      <aside className="fixed left-0 top-0 h-screen w-72 border-r border-white/10 bg-black/80 backdrop-blur-xl p-6 flex flex-col z-40">
+        
+        {/* LOGO */}
+        <div className="flex items-center gap-3 mb-10">
+          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+            <Zap className="text-cyan-400" size={18} />
+          </div>
+
+          <div>
+            <h1 className="text-white font-semibold tracking-wide">
+              SynaptiReach
+            </h1>
+            <p className="text-xs text-gray-500">
+              Enterprise AI Platform
+            </p>
+          </div>
+        </div>
+
+        {/* NAV */}
+        <nav className="space-y-2 flex-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active = pathname === item.href;
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 border ${
+                  active
+                    ? "bg-cyan-500/10 border-cyan-500/30 text-cyan-300"
+                    : "border-transparent text-gray-500 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <Icon size={18} />
+                <span className="text-sm font-medium">
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+      </aside>
+
+      {/* MAIN CONTENT */}
+      <main className="flex-1 ml-72 min-h-screen">
+        <div className="p-8">
+          {children}
+        </div>
+      </main>
+
+    </div>
+  );
+}
+
+
+############################################################
+# FILE: app/(marketing)/demo/leads/page.tsx
+############################################################
+"use client";
+
+import {
+  Search,
+  Filter,
+  Plus,
+  ArrowUpRight,
+  Phone,
+  Mail,
+  Calendar,
+  TrendingUp,
+  Target,
+  Clock3,
+  AlertCircle,
+  CheckCircle2,
+  Users,
+  Sparkles,
+} from "lucide-react";
+
+const leads = [
+  {
+    name: "Nova Medical Group",
+    stage: "Qualified",
+    owner: "Sarah K.",
+    value: "$18,400",
+    status: "Hot",
+    source: "LinkedIn Campaign",
+    lastContact: "2h ago",
+  },
+  {
+    name: "Atlas Logistics",
+    stage: "Proposal",
+    owner: "Michael T.",
+    value: "$42,000",
+    status: "Negotiation",
+    source: "Inbound Demo",
+    lastContact: "45m ago",
+  },
+  {
+    name: "Elevate Fitness",
+    stage: "Discovery",
+    owner: "Emma R.",
+    value: "$8,200",
+    status: "Warm",
+    source: "Instagram Ads",
+    lastContact: "1d ago",
+  },
+  {
+    name: "Vertex Construction",
+    stage: "Closed Won",
+    owner: "David L.",
+    value: "$61,000",
+    status: "Converted",
+    source: "Referral",
+    lastContact: "3h ago",
+  },
+  {
+    name: "BluePeak Dental",
+    stage: "Contacted",
+    owner: "Alex M.",
+    value: "$14,700",
+    status: "Follow Up",
+    source: "Cold Outreach",
+    lastContact: "20m ago",
+  },
+];
+
+const pipeline = [
+  { label: "New Leads", count: 148, color: "from-cyan-400 to-cyan-300" },
+  { label: "Contacted", count: 96, color: "from-sky-400 to-cyan-300" },
+  { label: "Qualified", count: 58, color: "from-emerald-400 to-cyan-300" },
+  { label: "Proposal", count: 27, color: "from-purple-400 to-cyan-300" },
+  { label: "Closed", count: 14, color: "from-green-400 to-emerald-300" },
+];
+
+export default function LeadsPage() {
+  return (
+    <div className="space-y-8">
+
+      {/* HEADER */}
+      <div className="
+        relative
+        overflow-hidden
+        rounded-3xl
+        border border-white/10
+        bg-[#0b0b0b]/90
+        backdrop-blur-xl
+        p-8
+      ">
+
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute left-0 top-0 w-72 h-72 bg-cyan-500/10 blur-[120px]" />
+          <div className="absolute right-0 bottom-0 w-72 h-72 bg-emerald-500/10 blur-[120px]" />
+        </div>
+
+        <div className="relative z-10 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-8">
+
+          <div>
+            <div className="
+              inline-flex
+              items-center
+              gap-2
+              px-3
+              py-1
+              rounded-full
+              border
+              border-cyan-400/20
+              bg-cyan-500/10
+              text-cyan-300
+              text-xs
+              uppercase
+              tracking-[0.2em]
+              mb-5
+            ">
+              Lead Operations
+            </div>
+
+            <h1 className="text-4xl xl:text-5xl font-black text-white">
+              Sales Pipeline
+            </h1>
+
+            <p className="text-gray-400 mt-4 max-w-2xl leading-relaxed">
+              Manage incoming leads, monitor conversion activity,
+              prioritize opportunities, and track pipeline performance
+              across your organization.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-4">
+            <button className="
+              px-5
+              py-3
+              rounded-2xl
+              bg-cyan-500
+              hover:bg-cyan-400
+              text-black
+              font-semibold
+              transition-all
+              flex
+              items-center
+              gap-2
+            ">
+              <Plus size={18} />
+              Add Lead
+            </button>
+
+            <button className="
+              px-5
+              py-3
+              rounded-2xl
+              border
+              border-white/10
+              bg-black/30
+              hover:border-cyan-400/30
+              text-white
+              transition-all
+              flex
+              items-center
+              gap-2
+            ">
+              <Filter size={18} />
+              Filters
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      {/* KPI ROW */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+
+        {[
+          {
+            label: "Total Leads",
+            value: "842",
+            change: "+18%",
+            icon: <Users size={18} />,
+          },
+          {
+            label: "Hot Leads",
+            value: "63",
+            change: "+11%",
+            icon: <Sparkles size={18} />,
+          },
+          {
+            label: "Conversion Rate",
+            value: "28%",
+            change: "+4%",
+            icon: <TrendingUp size={18} />,
+          },
+          {
+            label: "Avg Deal Size",
+            value: "$24.8k",
+            change: "+7%",
+            icon: <Target size={18} />,
+          },
+        ].map((card) => (
+          <div
+            key={card.label}
+            className="
+              relative
+              overflow-hidden
+              rounded-2xl
+              border
+              border-white/10
+              bg-[#0b0b0b]/90
+              backdrop-blur-xl
+              p-6
+            "
+          >
+
+            <div className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity">
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent" />
+            </div>
+
+            <div className="relative z-10">
+              <div className="flex items-center justify-between">
+                <div className="
+                  w-11
+                  h-11
+                  rounded-xl
+                  bg-cyan-500/10
+                  border
+                  border-cyan-400/20
+                  flex
+                  items-center
+                  justify-center
+                  text-cyan-300
+                ">
+                  {card.icon}
+                </div>
+
+                <span className="text-emerald-400 text-sm font-medium">
+                  {card.change}
+                </span>
+              </div>
+
+              <h2 className="text-3xl font-black text-white mt-5">
+                {card.value}
+              </h2>
+
+              <p className="text-gray-500 text-sm mt-1">
+                {card.label}
+              </p>
+            </div>
+
+          </div>
+        ))}
+
+      </div>
+
+      {/* PIPELINE OVERVIEW */}
+      <div className="
+        rounded-3xl
+        border
+        border-white/10
+        bg-[#0b0b0b]/90
+        backdrop-blur-xl
+        p-8
+      ">
+
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-2xl font-bold text-white">
+              Pipeline Overview
+            </h2>
+
+            <p className="text-gray-500 mt-1">
+              Live lead progression across the sales funnel
+            </p>
+          </div>
+
+          <div className="
+            px-4
+            py-2
+            rounded-xl
+            border
+            border-emerald-400/20
+            bg-emerald-500/10
+            text-emerald-300
+            text-sm
+          ">
+            +12% conversion growth
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
+
+          {pipeline.map((stage, i) => (
+            <div
+              key={stage.label}
+              className="
+                relative
+                overflow-hidden
+                rounded-2xl
+                border
+                border-white/10
+                bg-black/30
+                p-5
+              "
+            >
+
+              <div className={`
+                absolute
+                top-0
+                left-0
+                h-1
+                w-full
+                bg-gradient-to-r
+                ${stage.color}
+              `} />
+
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400 text-sm">
+                  {stage.label}
+                </span>
+
+                {i !== pipeline.length - 1 && (
+                  <ArrowUpRight
+                    size={16}
+                    className="text-cyan-400"
+                  />
+                )}
+              </div>
+
+              <h3 className="text-4xl font-black text-white mt-6">
+                {stage.count}
+              </h3>
+
+              <div className="mt-5 h-2 rounded-full bg-white/5 overflow-hidden">
+                <div
+                  style={{
+                    width: `${100 - i * 15}%`,
+                  }}
+                  className={`
+                    h-full
+                    rounded-full
+                    bg-gradient-to-r
+                    ${stage.color}
+                  `}
+                />
+              </div>
+
+            </div>
+          ))}
+
+        </div>
+
+      </div>
+
+      {/* MAIN CONTENT */}
+      <div className="grid grid-cols-1 2xl:grid-cols-12 gap-6">
+
+        {/* LEADS TABLE */}
+        <div className="
+          2xl:col-span-8
+          rounded-3xl
+          border
+          border-white/10
+          bg-[#0b0b0b]/90
+          backdrop-blur-xl
+          overflow-hidden
+        ">
+
+          <div className="p-6 border-b border-white/5">
+
+            <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
+
+              <div>
+                <h2 className="text-2xl font-bold text-white">
+                  Active Leads
+                </h2>
+
+                <p className="text-gray-500 mt-1">
+                  Recently updated opportunities
+                </p>
+              </div>
+
+              <div className="
+                flex
+                items-center
+                gap-3
+                rounded-2xl
+                border
+                border-white/10
+                bg-black/30
+                px-4
+                py-3
+                min-w-[280px]
+              ">
+                <Search size={18} className="text-gray-500" />
+
+                <input
+                  placeholder="Search leads..."
+                  className="
+                    bg-transparent
+                    outline-none
+                    w-full
+                    text-sm
+                    placeholder:text-gray-500
+                  "
+                />
+              </div>
+
+            </div>
+
+          </div>
+
+          <div className="divide-y divide-white/5">
+
+            {leads.map((lead) => (
+              <div
+                key={lead.name}
+                className="
+                  p-6
+                  hover:bg-white/[0.03]
+                  transition-all
+                "
+              >
+
+                <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
+
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-white font-semibold text-lg">
+                        {lead.name}
+                      </h3>
+
+                      <span className="
+                        px-2
+                        py-1
+                        rounded-full
+                        bg-cyan-500/10
+                        border
+                        border-cyan-400/20
+                        text-cyan-300
+                        text-xs
+                      ">
+                        {lead.status}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-5 mt-3 text-sm text-gray-500">
+
+                      <div className="flex items-center gap-2">
+                        <Users size={14} />
+                        {lead.owner}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Mail size={14} />
+                        {lead.source}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Clock3 size={14} />
+                        {lead.lastContact}
+                      </div>
+
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-4">
+
+                    <div className="text-right">
+                      <p className="text-gray-500 text-xs uppercase">
+                        Deal Value
+                      </p>
+
+                      <h4 className="text-white font-bold text-xl">
+                        {lead.value}
+                      </h4>
+                    </div>
+
+                    <div className="
+                      px-4
+                      py-2
+                      rounded-xl
+                      border
+                      border-white/10
+                      bg-black/30
+                      text-white
+                      text-sm
+                    ">
+                      {lead.stage}
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+            ))}
+
+          </div>
+
+        </div>
+
+        {/* RIGHT SIDEBAR */}
+        <div className="2xl:col-span-4 space-y-6">
+
+          {/* TASKS */}
+          <div className="
+            rounded-3xl
+            border
+            border-white/10
+            bg-[#0b0b0b]/90
+            backdrop-blur-xl
+            p-6
+          ">
+
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-white">
+                Priority Tasks
+              </h2>
+
+              <p className="text-gray-500 text-sm mt-1">
+                Immediate sales actions
+              </p>
+            </div>
+
+            <div className="space-y-4">
+
+              {[
+                "Follow up with Atlas Logistics",
+                "Send proposal to Nova Medical",
+                "Review hot lead scoring updates",
+                "Schedule onboarding call",
+              ].map((task) => (
+                <div
+                  key={task}
+                  className="
+                    flex
+                    items-start
+                    gap-3
+                    p-4
+                    rounded-2xl
+                    border
+                    border-white/5
+                    bg-black/20
+                  "
+                >
+                  <CheckCircle2
+                    size={18}
+                    className="text-cyan-400 mt-0.5"
+                  />
+
+                  <div>
+                    <p className="text-white text-sm">
+                      {task}
+                    </p>
+
+                    <p className="text-gray-500 text-xs mt-1">
+                      Due within next 4 hours
+                    </p>
+                  </div>
+                </div>
+              ))}
+
+            </div>
+
+          </div>
+
+          {/* ACTIVITY */}
+          <div className="
+            rounded-3xl
+            border
+            border-white/10
+            bg-[#0b0b0b]/90
+            backdrop-blur-xl
+            p-6
+          ">
+
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-white">
+                Recent Activity
+              </h2>
+
+              <p className="text-gray-500 text-sm mt-1">
+                Live CRM updates
+              </p>
+            </div>
+
+            <div className="space-y-4">
+
+              {[
+                {
+                  title: "Lead converted to proposal",
+                  time: "12 min ago",
+                },
+                {
+                  title: "New inbound demo booked",
+                  time: "26 min ago",
+                },
+                {
+                  title: "AI lead score updated",
+                  time: "1h ago",
+                },
+                {
+                  title: "Pipeline moved to negotiation",
+                  time: "2h ago",
+                },
+              ].map((item) => (
+                <div
+                  key={item.title}
+                  className="
+                    flex
+                    gap-3
+                    p-4
+                    rounded-2xl
+                    border
+                    border-white/5
+                    bg-black/20
+                  "
+                >
+                  <div className="
+                    w-2
+                    h-2
+                    rounded-full
+                    bg-cyan-400
+                    mt-2
+                    animate-pulse
+                  " />
+
+                  <div>
+                    <p className="text-white text-sm">
+                      {item.title}
+                    </p>
+
+                    <p className="text-gray-500 text-xs mt-1">
+                      {item.time}
+                    </p>
+                  </div>
+                </div>
+              ))}
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  );
+}
+
+
+############################################################
+# FILE: app/(marketing)/demo/marketing/page.tsx
+############################################################
+"use client";
+
+import {
+  Megaphone,
+  Mail,
+  MessageSquare,
+  Bot,
+  Sparkles,
+  TrendingUp,
+  Calendar,
+  BarChart3,
+  CheckCircle2,
+  Clock3,
+  Activity,
+  Wand2,
+  Zap,
+  Globe,
+  Send,
+  Target,
+  Users,
+} from "lucide-react";
+
+export default function MarketingPage() {
+  return (
+    <div className="space-y-8">
+
+      {/* HEADER */}
+      <div className="flex flex-col 2xl:flex-row 2xl:items-center 2xl:justify-between gap-6">
+
+        <div>
+          <div className="flex items-center gap-4 mb-3">
+            <div className="p-4 rounded-3xl bg-cyan-500/10 border border-cyan-500/20 shadow-[0_0_40px_rgba(0,255,255,0.08)]">
+              <Megaphone className="text-cyan-400" size={30} />
+            </div>
+
+            <div>
+              <h1 className="text-4xl font-bold text-white tracking-tight">
+                Marketing Engine
+              </h1>
+
+              <p className="text-gray-400 mt-2">
+                AI-powered multi-channel campaign management and automation
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+          {[
+            ["Campaigns", "18"],
+            ["Reach", "142K"],
+            ["CTR", "8.4%"],
+            ["Conversions", "1,284"],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="bg-[#0b0b0b]/90 backdrop-blur-xl border border-white/10 rounded-3xl p-5"
+            >
+              <p className="text-[11px] uppercase tracking-[0.25em] text-gray-500">
+                {label}
+              </p>
+
+              <p className="text-3xl font-bold text-white mt-2">
+                {value}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* MAIN GRID */}
+      <div className="grid grid-cols-1 2xl:grid-cols-3 gap-8">
+
+        {/* LEFT COLUMN */}
+        <div className="2xl:col-span-2 space-y-8">
+
+          {/* EMAIL */}
+          <div className="bg-[#0b0b0b]/90 backdrop-blur-xl border border-white/10 rounded-3xl p-8">
+
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-4">
+                <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20">
+                  <Mail className="text-cyan-400" size={24} />
+                </div>
+
+                <div>
+                  <h2 className="text-2xl font-bold text-white">
+                    Email Campaigns
+                  </h2>
+
+                  <p className="text-sm text-gray-400 mt-1">
+                    Automated outreach sequences and conversion funnels
+                  </p>
+                </div>
+              </div>
+
+              <button className="px-5 py-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 hover:bg-cyan-500/20 transition-all">
+                New Campaign
+              </button>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-4 mb-6">
+              {[
+                ["Open Rate", "42.8%"],
+                ["Click Rate", "11.2%"],
+                ["Conversions", "248"],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="bg-black/30 border border-white/5 rounded-2xl p-5"
+                >
+                  <p className="text-xs uppercase tracking-wider text-gray-500">
+                    {label}
+                  </p>
+
+                  <p className="text-3xl font-bold text-white mt-3">
+                    {value}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-cyan-500/[0.03] border border-cyan-500/20 rounded-3xl p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <Bot className="text-cyan-400" size={20} />
+
+                <h3 className="text-lg font-semibold text-white">
+                  AI Email Assistant
+                </h3>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-4">
+                {[
+                  "Generate Welcome Sequence",
+                  "Write Promotional Blast",
+                  "Optimize Subject Lines",
+                ].map((tool) => (
+                  <button
+                    key={tool}
+                    className="text-left p-5 rounded-2xl bg-black/30 border border-white/5 hover:border-cyan-500/40 hover:bg-cyan-500/[0.05] transition-all"
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles size={15} className="text-cyan-400" />
+                      <span className="text-sm text-white">{tool}</span>
+                    </div>
+
+                    <p className="text-xs text-gray-500">
+                      AI-assisted content generation
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* SMS */}
+          <div className="bg-[#0b0b0b]/90 backdrop-blur-xl border border-white/10 rounded-3xl p-8">
+
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-4">
+                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+                  <MessageSquare className="text-emerald-400" size={24} />
+                </div>
+
+                <div>
+                  <h2 className="text-2xl font-bold text-white">
+                    SMS Campaigns
+                  </h2>
+
+                  <p className="text-sm text-gray-400 mt-1">
+                    Automated messaging and follow-up systems
+                  </p>
+                </div>
+              </div>
+
+              <button className="px-5 py-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20 transition-all">
+                Launch SMS
+              </button>
+            </div>
+
+            <div className="grid md:grid-cols-4 gap-4 mb-6">
+              {[
+                ["Delivered", "96%"],
+                ["Replies", "684"],
+                ["Opt-ins", "2.1K"],
+                ["Conversions", "194"],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="bg-black/30 border border-white/5 rounded-2xl p-5"
+                >
+                  <p className="text-xs uppercase tracking-wider text-gray-500">
+                    {label}
+                  </p>
+
+                  <p className="text-3xl font-bold text-white mt-3">
+                    {value}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-emerald-500/[0.03] border border-emerald-500/20 rounded-3xl p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <Bot className="text-emerald-400" size={20} />
+
+                <h3 className="text-lg font-semibold text-white">
+                  AI SMS Assistant
+                </h3>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-4">
+                {[
+                  "Generate SMS Sequence",
+                  "Write Follow-Ups",
+                  "Optimize Reply Rates",
+                ].map((tool) => (
+                  <button
+                    key={tool}
+                    className="text-left p-5 rounded-2xl bg-black/30 border border-white/5 hover:border-emerald-500/40 hover:bg-emerald-500/[0.05] transition-all"
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <Wand2 size={15} className="text-emerald-400" />
+                      <span className="text-sm text-white">{tool}</span>
+                    </div>
+
+                    <p className="text-xs text-gray-500">
+                      AI messaging optimization
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* SOCIAL */}
+          <div className="bg-[#0b0b0b]/90 backdrop-blur-xl border border-white/10 rounded-3xl p-8">
+
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-4">
+                <div className="p-4 rounded-2xl bg-pink-500/10 border border-pink-500/20">
+                  <Globe className="text-pink-400" size={24} />
+                </div>
+
+                <div>
+                  <h2 className="text-2xl font-bold text-white">
+                    Social Campaigns
+                  </h2>
+
+                  <p className="text-sm text-gray-400 mt-1">
+                    Facebook & Instagram ad automation and audience targeting
+                  </p>
+                </div>
+              </div>
+
+              <button className="px-5 py-3 rounded-2xl bg-pink-500/10 border border-pink-500/20 text-pink-300 hover:bg-pink-500/20 transition-all">
+                Create Ad
+              </button>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-5 mb-6">
+
+              <div className="bg-black/30 border border-white/5 rounded-3xl p-6">
+                <h3 className="text-lg font-semibold text-white mb-5">
+                  Facebook Campaigns
+                </h3>
+
+                <div className="space-y-4">
+                  {[
+                    ["Reach", "82K"],
+                    ["Engagement", "6.2%"],
+                    ["Conversions", "318"],
+                  ].map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="flex justify-between border-b border-white/5 pb-3"
+                    >
+                      <span className="text-gray-400 text-sm">
+                        {label}
+                      </span>
+
+                      <span className="text-white font-semibold">
+                        {value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-black/30 border border-white/5 rounded-3xl p-6">
+                <h3 className="text-lg font-semibold text-white mb-5">
+                  Instagram Campaigns
+                </h3>
+
+                <div className="space-y-4">
+                  {[
+                    ["Reach", "61K"],
+                    ["Engagement", "8.8%"],
+                    ["Conversions", "244"],
+                  ].map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="flex justify-between border-b border-white/5 pb-3"
+                    >
+                      <span className="text-gray-400 text-sm">
+                        {label}
+                      </span>
+
+                      <span className="text-white font-semibold">
+                        {value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-pink-500/[0.03] border border-pink-500/20 rounded-3xl p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <Bot className="text-pink-400" size={20} />
+
+                <h3 className="text-lg font-semibold text-white">
+                  AI Social Assistant
+                </h3>
+              </div>
+
+              <div className="grid md:grid-cols-4 gap-4">
+                {[
+                  "Generate Ad Copy",
+                  "Create Captions",
+                  "Suggest Hashtags",
+                  "Optimize Targeting",
+                ].map((tool) => (
+                  <button
+                    key={tool}
+                    className="text-left p-5 rounded-2xl bg-black/30 border border-white/5 hover:border-pink-500/40 hover:bg-pink-500/[0.05] transition-all"
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles size={15} className="text-pink-400" />
+                      <span className="text-sm text-white">{tool}</span>
+                    </div>
+
+                    <p className="text-xs text-gray-500">
+                      AI creative generation
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT SIDEBAR */}
+        <div className="space-y-8">
+
+          {/* RECENT ACTIVITY */}
+          <div className="bg-[#0b0b0b]/90 backdrop-blur-xl border border-white/10 rounded-3xl p-6">
+
+            <div className="flex items-center gap-3 mb-6">
+              <Activity className="text-cyan-400" size={20} />
+
+              <h3 className="text-xl font-bold text-white">
+                Campaign Activity
+              </h3>
+            </div>
+
+            <div className="space-y-4">
+              {[
+                "Email campaign increased CTR by 14%",
+                "Instagram campaign reached 12K users",
+                "SMS reminders converted 42 leads",
+                "AI generated new ad sequence",
+                "Facebook spend optimized automatically",
+              ].map((activity, i) => (
+                <div
+                  key={i}
+                  className="flex gap-3 pb-4 border-b border-white/5 last:border-0"
+                >
+                  <CheckCircle2
+                    className="text-cyan-400 mt-1"
+                    size={15}
+                  />
+
+                  <div>
+                    <p className="text-sm text-gray-300">
+                      {activity}
+                    </p>
+
+                    <p className="text-xs text-gray-500 mt-1">
+                      {i + 1}h ago
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* AI RECOMMENDATIONS */}
+          <div className="bg-[#0b0b0b]/90 backdrop-blur-xl border border-white/10 rounded-3xl p-6">
+
+            <div className="flex items-center gap-3 mb-6">
+              <Zap className="text-emerald-400" size={20} />
+
+              <h3 className="text-xl font-bold text-white">
+                AI Recommendations
+              </h3>
+            </div>
+
+            <div className="space-y-4">
+              {[
+                {
+                  title: "Increase Email Send Time",
+                  desc: "AI predicts 18% higher open rate at 8AM",
+                },
+                {
+                  title: "Boost Instagram Spend",
+                  desc: "Current ROAS outperforming Facebook by 2.3x",
+                },
+                {
+                  title: "Retarget Abandoned Leads",
+                  desc: "132 leads eligible for automated follow-up",
+                },
+              ].map((rec) => (
+                <div
+                  key={rec.title}
+                  className="bg-black/30 border border-white/5 rounded-2xl p-4"
+                >
+                  <p className="text-sm font-semibold text-white">
+                    {rec.title}
+                  </p>
+
+                  <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                    {rec.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* UPCOMING */}
+          <div className="bg-[#0b0b0b]/90 backdrop-blur-xl border border-white/10 rounded-3xl p-6">
+
+            <div className="flex items-center gap-3 mb-6">
+              <Calendar className="text-purple-400" size={20} />
+
+              <h3 className="text-xl font-bold text-white">
+                Scheduled Campaigns
+              </h3>
+            </div>
+
+            <div className="space-y-4">
+              {[
+                ["Friday Promo Blast", "8:00 AM"],
+                ["Weekend SMS Push", "12:00 PM"],
+                ["Instagram Reel Campaign", "3:30 PM"],
+              ].map(([title, time]) => (
+                <div
+                  key={title}
+                  className="flex items-center justify-between bg-black/30 border border-white/5 rounded-2xl p-4"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-white">
+                      {title}
+                    </p>
+
+                    <p className="text-xs text-gray-500 mt-1">
+                      Scheduled campaign
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <Clock3 size={14} />
+                    {time}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+############################################################
+# FILE: app/(marketing)/demo/page.tsx
+############################################################
+import { redirect } from "next/navigation";
+
+export default function DemoIndex() {
+  redirect("/demo/dashboard");
+}
+
+
+############################################################
+# FILE: app/(marketing)/demo/settings/page.tsx
+############################################################
+"use client";
+
+import {
+  Settings,
+  ShieldCheck,
+  Bell,
+  User,
+  KeyRound,
+  Globe,
+  Cpu,
+  CheckCircle2,
+  Sparkles,
+  Mail,
+  Bot,
+  Save,
+  Server,
+  Database,
+  Workflow,
+  Palette,
+  Smartphone,
+  Lock,
+  Cloud,
+  Monitor,
+  Zap,
+} from "lucide-react";
+
+export default function SettingsPage() {
+  return (
+    <div className="space-y-8">
+
+      {/* HEADER */}
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
+
+        <div className="flex items-center gap-4">
+          <div className="p-4 rounded-3xl bg-cyan-500/10 border border-cyan-500/20">
+            <Settings className="text-cyan-400" size={32} />
+          </div>
+
+          <div>
+            <h1 className="text-4xl font-bold text-white">
+              Platform Settings
+            </h1>
+
+            <p className="text-gray-400 mt-2 max-w-3xl">
+              Configure AI infrastructure, automation systems,
+              CRM behavior, communication integrations, branding,
+              security policies, analytics, and platform preferences.
+            </p>
+          </div>
+        </div>
+
+        <button className="px-6 py-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 hover:bg-cyan-500/20 transition-all flex items-center gap-2">
+          <Save size={18} />
+          Save All Changes
+        </button>
+      </div>
+
+      {/* GRID */}
+      <div className="grid grid-cols-1 2xl:grid-cols-3 gap-8">
+
+        {/* LEFT */}
+        <div className="2xl:col-span-2 space-y-8">
+
+          {/* ACCOUNT */}
+          <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-8">
+            <div className="flex items-center gap-3 mb-8">
+              <User className="text-cyan-400" size={22} />
+              <h2 className="text-2xl font-bold text-white">
+                Account Settings
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Business Name
+                </label>
+
+                <input
+                  defaultValue="SynaptiReach"
+                  className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Admin Email
+                </label>
+
+                <input
+                  defaultValue="admin@synaptireach.ai"
+                  className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Timezone
+                </label>
+
+                <select className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none">
+                  <option>Central Time (US)</option>
+                  <option>Eastern Time (US)</option>
+                  <option>Pacific Time (US)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Language
+                </label>
+
+                <select className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none">
+                  <option>English</option>
+                  <option>Spanish</option>
+                </select>
+              </div>
+
+            </div>
+          </div>
+
+          {/* AI */}
+          <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-8">
+
+            <div className="flex items-center gap-3 mb-8">
+              <Bot className="text-emerald-400" size={22} />
+              <h2 className="text-2xl font-bold text-white">
+                AI Integrations
+              </h2>
+            </div>
+
+            <div className="space-y-6">
+
+              {[
+                ["OpenAI API Key", "sk-..."],
+                ["Gemini API Key", "AIza..."],
+                ["Claude API Key", "claude-api-key"],
+              ].map(([title, placeholder]) => (
+                <div
+                  key={title}
+                  className="bg-black/30 border border-white/5 rounded-3xl p-6"
+                >
+                  <label className="block text-sm text-gray-400 mb-3">
+                    {title}
+                  </label>
+
+                  <input
+                    placeholder={placeholder}
+                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none"
+                  />
+                </div>
+              ))}
+
+            </div>
+          </div>
+
+          {/* AI BEHAVIOR */}
+          <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-8">
+
+            <div className="flex items-center gap-3 mb-8">
+              <Cpu className="text-purple-400" size={22} />
+
+              <h2 className="text-2xl font-bold text-white">
+                AI Behavior Controls
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+              {[
+                "Enable Autonomous Suggestions",
+                "Auto Lead Scoring",
+                "Enable AI Conversations",
+                "Enable AI Email Writing",
+                "Smart Workflow Automation",
+                "Predictive Analytics",
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="flex items-center justify-between p-5 rounded-2xl bg-black/30 border border-white/5"
+                >
+                  <span className="text-gray-300 text-sm">
+                    {item}
+                  </span>
+
+                  <div className="w-11 h-6 rounded-full bg-cyan-500/20 relative">
+                    <div className="absolute right-1 top-1 w-4 h-4 rounded-full bg-cyan-400" />
+                  </div>
+                </div>
+              ))}
+
+            </div>
+          </div>
+
+          {/* TWILIO */}
+          <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-8">
+
+            <div className="flex items-center gap-3 mb-8">
+              <Smartphone className="text-green-400" size={22} />
+
+              <h2 className="text-2xl font-bold text-white">
+                Twilio SMS / Calling
+              </h2>
+            </div>
+
+            <div className="space-y-5">
+
+              <input
+                placeholder="Twilio Account SID"
+                className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none"
+              />
+
+              <input
+                placeholder="Twilio Auth Token"
+                className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none"
+              />
+
+              <input
+                placeholder="Twilio Phone Number"
+                className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none"
+              />
+
+            </div>
+          </div>
+
+          {/* SOCIAL */}
+          <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-8">
+
+            <div className="flex items-center gap-3 mb-8">
+              <Globe className="text-pink-400" size={22} />
+
+              <h2 className="text-2xl font-bold text-white">
+                Social Integrations
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+              <div className="bg-black/30 border border-white/5 rounded-3xl p-6 space-y-4">
+                <h3 className="text-xl font-semibold text-white">
+                  Facebook
+                </h3>
+
+                <input
+                  placeholder="Facebook App ID"
+                  className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none"
+                />
+
+                <input
+                  placeholder="Facebook Access Token"
+                  className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none"
+                />
+              </div>
+
+              <div className="bg-black/30 border border-white/5 rounded-3xl p-6 space-y-4">
+                <h3 className="text-xl font-semibold text-white">
+                  Instagram
+                </h3>
+
+                <input
+                  placeholder="Instagram Business ID"
+                  className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none"
+                />
+
+                <input
+                  placeholder="Instagram Access Token"
+                  className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none"
+                />
+              </div>
+
+            </div>
+          </div>
+
+          {/* EMAIL */}
+          <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-8">
+
+            <div className="flex items-center gap-3 mb-8">
+              <Mail className="text-cyan-400" size={22} />
+
+              <h2 className="text-2xl font-bold text-white">
+                Email / Resend
+              </h2>
+            </div>
+
+            <div className="space-y-5">
+
+              <input
+                placeholder="Resend API Key"
+                className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none"
+              />
+
+              <input
+                placeholder="Sender Domain"
+                className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none"
+              />
+
+              <input
+                placeholder="Sender Email"
+                className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none"
+              />
+
+            </div>
+          </div>
+
+          {/* CRM */}
+          <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-8">
+
+            <div className="flex items-center gap-3 mb-8">
+              <Database className="text-orange-400" size={22} />
+
+              <h2 className="text-2xl font-bold text-white">
+                CRM & Pipeline Settings
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+              {[
+                "Auto Assign Leads",
+                "Enable Opportunity Tracking",
+                "Duplicate Lead Detection",
+                "Pipeline Stage Automation",
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="flex items-center justify-between p-5 rounded-2xl bg-black/30 border border-white/5"
+                >
+                  <span className="text-sm text-gray-300">
+                    {item}
+                  </span>
+
+                  <div className="w-11 h-6 rounded-full bg-cyan-500/20 relative">
+                    <div className="absolute right-1 top-1 w-4 h-4 rounded-full bg-cyan-400" />
+                  </div>
+                </div>
+              ))}
+
+            </div>
+          </div>
+
+        </div>
+
+        {/* RIGHT */}
+        <div className="space-y-8">
+
+          {/* SECURITY */}
+          <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-6">
+
+            <div className="flex items-center gap-3 mb-6">
+              <ShieldCheck className="text-emerald-400" size={20} />
+
+              <h3 className="text-2xl font-bold text-white">
+                Security
+              </h3>
+            </div>
+
+            <div className="space-y-4">
+
+              {[
+                "2FA Authentication",
+                "Encrypted Sessions",
+                "Protected API Access",
+                "Firewall Enabled",
+                "Threat Monitoring",
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="flex items-center justify-between p-4 rounded-2xl bg-black/30 border border-white/5"
+                >
+                  <span className="text-gray-300 text-sm">
+                    {item}
+                  </span>
+
+                  <CheckCircle2
+                    className="text-emerald-400"
+                    size={18}
+                  />
+                </div>
+              ))}
+
+            </div>
+          </div>
+
+          {/* NOTIFICATIONS */}
+          <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-6">
+
+            <div className="flex items-center gap-3 mb-6">
+              <Bell className="text-orange-400" size={20} />
+
+              <h3 className="text-2xl font-bold text-white">
+                Notifications
+              </h3>
+            </div>
+
+            <div className="space-y-4">
+
+              {[
+                "Lead Alerts",
+                "AI Activity Reports",
+                "Campaign Updates",
+                "Workflow Errors",
+                "Security Notifications",
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="flex items-center justify-between p-4 rounded-2xl bg-black/30 border border-white/5"
+                >
+                  <span className="text-sm text-gray-300">
+                    {item}
+                  </span>
+
+                  <div className="w-10 h-5 rounded-full bg-cyan-500/20 relative">
+                    <div className="absolute right-1 top-0.5 w-4 h-4 rounded-full bg-cyan-400" />
+                  </div>
+                </div>
+              ))}
+
+            </div>
+          </div>
+
+          {/* SYSTEM */}
+          <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-6">
+
+            <div className="flex items-center gap-3 mb-6">
+              <Server className="text-purple-400" size={20} />
+
+              <h3 className="text-2xl font-bold text-white">
+                System Status
+              </h3>
+            </div>
+
+            <div className="space-y-5">
+
+              {[
+                ["AI Core", "Operational"],
+                ["CRM Database", "Healthy"],
+                ["Automation Engine", "Online"],
+                ["Email Infrastructure", "Connected"],
+                ["Cloud Sync", "Active"],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="flex items-center justify-between border-b border-white/5 pb-4"
+                >
+                  <span className="text-gray-400 text-sm">
+                    {label}
+                  </span>
+
+                  <span className="text-emerald-300 text-sm">
+                    {value}
+                  </span>
+                </div>
+              ))}
+
+            </div>
+          </div>
+
+          {/* APPEARANCE */}
+          <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-6">
+
+            <div className="flex items-center gap-3 mb-6">
+              <Palette className="text-pink-400" size={20} />
+
+              <h3 className="text-2xl font-bold text-white">
+                Appearance
+              </h3>
+            </div>
+
+            <div className="space-y-4">
+
+              <select className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none">
+                <option>Dark Mode</option>
+                <option>System Theme</option>
+              </select>
+
+              <select className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none">
+                <option>Cyan Theme</option>
+                <option>Purple Theme</option>
+              </select>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+############################################################
+# FILE: app/(marketing)/demo/workflow/page.tsx
+############################################################
+"use client";
+
+import {
+  Workflow,
+  Zap,
+  CheckCircle2,
+  Clock3,
+  AlertCircle,
+  ArrowRight,
+  Layers3,
+  Users,
+  MessageSquare,
+  Mail,
+  Bot,
+  Activity,
+  Sparkles,
+  Play,
+  Pause,
+  BarChart3,
+  Target,
+  ShieldCheck,
+  Cpu,
+  Database,
+  GitBranch,
+  RefreshCw,
+  TrendingUp,
+} from "lucide-react";
+
+export default function WorkflowPage() {
+  const workflows = [
+    {
+      title: "Lead Qualification Automation",
+      status: "Active",
+      trigger: "New lead submitted",
+      actions: [
+        "AI lead scoring",
+        "Assign sales rep",
+        "Send welcome email",
+        "Create CRM opportunity",
+      ],
+      color: "cyan",
+    },
+    {
+      title: "Hot Lead Escalation",
+      status: "Running",
+      trigger: "Lead score exceeds 90%",
+      actions: [
+        "Notify sales team",
+        "Trigger SMS follow-up",
+        "Schedule callback",
+        "Move pipeline stage",
+      ],
+      color: "emerald",
+    },
+    {
+      title: "Missed Communication Recovery",
+      status: "Monitoring",
+      trigger: "No reply in 48 hours",
+      actions: [
+        "AI follow-up message",
+        "Re-engagement sequence",
+        "Manager notification",
+      ],
+      color: "purple",
+    },
+    {
+      title: "Client Onboarding Pipeline",
+      status: "Operational",
+      trigger: "Contract signed",
+      actions: [
+        "Generate onboarding tasks",
+        "Create workspace",
+        "Assign onboarding specialist",
+        "Launch welcome automation",
+      ],
+      color: "orange",
+    },
+  ];
+
+  return (
+    <div className="space-y-8">
+
+      {/* HEADER */}
+      <div className="flex flex-col 2xl:flex-row 2xl:items-center 2xl:justify-between gap-6">
+
+        <div className="flex items-center gap-5">
+
+          <div className="p-4 rounded-3xl bg-cyan-500/10 border border-cyan-500/20">
+            <Workflow className="text-cyan-400" size={34} />
+          </div>
+
+          <div>
+            <h1 className="text-4xl font-bold text-white tracking-tight">
+              Workflow Automation
+            </h1>
+
+            <p className="text-gray-400 mt-2 max-w-3xl">
+              Centralized automation system managing lead routing,
+              communications, onboarding, AI actions, CRM updates,
+              and operational workflows across the platform.
+            </p>
+          </div>
+        </div>
+
+        {/* METRICS */}
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+
+          {[
+            ["Active Workflows", "42"],
+            ["Automations Today", "4,281"],
+            ["Execution Success", "98.4%"],
+            ["Avg Runtime", "0.8s"],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="bg-[#0b0b0b]/90 border border-white/10 rounded-3xl p-5"
+            >
+              <p className="text-[11px] uppercase tracking-[0.25em] text-gray-500">
+                {label}
+              </p>
+
+              <p className="text-2xl font-bold text-white mt-3">
+                {value}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* LIVE AUTOMATION FLOW */}
+      <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-8 overflow-hidden relative">
+
+        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/5 blur-3xl rounded-full" />
+
+        <div className="relative z-10">
+
+          <div className="flex items-center justify-between mb-8">
+
+            <div className="flex items-center gap-4">
+              <div className="p-4 rounded-3xl bg-cyan-500/10 border border-cyan-500/20">
+                <GitBranch className="text-cyan-400" size={28} />
+              </div>
+
+              <div>
+                <h2 className="text-3xl font-bold text-white">
+                  Live Workflow Pipeline
+                </h2>
+
+                <p className="text-gray-400 mt-2">
+                  Real-time workflow orchestration and automation execution
+                </p>
+              </div>
+            </div>
+
+            <div className="px-5 py-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm flex items-center gap-2">
+              <CheckCircle2 size={15} />
+              System Operational
+            </div>
+          </div>
+
+          {/* FLOW VISUAL */}
+          <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
+
+            {[
+              {
+                icon: Users,
+                title: "Lead Entered",
+                desc: "New contact captured",
+              },
+              {
+                icon: Bot,
+                title: "AI Processing",
+                desc: "Scoring + enrichment",
+              },
+              {
+                icon: Workflow,
+                title: "Automation",
+                desc: "Workflow execution",
+              },
+              {
+                icon: MessageSquare,
+                title: "Communication",
+                desc: "Email/SMS engagement",
+              },
+              {
+                icon: Target,
+                title: "Conversion",
+                desc: "Opportunity created",
+              },
+            ].map((step, index) => {
+              const Icon = step.icon;
+
+              return (
+                <div
+                  key={step.title}
+                  className="relative bg-black/30 border border-white/5 rounded-3xl p-6"
+                >
+                  <div className="flex items-center justify-between mb-6">
+
+                    <div className="p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/20">
+                      <Icon className="text-cyan-400" size={22} />
+                    </div>
+
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                  </div>
+
+                  <h3 className="text-white font-semibold text-lg">
+                    {step.title}
+                  </h3>
+
+                  <p className="text-sm text-gray-500 mt-3 leading-relaxed">
+                    {step.desc}
+                  </p>
+
+                  {index !== 4 && (
+                    <ArrowRight
+                      className="hidden xl:block absolute -right-4 top-1/2 -translate-y-1/2 text-gray-700"
+                      size={20}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* MAIN GRID */}
+      <div className="grid grid-cols-1 2xl:grid-cols-3 gap-8">
+
+        {/* LEFT */}
+        <div className="2xl:col-span-2 space-y-8">
+
+          {/* WORKFLOW CARDS */}
+          {workflows.map((workflow) => (
+            <div
+              key={workflow.title}
+              className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-8"
+            >
+              <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6 mb-8">
+
+                <div className="flex items-start gap-5">
+
+                  <div
+                    className={`
+                      p-4 rounded-3xl
+                      ${workflow.color === "cyan" && "bg-cyan-500/10 border border-cyan-500/20"}
+                      ${workflow.color === "emerald" && "bg-emerald-500/10 border border-emerald-500/20"}
+                      ${workflow.color === "purple" && "bg-purple-500/10 border border-purple-500/20"}
+                      ${workflow.color === "orange" && "bg-orange-500/10 border border-orange-500/20"}
+                    `}
+                  >
+                    <Zap
+                      className={`
+                        ${workflow.color === "cyan" && "text-cyan-400"}
+                        ${workflow.color === "emerald" && "text-emerald-400"}
+                        ${workflow.color === "purple" && "text-purple-400"}
+                        ${workflow.color === "orange" && "text-orange-400"}
+                      `}
+                      size={24}
+                    />
+                  </div>
+
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">
+                      {workflow.title}
+                    </h2>
+
+                    <p className="text-gray-400 mt-3">
+                      Trigger: {workflow.trigger}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+
+                  <div className="px-4 py-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm flex items-center gap-2">
+                    <CheckCircle2 size={14} />
+                    {workflow.status}
+                  </div>
+
+                  <button className="p-3 rounded-2xl bg-white/5 border border-white/10 hover:border-cyan-500/30 transition-all">
+                    <Pause className="text-gray-300" size={16} />
+                  </button>
+                </div>
+              </div>
+
+              {/* ACTION FLOW */}
+              <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+
+                {workflow.actions.map((action, index) => (
+                  <div
+                    key={action}
+                    className="relative bg-black/30 border border-white/5 rounded-3xl p-5"
+                  >
+                    <div className="flex items-center justify-between mb-5">
+
+                      <div className="w-8 h-8 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 text-sm font-semibold">
+                        {index + 1}
+                      </div>
+
+                      <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    </div>
+
+                    <p className="text-white text-sm leading-relaxed">
+                      {action}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {/* ACTIVE TASK QUEUE */}
+          <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-8">
+
+            <div className="flex items-center gap-4 mb-8">
+              <Layers3 className="text-cyan-400" size={24} />
+
+              <h2 className="text-3xl font-bold text-white">
+                Active Workflow Queue
+              </h2>
+            </div>
+
+            <div className="space-y-4">
+
+              {[
+                {
+                  title: "Lead onboarding automation executing",
+                  status: "Running",
+                  time: "2s ago",
+                },
+                {
+                  title: "Email follow-up workflow triggered",
+                  status: "Completed",
+                  time: "1m ago",
+                },
+                {
+                  title: "AI lead routing processing",
+                  status: "Active",
+                  time: "Realtime",
+                },
+                {
+                  title: "Pipeline escalation sequence",
+                  status: "Queued",
+                  time: "Awaiting execution",
+                },
+              ].map((task) => (
+                <div
+                  key={task.title}
+                  className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 p-5 rounded-3xl bg-black/30 border border-white/5"
+                >
+                  <div>
+                    <p className="text-white font-medium">
+                      {task.title}
+                    </p>
+
+                    <p className="text-gray-500 text-sm mt-2">
+                      {task.time}
+                    </p>
+                  </div>
+
+                  <div className="px-4 py-2 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-sm flex items-center gap-2">
+                    <Clock3 size={14} />
+                    {task.status}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT SIDEBAR */}
+        <div className="space-y-8">
+
+          {/* LIVE ACTIVITY */}
+          <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-6">
+
+            <div className="flex items-center gap-3 mb-6">
+              <Activity className="text-cyan-400" size={20} />
+
+              <h3 className="text-2xl font-bold text-white">
+                Workflow Activity
+              </h3>
+            </div>
+
+            <div className="space-y-5">
+
+              {[
+                "AI automation assigned 12 new leads",
+                "Follow-up workflow triggered",
+                "Sales escalation completed",
+                "Pipeline stage updated automatically",
+                "CRM synchronization successful",
+                "Email sequence launched",
+              ].map((item, i) => (
+                <div
+                  key={i}
+                  className="flex items-start gap-4 pb-5 border-b border-white/5 last:border-0"
+                >
+                  <div className="mt-1">
+                    <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-gray-300 leading-relaxed">
+                      {item}
+                    </p>
+
+                    <p className="text-xs text-gray-500 mt-2">
+                      {i + 1}m ago
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* SYSTEM HEALTH */}
+          <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-6">
+
+            <div className="flex items-center gap-3 mb-6">
+              <Cpu className="text-emerald-400" size={20} />
+
+              <h3 className="text-2xl font-bold text-white">
+                Automation Health
+              </h3>
+            </div>
+
+            <div className="space-y-5">
+
+              {[
+                ["Workflow Engine", "Operational"],
+                ["AI Runtime", "Healthy"],
+                ["Database Sync", "24ms"],
+                ["Task Queue", "Stable"],
+                ["Automation Layer", "Protected"],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="flex items-center justify-between border-b border-white/5 pb-4"
+                >
+                  <span className="text-gray-400 text-sm">
+                    {label}
+                  </span>
+
+                  <span className="text-white font-semibold">
+                    {value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* AI RECOMMENDATIONS */}
+          <div className="bg-[#0b0b0b]/90 border border-white/10 rounded-[32px] p-6">
+
+            <div className="flex items-center gap-3 mb-6">
+              <TrendingUp className="text-purple-400" size={20} />
+
+              <h3 className="text-2xl font-bold text-white">
+                Recommendations
+              </h3>
+            </div>
+
+            <div className="space-y-4">
+
+              {[
+                {
+                  title: "Reduce lead routing delay",
+                  desc: "AI predicts 11% faster conversion with instant assignment.",
+                },
+                {
+                  title: "Expand onboarding automation",
+                  desc: "Client setup time can be reduced by 34%.",
+                },
+                {
+                  title: "Enable SMS escalation",
+                  desc: "Hot lead conversion may improve by 18%.",
+                },
+              ].map((rec) => (
+                <div
+                  key={rec.title}
+                  className="p-5 rounded-3xl bg-black/30 border border-white/5"
+                >
+                  <p className="text-white font-medium">
+                    {rec.title}
+                  </p>
+
+                  <p className="text-sm text-gray-500 leading-relaxed mt-3">
+                    {rec.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+

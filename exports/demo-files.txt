@@ -1,0 +1,16 @@
+app/(marketing)/demo/ai_assistant/page.tsx
+app/(marketing)/demo/communications/page.tsx
+app/(marketing)/demo/components/AutomationQueue.tsx
+app/(marketing)/demo/components/CustomerHealth.tsx
+app/(marketing)/demo/components/LiveActivityStream.tsx
+app/(marketing)/demo/components/PipelineFunnel.tsx
+app/(marketing)/demo/components/RevenueForecast.tsx
+app/(marketing)/demo/components/SalesHeatmap.tsx
+app/(marketing)/demo/components/TeamPerformance.tsx
+app/(marketing)/demo/dashboard/page.tsx
+app/(marketing)/demo/layout.tsx
+app/(marketing)/demo/leads/page.tsx
+app/(marketing)/demo/marketing/page.tsx
+app/(marketing)/demo/page.tsx
+app/(marketing)/demo/settings/page.tsx
+app/(marketing)/demo/workflow/page.tsx

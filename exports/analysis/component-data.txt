@@ -1,0 +1,139 @@
+==================================================
+AutomationQueue
+==================================================
+const queue = [
+  {
+    task: "Lead qualification workflow",
+    status: "Running",
+  },
+  {
+    task: "Email follow-up sequence",
+    status: "Queued",
+  },
+  {
+    task: "CRM synchronization",
+    status: "Completed",
+  },
+  {
+    task: "Campaign optimization",
+    status: "Running",
+  },
+];
+
+==================================================
+CustomerHealth
+==================================================
+const clients = [
+  {
+    name: "Apex Logistics",
+    health: "Excellent",
+    usage: "92%",
+    color: "text-emerald-400",
+  },
+  {
+    name: "Nova Medical",
+    health: "Stable",
+    usage: "74%",
+    color: "text-cyan-300",
+  },
+  {
+    name: "Velocity Retail",
+    health: "At Risk",
+    usage: "41%",
+    color: "text-red-400",
+  },
+];
+
+==================================================
+LiveActivityStream
+==================================================
+const activities = [
+  "New enterprise lead assigned to Sarah",
+  "AI responded to inbound inquiry",
+  "Healthcare campaign launched",
+  "Pipeline status updated for Apex Logistics",
+  "Client onboarding completed",
+  "Proposal sent to enterprise lead",
+];
+
+==================================================
+PipelineFunnel
+==================================================
+  const stages = [
+    {
+      name: "New Leads",
+      count: 248,
+      width: "100%",
+      color: "from-cyan-500/40 to-cyan-500/10",
+    },
+    {
+      name: "Contacted",
+      count: 186,
+      width: "82%",
+      color: "from-sky-500/40 to-sky-500/10",
+    },
+    {
+      name: "Qualified",
+      count: 121,
+      width: "64%",
+      color: "from-blue-500/40 to-blue-500/10",
+    },
+    {
+      name: "Proposal Sent",
+      count: 74,
+      width: "48%",
+      color: "from-indigo-500/40 to-indigo-500/10",
+    },
+    {
+      name: "Negotiation",
+      count: 38,
+      width: "34%",
+      color: "from-violet-500/40 to-violet-500/10",
+    },
+    {
+      name: "Closed Won",
+      count: 19,
+      width: "22%",
+      color: "from-emerald-500/40 to-emerald-500/10",
+    },
+  ];
+
+==================================================
+RevenueForecast
+==================================================
+const months = [
+  { month: "Jan", value: 42 },
+  { month: "Feb", value: 51 },
+  { month: "Mar", value: 48 },
+  { month: "Apr", value: 64 },
+  { month: "May", value: 72 },
+  { month: "Jun", value: 81 },
+  { month: "Jul", value: 93 },
+  { month: "Aug", value: 108 },
+];
+
+==================================================
+SalesHeatmap
+==================================================
+
+==================================================
+TeamPerformance
+==================================================
+const reps = [
+  {
+    name: "Sarah Chen",
+    deals: 14,
+    closeRate: "32%",
+  },
+  {
+    name: "Marcus Reed",
+    deals: 11,
+    closeRate: "28%",
+  },
+  {
+    name: "Emily Carter",
+    deals: 9,
+    closeRate: "24%",
+  },
+];
+

@@ -1,0 +1,32 @@
+{
+  "name": "synaptireach",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.10.3",
+    "@supabase/supabase-js": "^2.105.4",
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^1.14.0",
+    "next": "^15.3.0",
+    "next-auth": "^4.24.14",
+    "pg": "^8.20.0",
+    "postgres": "^3.4.9",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^3.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "25.6.0",
+    "@types/react": "19.2.14",
+    "autoprefixer": "^10",
+    "eslint": "^10.3.0",
+    "postcss": "^8",
+    "tailwindcss": "3.4.4",
+    "typescript": "6.0.3"
+  }
+}
