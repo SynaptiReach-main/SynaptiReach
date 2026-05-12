@@ -7,37 +7,31 @@ import {
   Mail,
   MessageSquare,
   Share2,
-  Sparkles,
   TrendingUp,
   Activity,
+  Sparkles,
   CalendarClock,
-  Target,
-  Users,
-  Zap,
   BarChart3,
-  ArrowUpRight,
 } from "lucide-react";
 
 import EmailCampaignModal from "@/components/marketing/modals/EmailCampaignModal";
 import SMSCampaignModal from "@/components/marketing/modals/SMSCampaignModal";
 import SocialCampaignModal from "@/components/marketing/modals/SocialCampaignModal";
-import AnalyticsCharts from "@/components/marketing/analytics/AnalyticsCharts";
-import WorkflowBuilder from "@/components/marketing/workflows/WorkflowBuilder";
 
 export default function MarketingPage() {
   const [
-    emailModalOpen,
-    setEmailModalOpen,
+    emailOpen,
+    setEmailOpen,
   ] = useState(false);
 
   const [
-    smsModalOpen,
-    setSMSModalOpen,
+    smsOpen,
+    setSmsOpen,
   ] = useState(false);
 
   const [
-    socialModalOpen,
-    setSocialModalOpen,
+    socialOpen,
+    setSocialOpen,
   ] = useState(false);
 
   const [
@@ -55,28 +49,16 @@ export default function MarketingPage() {
     setRecommendations,
   ] = useState<any[]>([]);
 
-  const [
-    analytics,
-    setAnalytics,
-  ] = useState<any>(null);
-
-  const [
-    loading,
-    setLoading,
-  ] = useState(true);
-
-  async function loadDashboard() {
+  async function loadData() {
     try {
       const [
         campaignsRes,
         activityRes,
         recommendationsRes,
-        analyticsRes,
       ] = await Promise.all([
         fetch("/api/marketing/campaigns"),
         fetch("/api/marketing/activity"),
         fetch("/api/marketing/recommendations"),
-        fetch("/api/marketing/analytics"),
       ]);
 
       const campaignsData =
@@ -84,9 +66,6 @@ export default function MarketingPage() {
 
       const activityData =
         await activityRes.json();
-
-      const analyticsData =
-        await analyticsRes.json();
 
       const recommendationsData =
         await recommendationsRes.json();
@@ -99,88 +78,45 @@ export default function MarketingPage() {
         activityData.data || []
       );
 
-      setAnalytics(
-        analyticsData.data
-      );
-
       setRecommendations(
         recommendationsData.data || []
       );
     } catch (error) {
       console.error(error);
-    } finally {
-      setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadDashboard();
+    loadData();
   }, []);
 
-  const totalCampaigns =
-    campaigns.length;
-
-  const activeCampaigns =
-    campaigns.filter(
-      (c) =>
-        c.status === "active"
-    ).length;
-
-  const delivered =
-    campaigns.reduce(
-      (acc, c) =>
-        acc +
-        (
-          c.delivered_count || 0
-        ),
-      0
-    );
-
-  const opened =
-    campaigns.reduce(
-      (acc, c) =>
-        acc +
-        (
-          c.opened_count || 0
-        ),
-      0
-    );
-
-  const openRate =
-    delivered > 0
-      ? (
-          opened /
-          delivered
-        ) * 100
-      : 0;
-
   return (
-    <main className="min-h-screen text-white pb-20">
+    <main className="min-h-screen text-white">
 
       <EmailCampaignModal
-        open={emailModalOpen}
+        open={emailOpen}
         onClose={() =>
-          setEmailModalOpen(false)
+          setEmailOpen(false)
         }
       />
 
       <SMSCampaignModal
-        open={smsModalOpen}
+        open={smsOpen}
         onClose={() =>
-          setSMSModalOpen(false)
+          setSmsOpen(false)
         }
       />
 
       <SocialCampaignModal
-        open={socialModalOpen}
+        open={socialOpen}
         onClose={() =>
-          setSocialModalOpen(false)
+          setSocialOpen(false)
         }
       />
 
       <section className="mb-10">
 
-        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
+        <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
 
           <div className="flex items-center gap-4">
 
@@ -188,19 +124,19 @@ export default function MarketingPage() {
 
               <Megaphone
                 className="text-cyan-300"
-                size={30}
+                size={28}
               />
 
             </div>
 
             <div>
 
-              <h1 className="text-4xl md:text-5xl font-black">
+              <h1 className="text-4xl font-black">
                 Marketing Command Center
               </h1>
 
-              <p className="text-gray-400 mt-2">
-                Autonomous multi-channel campaign intelligence
+              <p className="text-gray-500 mt-1">
+                AI-powered multi-channel marketing automation
               </p>
 
             </div>
@@ -211,9 +147,9 @@ export default function MarketingPage() {
 
             <button
               onClick={() =>
-                setEmailModalOpen(true)
+                setEmailOpen(true)
               }
-              className="px-5 py-4 rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 text-black font-black flex items-center gap-2"
+              className="px-5 py-3 rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 text-black font-black flex items-center gap-2"
             >
               <Mail size={18} />
               Email Campaign
@@ -221,9 +157,9 @@ export default function MarketingPage() {
 
             <button
               onClick={() =>
-                setSMSModalOpen(true)
+                setSmsOpen(true)
               }
-              className="px-5 py-4 rounded-2xl border border-white/10 bg-white/[0.03] text-white font-bold flex items-center gap-2"
+              className="px-5 py-3 rounded-2xl border border-white/10 bg-white/[0.03] text-white font-bold flex items-center gap-2"
             >
               <MessageSquare size={18} />
               SMS Campaign
@@ -231,9 +167,9 @@ export default function MarketingPage() {
 
             <button
               onClick={() =>
-                setSocialModalOpen(true)
+                setSocialOpen(true)
               }
-              className="px-5 py-4 rounded-2xl border border-white/10 bg-white/[0.03] text-white font-bold flex items-center gap-2"
+              className="px-5 py-3 rounded-2xl border border-white/10 bg-white/[0.03] text-white font-bold flex items-center gap-2"
             >
               <Share2 size={18} />
               Social Campaign
@@ -243,78 +179,81 @@ export default function MarketingPage() {
 
         </div>
 
-      </section>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
 
-      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-10">
+          {[
+            {
+              label: "Campaigns",
+              value:
+                campaigns.length,
+              icon: Megaphone,
+            },
+            {
+              label: "Active",
+              value:
+                campaigns.filter(
+                  (c) =>
+                    c.status ===
+                    "active"
+                ).length,
+              icon: Activity,
+            },
+            {
+              label: "Scheduled",
+              value:
+                campaigns.filter(
+                  (c) =>
+                    c.status ===
+                    "scheduled"
+                ).length,
+              icon: CalendarClock,
+            },
+            {
+              label: "AI Insights",
+              value:
+                recommendations.length,
+              icon: Sparkles,
+            },
+          ].map((item) => {
+            const Icon = item.icon;
 
-        {[
-          {
-            label:
-              "Total Campaigns",
-            value:
-              totalCampaigns,
-            icon: Target,
-          },
-          {
-            label:
-              "Active Campaigns",
-            value:
-              activeCampaigns,
-            icon: Zap,
-          },
-          {
-            label:
-              "Messages Delivered",
-            value:
-              delivered,
-            icon: Activity,
-          },
-          {
-            label:
-              "Open Rate",
-            value:
-              `${openRate.toFixed(1)}%`,
-            icon: TrendingUp,
-          },
-        ].map((item) => {
-          const Icon =
-            item.icon;
+            return (
+              <div
+                key={item.label}
+                className="rounded-3xl border border-white/10 bg-white/[0.03] p-5"
+              >
 
-          return (
-            <div
-              key={item.label}
-              className="rounded-3xl border border-white/10 bg-white/[0.03] p-6"
-            >
+                <div className="flex items-center justify-between mb-5">
 
-              <div className="flex items-center justify-between mb-5">
+                  <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
 
-                <div className="w-12 h-12 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 flex items-center justify-center">
+                    <Icon
+                      size={20}
+                      className="text-cyan-300"
+                    />
 
-                  <Icon
-                    className="text-cyan-300"
-                    size={20}
+                  </div>
+
+                  <TrendingUp
+                    size={18}
+                    className="text-green-400"
                   />
 
                 </div>
 
-                <ArrowUpRight
-                  className="text-green-400"
-                  size={18}
-                />
+                <div className="text-3xl font-black mb-1">
+                  {item.value}
+                </div>
+
+                <div className="text-sm text-gray-500">
+                  {item.label}
+                </div>
 
               </div>
+            );
+          })}
 
-              <div className="text-4xl font-black">
-                {item.value}
-              </div>
-
-              <div className="text-sm text-gray-500 mt-2">
-                {item.label}
-              </div>
-
-            </div>
-          );
-        })}
+        </div>
 
       </section>
 
@@ -333,194 +272,46 @@ export default function MarketingPage() {
                 </h2>
 
                 <p className="text-sm text-gray-500">
-                  Live campaign tracking and execution
+                  Live marketing execution activity
                 </p>
 
               </div>
 
-              <div className="px-4 py-2 rounded-xl border border-cyan-500/20 bg-cyan-500/10 text-cyan-300 text-sm font-semibold">
-                Live
-              </div>
-
-            </div>
-
-            <div className="space-y-4">
-
-              {loading ? (
-                <div className="text-gray-500">
-                  Loading...
-                </div>
-              ) : campaigns.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center">
-
-                  <div className="text-lg font-bold text-white mb-2">
-                    No Campaigns Yet
-                  </div>
-
-                  <div className="text-sm text-gray-500">
-                    Launch your first AI-powered campaign.
-                  </div>
-
-                </div>
-              ) : (
-                campaigns.map(
-                  (campaign) => (
-                    <div
-                      key={
-                        campaign.id
-                      }
-                      className="rounded-2xl border border-white/10 bg-black/30 p-5"
-                    >
-
-                      <div className="flex items-start justify-between mb-4">
-
-                        <div>
-
-                          <div className="font-bold text-lg">
-                            {
-                              campaign.name
-                            }
-                          </div>
-
-                          <div className="text-sm text-gray-500 mt-1">
-                            {
-                              campaign.type
-                            }
-                          </div>
-
-                        </div>
-
-                        <div className="px-3 py-1 rounded-xl border border-cyan-500/20 bg-cyan-500/10 text-cyan-300 text-xs font-bold uppercase">
-                          {
-                            campaign.status
-                          }
-                        </div>
-
-                      </div>
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">
-                            Delivered
-                          </div>
-
-                          <div className="font-black text-xl">
-                            {
-                              campaign.delivered_count || 0
-                            }
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">
-                            Opened
-                          </div>
-
-                          <div className="font-black text-xl">
-                            {
-                              campaign.opened_count || 0
-                            }
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">
-                            Clicked
-                          </div>
-
-                          <div className="font-black text-xl">
-                            {
-                              campaign.clicked_count || 0
-                            }
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">
-                            Converted
-                          </div>
-
-                          <div className="font-black text-xl">
-                            {
-                              campaign.converted_count || 0
-                            }
-                          </div>
-                        </div>
-
-                      </div>
-
-                    </div>
-                  )
-                )
-              )}
-
-            </div>
-
-          </div>
-
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-
-            <div className="flex items-center gap-3 mb-6">
-
-              <BarChart3
+              <Activity
                 className="text-cyan-300"
                 size={20}
               />
 
-              <div>
-
-                <h2 className="text-2xl font-black">
-                  Scheduled Campaigns
-                </h2>
-
-                <p className="text-sm text-gray-500">
-                  Upcoming automated campaign execution
-                </p>
-
-              </div>
-
             </div>
 
             <div className="space-y-4">
 
-              {campaigns
-                .filter(
-                  (c) =>
-                    c.status ===
-                    "scheduled"
-                )
-                .map((campaign) => (
-                  <div
-                    key={
-                      campaign.id
-                    }
-                    className="rounded-2xl border border-white/10 bg-black/30 p-5 flex items-center justify-between"
-                  >
+              {activity.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-2xl border border-white/10 bg-black/30 p-5"
+                >
 
-                    <div>
+                  <div className="flex items-center justify-between mb-2">
 
-                      <div className="font-bold">
-                        {
-                          campaign.name
-                        }
-                      </div>
-
-                      <div className="text-sm text-gray-500 mt-1">
-                        {
-                          campaign.scheduled_for
-                        }
-                      </div>
-
+                    <div className="font-bold text-white">
+                      {item.title}
                     </div>
 
-                    <CalendarClock
-                      className="text-cyan-300"
-                      size={20}
-                    />
+                    <div className="text-xs text-gray-500">
+                      {new Date(
+                        item.created_at
+                      ).toLocaleString()}
+                    </div>
 
                   </div>
-                ))}
+
+                  <div className="text-sm text-gray-400">
+                    {item.description}
+                  </div>
+
+                </div>
+              ))}
 
             </div>
 
@@ -534,23 +325,19 @@ export default function MarketingPage() {
 
             <div className="flex items-center gap-3 mb-5">
 
-              <div className="w-12 h-12 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 flex items-center justify-center">
-
-                <Sparkles
-                  className="text-cyan-300"
-                  size={20}
-                />
-
-              </div>
+              <Sparkles
+                className="text-cyan-300"
+                size={22}
+              />
 
               <div>
 
-                <h2 className="font-black text-xl">
+                <h2 className="text-xl font-black">
                   AI Recommendations
                 </h2>
 
                 <p className="text-sm text-gray-400">
-                  Autonomous optimization intelligence
+                  Autonomous growth intelligence
                 </p>
 
               </div>
@@ -559,50 +346,14 @@ export default function MarketingPage() {
 
             <div className="space-y-4">
 
-              {recommendations
-                .length === 0 ? (
-                <div className="text-sm text-gray-500">
-                  No AI recommendations available.
-                </div>
-              ) : (
-                recommendations.map(
-                  (
-                    recommendation
-                  ) => (
-                    <div
-                      key={
-                        recommendation.id
-                      }
-                      className="rounded-2xl border border-white/10 bg-black/30 p-4"
-                    >
-
-                      <div className="flex items-start gap-3">
-
-                        <Sparkles
-                          className="text-green-400 mt-1"
-                          size={16}
-                        />
-
-                        <div>
-
-                          <div className="font-semibold text-sm">
-                            {
-                              recommendation.title
-                            }
-                          </div>
-
-                          <div className="text-xs text-gray-500 mt-1">
-                            {
-                              recommendation.description
-                            }
-                          </div>
-
-                        </div>
-
-                      </div>
-
-                    </div>
-                  )
+              {recommendations.map(
+                (item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-gray-300"
+                  >
+                    {item.content}
+                  </div>
                 )
               )}
 
@@ -614,81 +365,47 @@ export default function MarketingPage() {
 
             <div className="flex items-center gap-3 mb-5">
 
-              <Users
+              <BarChart3
                 className="text-cyan-300"
                 size={20}
               />
 
               <h2 className="text-xl font-black">
-                Live Activity Feed
+                Scheduled Campaigns
               </h2>
 
             </div>
 
             <div className="space-y-4">
 
-              {activity.length === 0 ? (
-                <div className="text-sm text-gray-500">
-                  No activity available.
-                </div>
-              ) : (
-                activity.map(
-                  (item) => (
-                    <div
-                      key={
-                        item.id
-                      }
-                      className="rounded-2xl border border-white/10 bg-black/30 p-4"
-                    >
-
-                      <div className="flex items-start gap-3">
-
-                        <div className="w-2 h-2 rounded-full bg-green-400 mt-2" />
-
-                        <div>
-
-                          <div className="text-sm font-semibold">
-                            {
-                              item.title
-                            }
-                          </div>
-
-                          <div className="text-xs text-gray-500 mt-1">
-                            {
-                              item.description
-                            }
-                          </div>
-
-                        </div>
-
-                      </div>
-
-                    </div>
-                  )
+              {campaigns
+                .filter(
+                  (c) =>
+                    c.status ===
+                    "scheduled"
                 )
-              )}
+                .map((campaign) => (
+                  <div
+                    key={campaign.id}
+                    className="rounded-2xl border border-white/10 bg-black/30 p-4"
+                  >
+
+                    <div className="font-bold text-white">
+                      {campaign.name}
+                    </div>
+
+                    <div className="text-sm text-gray-500 mt-1">
+                      {campaign.channel}
+                    </div>
+
+                  </div>
+                ))}
 
             </div>
 
           </div>
 
         </div>
-
-      </section>
-
-      {analytics && (
-        <section className="mt-10">
-
-          <AnalyticsCharts
-            analytics={analytics}
-          />
-
-        </section>
-      )}
-
-      <section className="mt-10">
-
-        <WorkflowBuilder />
 
       </section>
 
