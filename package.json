@@ -22,7 +22,9 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "reactflow": "^11.11.4",
-    "recharts": "^3.8.1"
+    "recharts": "^3.8.1",
+    "resend": "^6.12.3",
+    "twilio": "^6.0.2"
   },
   "devDependencies": {
     "@types/node": "25.6.0",
