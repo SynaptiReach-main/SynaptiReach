@@ -17,7 +17,7 @@ import {
   LogOut,
 } from "lucide-react";
 
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 
 const navItems = [
   {
@@ -70,7 +70,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
 
-  const supabase = createClient();
+  // using shared supabase client
 
   const [workspace, setWorkspace] =
     useState<Workspace | null>(null);

@@ -4,7 +4,7 @@
 type AppRoutes = "/" | "/admin/dashboard" | "/admin/dashboard/admin" | "/admin/dashboard/analytics" | "/admin/dashboard/campaigns" | "/admin/dashboard/client" | "/admin/dashboard/clients" | "/admin/dashboard/settings" | "/admin/dashboard/staff" | "/analytics" | "/contact" | "/dashboard" | "/demo" | "/demo/ai_assistant" | "/demo/communications" | "/demo/dashboard" | "/demo/leads" | "/demo/marketing" | "/demo/settings" | "/demo/workflow" | "/onboarding" | "/onboarding/select" | "/portal-staff/dashboard" | "/portal/dashboard" | "/pricing" | "/services" | "/signin" | "/signup" | "/staff/dashboard" | "/trial"
 type AppRouteHandlerRoutes = "/api/auth/[...nextauth]" | "/api/onboarding/complete" | "/api/onboarding/integrations" | "/api/onboarding/save" | "/api/onboarding/upload"
 type PageRoutes = never
-type LayoutRoutes = "/" | "/admin" | "/admin/dashboard" | "/demo" | "/portal" | "/portal-staff" | "/staff"
+type LayoutRoutes = "/" | "/admin" | "/admin/dashboard" | "/dashboard" | "/demo" | "/portal" | "/portal-staff" | "/staff"
 type RedirectRoutes = never
 type RewriteRoutes = never
 type Routes = AppRoutes | PageRoutes | LayoutRoutes | RedirectRoutes | RewriteRoutes | AppRouteHandlerRoutes
@@ -59,6 +59,7 @@ interface LayoutSlotMap {
   "/": never
   "/admin": never
   "/admin/dashboard": never
+  "/dashboard": never
   "/demo": never
   "/portal": never
   "/portal-staff": never
