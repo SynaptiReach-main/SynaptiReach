@@ -405,3 +405,37 @@ create table if not exists marketing_media (
 create index if not exists marketing_media_workspace_idx
 on marketing_media(workspace_id);
 
+
+create table if not exists marketing_suppression_list (
+  id uuid primary key default gen_random_uuid(),
+
+  workspace_id uuid,
+
+  contact text,
+
+  reason text,
+
+  created_at timestamptz default now()
+);
+
+create index if not exists marketing_suppression_workspace_idx
+on marketing_suppression_list(workspace_id);
+
+create index if not exists marketing_suppression_contact_idx
+on marketing_suppression_list(contact);
+
+create table if not exists marketing_audit_logs (
+  id uuid primary key default gen_random_uuid(),
+
+  workspace_id uuid,
+
+  action text,
+
+  metadata jsonb default '{}'::jsonb,
+
+  created_at timestamptz default now()
+);
+
+create index if not exists marketing_audit_workspace_idx
+on marketing_audit_logs(workspace_id);
+
