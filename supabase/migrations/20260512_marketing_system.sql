@@ -346,3 +346,30 @@ add column if not exists failed_count integer default 0;
 alter table marketing_campaigns
 add column if not exists engagement_score integer default 0;
 
+
+create table if not exists marketing_automation_queue (
+  id uuid primary key default gen_random_uuid(),
+
+  workspace_id uuid,
+
+  name text,
+
+  type text,
+
+  content jsonb default '{}'::jsonb,
+
+  status text default 'pending',
+
+  execute_at timestamptz,
+
+  completed_at timestamptz,
+
+  created_at timestamptz default now()
+);
+
+create index if not exists marketing_automation_status_idx
+on marketing_automation_queue(status);
+
+create index if not exists marketing_automation_execute_idx
+on marketing_automation_queue(execute_at);
+
