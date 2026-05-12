@@ -373,3 +373,15 @@ on marketing_automation_queue(status);
 create index if not exists marketing_automation_execute_idx
 on marketing_automation_queue(execute_at);
 
+
+alter table marketing_campaigns
+add column if not exists ai_score integer default 0;
+
+alter table marketing_campaigns
+add column if not exists ai_recommendations jsonb
+default '[]'::jsonb;
+
+alter table marketing_campaigns
+add column if not exists ai_send_time jsonb
+default '{}'::jsonb;
+
