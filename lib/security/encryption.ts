@@ -1,9 +1,11 @@
 import crypto from "crypto";
 
-const algorithm = "aes-256-cbc";
+const algorithm =
+  "aes-256-cbc";
 
 const secret =
-  process.env.ENCRYPTION_SECRET!;
+  process.env.ENCRYPTION_SECRET ||
+  "fallback-dev-secret";
 
 const key = crypto
   .createHash("sha256")
