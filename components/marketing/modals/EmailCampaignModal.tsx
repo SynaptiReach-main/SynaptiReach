@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   Mail,
@@ -34,17 +34,111 @@ export default function EmailCampaignModal({
   const [stagger, setStagger] = useState("50");
   const [sendDate, setSendDate] = useState("");
   const [sendTime, setSendTime] = useState("");
+  const [attachments, setAttachments] = useState<any[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [aiError, setAiError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const credits = estimateAICredits(prompt);
+
+  function resetForm() {
+    setPrompt("");
+    setSubject("");
+    setBody("");
+    setSegment("all");
+    setStagger("50");
+    setSendDate("");
+    setSendTime("");
+    setAttachments([]);
+    setLoading(false);
+    setAiLoading(false);
+    setError("");
+    setAiError("");
+    setSuccess("");
+  }
+
+  async function uploadFile(file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch("/api/marketing/media/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data?.error ||
+          "Media upload failed. Confirm the Supabase marketing-media bucket exists."
+      );
+    }
+
+    setAttachments((current) => [...current, data.media]);
+  }
+
+  function closeModal() {
+    resetForm();
+    onClose();
+  }
+
+  function getScheduledAt() {
+    if ((sendDate && !sendTime) || (!sendDate && sendTime)) {
+      throw new Error("Select both a send date and send time, or leave both blank.");
+    }
+
+    if (!sendDate && !sendTime) {
+      return null;
+    }
+
+    const scheduledDate = new Date(`${sendDate}T${sendTime}`);
+
+    if (Number.isNaN(scheduledDate.getTime())) {
+      throw new Error("Enter a valid send date and time.");
+    }
+
+    return scheduledDate.toISOString();
+  }
+
+  function applyGeneratedEmail(text: string) {
+    const lines = text
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    const subjectLine = lines.find((line) =>
+      /^subject\s*:/i.test(line)
+    );
+
+    const nextSubject = subjectLine
+      ? subjectLine.replace(/^subject\s*:\s*/i, "").trim()
+      : lines[0] || "";
+
+    const nextBody = lines
+      .filter((line) => line !== subjectLine && line !== nextSubject)
+      .join("\n\n") || text;
+
+    setSubject(nextSubject);
+    setBody(nextBody);
+  }
+
+  useEffect(() => {
+    if (open) {
+      resetForm();
+    }
+  }, [open]);
 
   async function generateAI() {
 
     try {
 
       setAiLoading(true);
+      setAiError("");
 
       const response =
         await fetch(
@@ -62,6 +156,7 @@ export default function EmailCampaignModal({
 You are SynaptiReach's elite email campaign strategist.
 
 Generate:
+- one concise subject line prefixed with "Subject:"
 - high converting emails
 - optimized CTA
 - conversion focused structure
@@ -80,24 +175,22 @@ Generate:
       const data =
         await response.json();
 
+      if (!response.ok || !data.success) {
+        throw new Error(data?.error || "AI generation failed.");
+      }
+
       if (data?.text) {
-
-        const generated =
-          data.text;
-
-        const split =
-          generated.split("\n");
-
-        if (split.length > 0) {
-          setSubject(split[0]);
-        }
-
-        setBody(generated);
+        applyGeneratedEmail(data.text);
       }
 
     } catch (error) {
 
       console.error(error);
+      setAiError(
+        error instanceof Error
+          ? error.message
+          : "AI generation failed."
+      );
 
     } finally {
 
@@ -112,13 +205,16 @@ Generate:
     try {
 
       setLoading(true);
+      setError("");
+      setSuccess("");
 
-      const scheduledFor =
-        sendDate && sendTime
-          ? new Date(
-              `${sendDate}T${sendTime}`
-            ).toISOString()
-          : null;
+      if (!body.trim()) {
+        setError("Enter email body content before scheduling.");
+        return;
+      }
+
+      const scheduledAt = getScheduledAt();
+
 
       const campaignResponse =
         await fetch(
@@ -131,15 +227,15 @@ Generate:
             },
             body: JSON.stringify({
               type: "email",
-              segment,
+              audience: segment,
               subject,
               content: body,
-              stagger_size: Number(stagger),
-              scheduled_for: scheduledFor,
-              status:
-                scheduledFor
-                  ? "scheduled"
-                  : "processing",
+              stagger: Number(stagger),
+              sendDate,
+              sendTime,
+              scheduledAt,
+              attachments,
+              status: "scheduled",
             }),
           }
         );
@@ -148,44 +244,7 @@ Generate:
         await campaignResponse.json();
 
       if (!campaignData.success) {
-
-        alert(
-          "Failed to create campaign"
-        );
-
-        return;
-      }
-
-      if (!scheduledFor) {
-
-        const executeResponse =
-          await fetch(
-            "/api/marketing/email/send",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
-              body: JSON.stringify({
-                campaignId:
-                  campaignData.campaign.id,
-              }),
-            }
-          );
-
-        const executeData =
-          await executeResponse.json();
-
-        if (!executeData.success) {
-
-          alert(
-            "Campaign execution failed"
-          );
-
-          return;
-        }
-
+        throw new Error(campaignData.error || "Failed to create campaign.");
       }
 
       await fetch(
@@ -197,32 +256,29 @@ Generate:
               "application/json",
           },
           body: JSON.stringify({
-            type: "email_campaign",
-            title:
-              subject ||
-              "Email Campaign",
-            status:
-              scheduledFor
-                ? "scheduled"
-                : "sent",
+            campaign_id: campaignData.campaign.id,
+            action: scheduledAt ? "scheduled" : "created",
+            details: `${subject || "Email Campaign"} for ${segment}`,
           }),
         }
       );
 
-      alert(
-        scheduledFor
-          ? "Campaign scheduled successfully"
-          : "Campaign launched successfully"
+      setSuccess("Campaign scheduled successfully.");
+
+      window.dispatchEvent(
+        new Event("marketing-data-refresh")
       );
 
+      resetForm();
       onClose();
 
     } catch (error) {
 
       console.error(error);
-
-      alert(
-        "Campaign failed"
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Campaign failed."
       );
 
     } finally {
@@ -237,7 +293,7 @@ Generate:
 
     <MarketingModal
       open={open}
-      onClose={onClose}
+      onClose={closeModal}
       title="Email Campaign Builder"
     >
 
@@ -435,7 +491,64 @@ Generate:
 
             <div className="flex flex-wrap items-center gap-3 mt-5">
 
-              <button className="px-5 py-3 rounded-2xl border border-white/10 bg-black/30 text-white flex items-center gap-2">
+              {error && (
+                <div className="w-full rounded-2xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">
+                  {error}
+                </div>
+              )}
+
+              {success && (
+                <div className="w-full rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-sm text-cyan-100">
+                  {success}
+                </div>
+              )}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={async (event) => {
+                  const file = event.target.files?.[0];
+
+                  if (!file) return;
+
+                  try {
+                    setError("");
+                    await uploadFile(file);
+                  } catch (error) {
+                    setError(
+                      error instanceof Error
+                        ? error.message
+                        : "Media upload failed."
+                    );
+                  } finally {
+                    event.target.value = "";
+                  }
+                }}
+              />
+
+              {attachments.length > 0 && (
+                <div className="w-full flex flex-wrap gap-2">
+                  {attachments.map((item) => (
+                    <button
+                      key={item.url}
+                      onClick={() =>
+                        setAttachments((current) =>
+                          current.filter((attachment) => attachment.url !== item.url)
+                        )
+                      }
+                      className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-100"
+                    >
+                      {item.name || item.url} x
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="px-5 py-3 rounded-2xl border border-white/10 bg-black/30 text-white flex items-center gap-2"
+              >
 
                 <Upload size={18} />
 
@@ -484,6 +597,8 @@ Generate:
             setPrompt={setPrompt}
             credits={credits}
             onGenerate={generateAI}
+            loading={aiLoading}
+            error={aiError}
           />
 
           <div className="mt-5 rounded-3xl border border-cyan-500/20 bg-cyan-500/[0.05] p-5">
@@ -536,3 +651,5 @@ Generate:
   );
 
 }
+
+

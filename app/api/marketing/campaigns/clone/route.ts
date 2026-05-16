@@ -60,13 +60,19 @@ export async function POST(
 
     await supabase
       .from(
-        "marketing_activity"
+        "marketing_events"
       )
       .insert({
-        title:
-          "Campaign Cloned",
-        description:
-          `${campaign.name} duplicated successfully.`,
+        type: "campaign_clone",
+        event_type: "campaign_clone",
+        action: "cloned",
+        title: "Campaign Cloned",
+        message:
+          `${campaign.name || campaign.subject || campaign.id} duplicated successfully.`,
+        details:
+          `${campaign.name || campaign.subject || campaign.id} duplicated successfully.`,
+        campaign_id:
+          campaign.id,
       });
 
     return NextResponse.json({

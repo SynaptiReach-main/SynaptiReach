@@ -12,6 +12,10 @@ import {
   Sparkles,
   CalendarClock,
   BarChart3,
+  Edit2,
+  XCircle,
+  Save,
+  Loader2,
 } from "lucide-react";
 
 import EmailCampaignModal from "@/components/marketing/modals/EmailCampaignModal";
@@ -49,6 +53,310 @@ export default function MarketingPage() {
     setRecommendations,
   ] = useState<any[]>([]);
 
+  const [
+    editingCampaign,
+    setEditingCampaign,
+  ] = useState<any | null>(null);
+
+  const [
+    editForm,
+    setEditForm,
+  ] = useState({
+    subject: "",
+    content: "",
+    audience: "",
+    stagger: "50",
+    sendDate: "",
+    sendTime: "",
+  });
+
+  const [
+    actionLoading,
+    setActionLoading,
+  ] = useState("");
+
+  const [
+    actionError,
+    setActionError,
+  ] = useState("");
+
+  const [
+    recommendationLoading,
+    setRecommendationLoading,
+  ] = useState("");
+
+  const scheduledCampaigns =
+    campaigns.filter(
+      (campaign) =>
+        campaign.status === "scheduled"
+    );
+
+  function closeEmailModal() {
+    setEmailOpen(false);
+    loadData();
+  }
+
+  function closeSmsModal() {
+    setSmsOpen(false);
+    loadData();
+  }
+
+  function closeSocialModal() {
+    setSocialOpen(false);
+    loadData();
+  }
+
+  function formatDateTime(value?: string) {
+    if (!value) {
+      return "No date selected";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return "Invalid scheduled time";
+    }
+
+    return date.toLocaleString();
+  }
+
+  function toDateInputValue(value?: string) {
+    if (!value) {
+      return "";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return "";
+    }
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  }
+
+  function toTimeInputValue(value?: string) {
+    if (!value) {
+      return "";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return "";
+    }
+
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+
+    return `${hours}:${minutes}`;
+  }
+
+  function getScheduledAt(dateValue: string, timeValue: string) {
+    if ((dateValue && !timeValue) || (!dateValue && timeValue)) {
+      throw new Error("Select both a send date and send time, or leave both blank.");
+    }
+
+    if (!dateValue && !timeValue) {
+      return null;
+    }
+
+    const date = new Date(`${dateValue}T${timeValue}`);
+
+    if (Number.isNaN(date.getTime())) {
+      throw new Error("Enter a valid send date and time.");
+    }
+
+    return date.toISOString();
+  }
+
+  function startEditingCampaign(campaign: any) {
+    const scheduledValue =
+      campaign.send_date ||
+      campaign.send_time;
+
+    setActionError("");
+    setEditingCampaign(campaign);
+    setEditForm({
+      subject: campaign.subject || campaign.name || "",
+      content: campaign.content || "",
+      audience: campaign.audience || "all",
+      stagger: String(campaign.stagger || 50),
+      sendDate: toDateInputValue(scheduledValue),
+      sendTime: toTimeInputValue(scheduledValue),
+    });
+  }
+
+  async function logActivity(
+    campaignId: string,
+    action: string,
+    details: string
+  ) {
+    await fetch(
+      "/api/marketing/activity",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          campaign_id: campaignId,
+          action,
+          details,
+        }),
+      }
+    );
+  }
+
+  async function saveEditedCampaign() {
+    if (!editingCampaign) {
+      return;
+    }
+
+    try {
+      setActionLoading(`edit-${editingCampaign.id}`);
+      setActionError("");
+
+      const scheduledAt = getScheduledAt(
+        editForm.sendDate,
+        editForm.sendTime
+      );
+
+      const response = await fetch(
+        "/api/marketing/campaigns",
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id: editingCampaign.id,
+            subject: editForm.subject,
+            content: editForm.content,
+            audience: editForm.audience,
+            stagger: Number(editForm.stagger),
+            sendDate: editForm.sendDate,
+            sendTime: editForm.sendTime,
+            scheduledAt,
+            status: "scheduled",
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data?.error || "Failed to update campaign.");
+      }
+
+      await logActivity(
+        editingCampaign.id,
+        "updated",
+        `${editForm.subject || editingCampaign.type || "Campaign"} schedule updated`
+      );
+
+      setEditingCampaign(null);
+      window.dispatchEvent(new Event("marketing-data-refresh"));
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : "Failed to update campaign."
+      );
+    } finally {
+      setActionLoading("");
+    }
+  }
+
+  async function cancelCampaign(campaign: any) {
+    try {
+      setActionLoading(`cancel-${campaign.id}`);
+      setActionError("");
+
+      const response = await fetch(
+        `/api/marketing/campaigns?id=${encodeURIComponent(campaign.id)}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data?.error || "Failed to cancel campaign.");
+      }
+
+      await logActivity(
+        campaign.id,
+        "cancelled",
+        `${campaign.subject || campaign.name || campaign.type || "Campaign"} cancelled`
+      );
+
+      if (editingCampaign?.id === campaign.id) {
+        setEditingCampaign(null);
+      }
+
+      window.dispatchEvent(new Event("marketing-data-refresh"));
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : "Failed to cancel campaign."
+      );
+    } finally {
+      setActionLoading("");
+    }
+  }
+
+  async function acceptRecommendation(item: any) {
+    try {
+      const key = item.id || item.title || item.content;
+      setRecommendationLoading(key);
+      setActionError("");
+
+      const response = await fetch(
+        "/api/marketing/recommendations",
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id: item.id,
+            title: item.title || item.content,
+            description: item.description || item.details || item.content,
+            type: item.recommendation_type || item.type,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data?.error || "Failed to accept recommendation.");
+      }
+
+      window.dispatchEvent(new Event("marketing-data-refresh"));
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : "Failed to accept recommendation."
+      );
+    } finally {
+      setRecommendationLoading("");
+    }
+  }
+
   async function loadData() {
     try {
       const [
@@ -71,11 +379,15 @@ export default function MarketingPage() {
         await recommendationsRes.json();
 
       setCampaigns(
-        campaignsData.data || []
+        campaignsData.campaigns ||
+        campaignsData.data ||
+        []
       );
 
       setActivity(
-        activityData.data || []
+        activityData.data ||
+        activityData.events ||
+        []
       );
 
       setRecommendations(
@@ -88,6 +400,22 @@ export default function MarketingPage() {
 
   useEffect(() => {
     loadData();
+
+    const refreshMarketingData = () => {
+      loadData();
+    };
+
+    window.addEventListener(
+      "marketing-data-refresh",
+      refreshMarketingData
+    );
+
+    return () => {
+      window.removeEventListener(
+        "marketing-data-refresh",
+        refreshMarketingData
+      );
+    };
   }, []);
 
   return (
@@ -95,23 +423,17 @@ export default function MarketingPage() {
 
       <EmailCampaignModal
         open={emailOpen}
-        onClose={() =>
-          setEmailOpen(false)
-        }
+        onClose={closeEmailModal}
       />
 
       <SMSCampaignModal
         open={smsOpen}
-        onClose={() =>
-          setSmsOpen(false)
-        }
+        onClose={closeSmsModal}
       />
 
       <SocialCampaignModal
         open={socialOpen}
-        onClose={() =>
-          setSocialOpen(false)
-        }
+        onClose={closeSocialModal}
       />
 
       <section className="mb-10">
@@ -194,7 +516,9 @@ export default function MarketingPage() {
                 campaigns.filter(
                   (c) =>
                     c.status ===
-                    "active"
+                    "active" ||
+                    c.status ===
+                    "processing"
                 ).length,
               icon: Activity,
             },
@@ -286,6 +610,12 @@ export default function MarketingPage() {
 
             <div className="space-y-4">
 
+              {activity.length === 0 && (
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-5 text-sm text-gray-400">
+                  No marketing activity yet.
+                </div>
+              )}
+
               {activity.map((item) => (
                 <div
                   key={item.id}
@@ -295,7 +625,7 @@ export default function MarketingPage() {
                   <div className="flex items-center justify-between mb-2">
 
                     <div className="font-bold text-white">
-                      {item.title}
+                      {item.title || item.action || item.type || "Marketing Activity"}
                     </div>
 
                     <div className="text-xs text-gray-500">
@@ -307,7 +637,7 @@ export default function MarketingPage() {
                   </div>
 
                   <div className="text-sm text-gray-400">
-                    {item.description}
+                    {item.description || item.details || item.message || ""}
                   </div>
 
                 </div>
@@ -346,13 +676,35 @@ export default function MarketingPage() {
 
             <div className="space-y-4">
 
+              {recommendations.length === 0 && (
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-gray-400">
+                  No AI recommendations yet.
+                </div>
+              )}
+
               {recommendations.map(
                 (item) => (
                   <div
-                    key={item.id}
+                    key={item.id || item.title || item.content}
                     className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-gray-300"
                   >
-                    {item.content}
+                    <div className="font-bold text-white">
+                      {item.title || item.content || "AI Recommendation"}
+                    </div>
+
+                    <div className="text-gray-400 mt-2">
+                      {item.description || item.details || item.estimated_impact || ""}
+                    </div>
+
+                    <button
+                      onClick={() => acceptRecommendation(item)}
+                      disabled={recommendationLoading === (item.id || item.title || item.content)}
+                      className="mt-4 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-100"
+                    >
+                      {recommendationLoading === (item.id || item.title || item.content)
+                        ? "Accepting..."
+                        : "Accept"}
+                    </button>
                   </div>
                 )
               )}
@@ -378,25 +730,193 @@ export default function MarketingPage() {
 
             <div className="space-y-4">
 
-              {campaigns
-                .filter(
-                  (c) =>
-                    c.status ===
-                    "scheduled"
-                )
+              {actionError && (
+                <div className="rounded-2xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">
+                  {actionError}
+                </div>
+              )}
+
+              {scheduledCampaigns.length === 0 && (
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-gray-400">
+                  No scheduled campaigns yet.
+                </div>
+              )}
+
+              {scheduledCampaigns
                 .map((campaign) => (
                   <div
                     key={campaign.id}
                     className="rounded-2xl border border-white/10 bg-black/30 p-4"
                   >
 
-                    <div className="font-bold text-white">
-                      {campaign.name}
-                    </div>
+                    {editingCampaign?.id === campaign.id ? (
+                      <div className="space-y-3">
 
-                    <div className="text-sm text-gray-500 mt-1">
-                      {campaign.channel}
-                    </div>
+                        <input
+                          value={editForm.subject}
+                          onChange={(event) =>
+                            setEditForm({
+                              ...editForm,
+                              subject: event.target.value,
+                            })
+                          }
+                          className="w-full rounded-2xl border border-white/10 bg-black/30 p-3 text-white"
+                          placeholder="Campaign subject"
+                        />
+
+                        <textarea
+                          value={editForm.content}
+                          onChange={(event) =>
+                            setEditForm({
+                              ...editForm,
+                              content: event.target.value,
+                            })
+                          }
+                          className="w-full min-h-[120px] rounded-2xl border border-white/10 bg-black/30 p-3 text-white"
+                          placeholder="Campaign content"
+                        />
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <select
+                            value={editForm.audience}
+                            onChange={(event) =>
+                              setEditForm({
+                                ...editForm,
+                                audience: event.target.value,
+                              })
+                            }
+                            className="rounded-2xl border border-white/10 bg-black/30 p-3 text-white"
+                          >
+                            <option value="all">All Leads</option>
+                            <option value="new">New</option>
+                            <option value="cold">Cold</option>
+                            <option value="qualified">Qualified</option>
+                            <option value="converted">Converted</option>
+                          </select>
+
+                          <select
+                            value={editForm.stagger}
+                            onChange={(event) =>
+                              setEditForm({
+                                ...editForm,
+                                stagger: event.target.value,
+                              })
+                            }
+                            className="rounded-2xl border border-white/10 bg-black/30 p-3 text-white"
+                          >
+                            <option>50</option>
+                            <option>100</option>
+                            <option>150</option>
+                            <option>200</option>
+                          </select>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <input
+                            type="date"
+                            value={editForm.sendDate}
+                            onChange={(event) =>
+                              setEditForm({
+                                ...editForm,
+                                sendDate: event.target.value,
+                              })
+                            }
+                            className="rounded-2xl border border-white/10 bg-black/30 p-3 text-white"
+                          />
+
+                          <input
+                            type="time"
+                            value={editForm.sendTime}
+                            onChange={(event) =>
+                              setEditForm({
+                                ...editForm,
+                                sendTime: event.target.value,
+                              })
+                            }
+                            className="rounded-2xl border border-white/10 bg-black/30 p-3 text-white"
+                          />
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={saveEditedCampaign}
+                            disabled={actionLoading === `edit-${campaign.id}`}
+                            className="px-4 py-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 text-black font-black flex items-center gap-2"
+                          >
+                            {actionLoading === `edit-${campaign.id}` ? (
+                              <Loader2
+                                size={16}
+                                className="animate-spin"
+                              />
+                            ) : (
+                              <Save size={16} />
+                            )}
+                            Save
+                          </button>
+
+                          <button
+                            onClick={() => setEditingCampaign(null)}
+                            className="px-4 py-2 rounded-2xl border border-white/10 bg-white/[0.03] text-white font-bold"
+                          >
+                            Close
+                          </button>
+                        </div>
+
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="font-bold text-white">
+                              {campaign.name || campaign.subject || `${campaign.type || "Marketing"} Campaign`}
+                            </div>
+
+                            <div className="text-sm text-gray-500 mt-1">
+                              {[
+                                campaign.channel || campaign.type,
+                                campaign.audience,
+                              ]
+                                .filter(Boolean)
+                                .join(" - ") || "email"}
+                            </div>
+                          </div>
+
+                          <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-xs font-bold text-cyan-200">
+                            {campaign.status}
+                          </span>
+                        </div>
+
+                        <div className="text-sm text-gray-400 mt-3">
+                          {formatDateTime(campaign.send_date || campaign.send_time)}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          <button
+                            onClick={() => startEditingCampaign(campaign)}
+                            className="px-4 py-2 rounded-2xl border border-white/10 bg-white/[0.03] text-white font-bold flex items-center gap-2"
+                          >
+                            <Edit2 size={15} />
+                            Edit
+                          </button>
+
+                          <button
+                            onClick={() => cancelCampaign(campaign)}
+                            disabled={actionLoading === `cancel-${campaign.id}`}
+                            className="px-4 py-2 rounded-2xl border border-red-400/20 bg-red-500/10 text-red-100 font-bold flex items-center gap-2"
+                          >
+                            {actionLoading === `cancel-${campaign.id}` ? (
+                              <Loader2
+                                size={15}
+                                className="animate-spin"
+                              />
+                            ) : (
+                              <XCircle size={15} />
+                            )}
+                            Cancel
+                          </button>
+                        </div>
+                      </>
+                    )}
 
                   </div>
                 ))}
@@ -412,3 +932,4 @@ export default function MarketingPage() {
     </main>
   );
 }
+

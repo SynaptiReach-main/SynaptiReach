@@ -33,11 +33,16 @@ export async function incrementMetric(
     .eq("id", campaignId);
 
   await supabase
-    .from("marketing_activity")
+    .from("marketing_events")
     .insert({
-      title:
-        "Campaign Engagement",
-      description:
-        `${field} updated for ${campaign.name}`,
+      type: "campaign_engagement",
+      event_type: "campaign_engagement",
+      action: field,
+      title: "Campaign Engagement",
+      message:
+        `${field} updated for ${campaign.name || campaign.subject || campaign.id}`,
+      details:
+        `${field} updated for ${campaign.name || campaign.subject || campaign.id}`,
+      campaign_id: campaignId,
     });
 }

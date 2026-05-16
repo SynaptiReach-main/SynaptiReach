@@ -56,7 +56,7 @@ export async function POST(
       `${Date.now()}-${file.name}`;
 
     const path =
-      `${workspaceId}/${filename}`;
+      `${workspaceId || "unscoped"}/${filename}`;
 
     const {
       error:
@@ -95,6 +95,24 @@ export async function POST(
         file.name
       );
 
+    const mediaInsert: Record<string, any> = {
+      name:
+        file.name,
+
+      type,
+
+      url:
+        data.publicUrl,
+
+      size:
+        file.size,
+    };
+
+    if (workspaceId) {
+      mediaInsert.workspace_id =
+        workspaceId;
+    }
+
     const {
       data:
         mediaRecord,
@@ -102,21 +120,7 @@ export async function POST(
       .from(
         "marketing_media"
       )
-      .insert({
-        workspace_id:
-          workspaceId,
-
-        name:
-          file.name,
-
-        type,
-
-        url:
-          data.publicUrl,
-
-        size:
-          file.size,
-      })
+      .insert(mediaInsert)
       .select()
       .single();
 

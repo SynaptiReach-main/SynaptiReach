@@ -30,8 +30,7 @@ export async function GET(
     );
 
   if (
-    campaign &&
-    lead
+    campaign
   ) {
     await supabase
       .from(
@@ -42,10 +41,38 @@ export async function GET(
           campaign,
 
         lead_id:
-          lead,
+          lead || null,
 
         event_type:
           "open",
+      });
+
+    const { data: existing } = await supabase
+      .from("marketing_campaigns")
+      .select("opened_count")
+      .eq("id", campaign)
+      .maybeSingle();
+
+    await supabase
+      .from("marketing_campaigns")
+      .update({
+        opened_count: Number(existing?.opened_count || 0) + 1,
+      })
+      .eq("id", campaign);
+
+    await supabase
+      .from("marketing_events")
+      .insert({
+        campaign_id: campaign,
+        action: "opened",
+        type: "open",
+        event_type: "open",
+        title: "Campaign opened",
+        message: "Tracking pixel loaded",
+        details: "Tracking pixel loaded",
+        metadata: {
+          lead,
+        },
       });
   }
 

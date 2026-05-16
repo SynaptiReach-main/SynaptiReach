@@ -64,12 +64,16 @@ export async function POST(
 
     await supabase
       .from(
-        "marketing_activity"
+        "marketing_events"
       )
       .insert({
-        title:
-          "Workflow Created",
-        description:
+        type: "workflow",
+        event_type: "workflow",
+        action: "created",
+        title: "Workflow Created",
+        message:
+          `${body.name} automation created.`,
+        details:
           `${body.name} automation created.`,
       });
 

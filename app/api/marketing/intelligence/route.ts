@@ -45,6 +45,9 @@ export async function POST(
 
         recommendations,
       },
+      provider: null,
+      model: null,
+      fallback_used: false,
     });
   } catch (error: any) {
     return NextResponse.json(

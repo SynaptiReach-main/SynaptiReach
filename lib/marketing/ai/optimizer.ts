@@ -170,7 +170,7 @@ export async function runOptimizer() {
 
   await supabase
     .from(
-      "marketing_recommendations"
+      "marketing_ai_recommendations"
     )
     .delete()
     .neq("id", "0");
@@ -191,8 +191,12 @@ export async function runOptimizer() {
         "marketing_campaigns"
       )
       .update({
-        ai_health_score:
-          healthScore,
+        ai_recommendations: [
+          {
+            healthScore,
+            ...recommendation,
+          },
+        ],
       })
       .eq(
         "id",
@@ -201,13 +205,19 @@ export async function runOptimizer() {
 
     await supabase
       .from(
-        "marketing_recommendations"
+        "marketing_ai_recommendations"
       )
       .insert({
-        title:
-          recommendation.title,
-        description:
-          recommendation.description,
+        recommendation_type:
+          "campaign_optimization",
+        priority:
+          healthScore < 50
+            ? "high"
+            : "medium",
+        title: recommendation.title,
+        description: recommendation.description,
+        estimated_impact:
+          `Campaign health score ${healthScore}`,
       });
   }
 
@@ -218,12 +228,16 @@ export async function runOptimizer() {
 
   await supabase
     .from(
-      "marketing_activity"
+      "marketing_events"
     )
     .insert({
-      title:
-        "AI Optimization Complete",
-      description:
+      type: "campaign_optimization",
+      event_type: "campaign_optimization",
+      action: "optimized",
+      title: "AI Optimization Complete",
+      message:
+        `AI predicted ${bestHour}:00 as highest-performing send hour.`,
+      details:
         `AI predicted ${bestHour}:00 as highest-performing send hour.`,
     });
 }

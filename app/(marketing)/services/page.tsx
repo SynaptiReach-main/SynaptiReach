@@ -1,692 +1,105 @@
-export {};
-'use client'
+import Link from "next/link";
 
-import Link from 'next/link'
-
-const serviceGroups = [
-  {
-    title: '📢 Marketing Services',
-    sections: [
-      {
-        name: 'Execution',
-        items: [
-          'Email Campaign',
-          'SMS Campaign',
-          'Landing Page',
-          'Workflow Setup',
-          'CRM Setup',
-        ],
-      },
-      {
-        name: 'Strategy',
-        items: [
-          'Offer Optimization',
-          'Funnel Copywriting',
-          'Lead Magnet Creation',
-          'A/B Testing',
-          'Conversion Audit',
-        ],
-      },
-      {
-        name: 'Advanced',
-        items: [
-          'Customer Journey Mapping',
-          'Segmentation Strategy',
-          'Retargeting Setup',
-        ],
-      },
-    ],
-  },
-  {
-    title: '🤖 AI Services',
-    sections: [
-      {
-        name: 'AI Optimization',
-        items: [
-          'AI Campaign Strategy',
-          'AI Persona Modeling',
-          'AI Funnel Optimization',
-        ],
-      },
-    ],
-  },
-  {
-    title: '🎨 Branding & SEO',
-    sections: [
-      {
-        name: 'Brand Development',
-        items: [
-          'Logo Design',
-          'Branding Kit',
-          'SEO Optimization',
-          'Local SEO',
-        ],
-      },
-    ],
-  },
-  {
-    title: '📱 Social & GMB',
-    sections: [
-      {
-        name: 'Growth Presence',
-        items: [
-          'Social Media Management',
-          'Content Calendar',
-          'GMB Optimization',
-          'GMB Monthly Management',
-        ],
-      },
-    ],
-  },
-]
-
-const pricing = [
-  { name: 'Starter', range: '$29–$79 range' },
-  { name: 'Growth', range: '$79–$129 range' },
-  { name: 'Advanced', range: '$129–$179 range' },
-  { name: 'Premium Strategy', range: '$149–$249 range' },
-  { name: 'Branding', range: '$149–$499' },
-  { name: 'Monthly Services', range: '$79–$199/mo' },
-]
+const services = [
+  { title: "Marketing Services", sections: [
+    { name: "Execution", items: [["Email Campaign", "$149"], ["SMS Campaign", "$179"], ["Landing Page", "$399"], ["Workflow Setup", "$249"], ["CRM Setup", "$399"]] },
+    { name: "Strategy", items: [["Offer Optimization", "$249"], ["Funnel Copywriting", "$399"], ["Lead Magnet Creation", "$299"], ["A/B Testing", "$249"], ["Conversion Audit", "$299"]] },
+    { name: "Advanced", items: [["Customer Journey Mapping", "$499"], ["Segmentation Strategy", "$399"], ["Retargeting Setup", "$499"]] },
+  ]},
+  { title: "AI Services", sections: [
+    { name: "AI Execution", items: [["AI Campaign Strategy", "$399"], ["AI Persona Modeling", "$349"], ["AI Funnel Optimization", "$499"]] },
+  ]},
+  { title: "Branding & SEO", sections: [
+    { name: "Brand Growth", items: [["Logo Design", "$249"], ["Branding Kit", "$599"], ["SEO Optimization", "$499"], ["Local SEO", "$399"]] },
+  ]},
+  { title: "Social & GMB", sections: [
+    { name: "Local Presence", items: [["Social Media Management", "$599/mo"], ["Content Calendar", "$249"], ["GMB Optimization", "$299"], ["GMB Monthly Management", "$299/mo"]] },
+  ]},
+];
 
 const bundles = [
-  {
-    name: 'Launch',
-    price: '$149',
-    items: ['Landing Page', 'Email Campaign', 'Workflow'],
-  },
-  {
-    name: 'Growth',
-    price: '$299',
-    popular: true,
-    items: ['Funnel', 'Email Sequence', 'CRM Setup', 'Segmentation'],
-  },
-  {
-    name: 'Automation',
-    price: '$499',
-    items: ['Lead Nurturing', 'Advanced Automation', 'A/B Testing', 'Dashboard'],
-  },
-  {
-    name: 'Authority',
-    price: '$799',
-    items: ['Branding', 'SEO', 'GMB', 'Offer Optimization'],
-  },
-  {
-    name: 'Conversion Engine',
-    price: '$999',
-    items: ['Funnel', 'Copywriting', 'Lead Magnet', 'AI Strategy'],
-  },
-  {
-    name: 'Full Business',
-    price: '$1,499',
-    items: ['Full system setup', 'Automation', 'Branding', 'Strategy'],
-  },
-]
+  { name: "Launch System", price: "$599", items: ["Landing Page", "Email Campaign", "Workflow Setup", "Basic CRM Setup", "Best for launching fast"] },
+  { name: "Growth Engine", price: "$999", popular: true, items: ["Funnel Copywriting", "Email Sequence", "CRM Setup", "Segmentation Strategy", "Lead Magnet"] },
+  { name: "Automation System", price: "$1,499", items: ["Lead Nurturing Workflow", "Advanced Automation", "A/B Testing", "Dashboard Setup", "SMS Campaign"] },
+  { name: "Authority Builder", price: "$1,799", items: ["Branding Kit", "SEO Optimization", "Local SEO", "GMB Optimization", "Offer Optimization"] },
+  { name: "Conversion Engine", price: "$2,499", items: ["Funnel Strategy", "Funnel Copywriting", "Lead Magnet Creation", "AI Campaign Strategy", "Customer Journey Mapping", "Segmentation Strategy"] },
+  { name: "Full Business System", price: "$4,999", items: ["Full system setup", "CRM Setup", "Automation System", "Branding Kit", "SEO/GMB", "AI Funnel Optimization", "Campaign Strategy", "30-day implementation support"] },
+];
 
-const recurring = [
-  { name: 'Growth Ops', price: '$299/mo' },
-  { name: 'Scale Ops', price: '$599/mo' },
-  { name: 'Elite Ops', price: '$999/mo' },
-]
+const retainers = [
+  ["Growth Ops", "$599/mo"],
+  ["Scale Ops", "$999/mo"],
+  ["Elite Ops", "$1,999/mo"],
+];
+
+const card = "rounded-3xl border border-cyan-400/15 bg-slate-950/70 p-6 backdrop-blur";
 
 export default function ServicesPage() {
-  const C = {
-    bg: 'transparent',
-    card: 'rgba(17,24,39,0.72)',
-    cyan: '#00E5FF',
-    green: '#00E676',
-    muted: '#B2EBF2',
-    dim: '#7FB3C8',
-    border: 'rgba(0,229,255,0.12)',
-    borderHot: 'rgba(0,229,255,0.35)',
-  }
-
-  const gradText = {
-    background: 'linear-gradient(90deg,#00FFFF,#00E676)',
-    WebkitBackgroundClip: 'text' as const,
-    WebkitTextFillColor: 'transparent' as const,
-  }
-
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: 'transparent',
-        color: '#fff',
-        fontFamily: "'Inter', sans-serif",
-        position: 'relative',
-      }}
-    >
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=JetBrains+Mono&display=swap');
-
-        *{
-          box-sizing:border-box;
-          margin:0;
-          padding:0;
-        }
-
-        a{
-          text-decoration:none;
-          color:inherit;
-        }
-
-        .card-hover{
-          transition:all .25s ease;
-          backdrop-filter: blur(10px);
-        }
-
-        .card-hover:hover{
-          border-color:rgba(0,229,255,0.35)!important;
-          transform:translateY(-3px);
-        }
-
-        .cta-btn:hover{
-          transform:scale(1.03);
-        }
-      `}</style>
-
-      <div
-        style={{
-          maxWidth: '1180px',
-          margin: '0 auto',
-          padding: '70px 20px 100px',
-          position: 'relative',
-          zIndex: 1,
-          background: 'transparent',
-        }}
-      >
-        {/* HERO */}
-        <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-          <div
-            style={{
-              display: 'inline-block',
-              padding: '6px 18px',
-              borderRadius: '999px',
-              border: '1px solid rgba(0,229,255,0.25)',
-              color: C.cyan,
-              fontSize: '11px',
-              fontWeight: 700,
-              letterSpacing: '0.12em',
-              marginBottom: '18px',
-              background: 'rgba(0,0,0,0.15)',
-              backdropFilter: 'blur(8px)',
-            }}
-          >
-            SERVICES & EXECUTION
-          </div>
-
-          <h1
-            style={{
-              fontFamily: 'Montserrat,sans-serif',
-              fontWeight: 800,
-              fontSize: 'clamp(34px,6vw,64px)',
-              lineHeight: 1.1,
-              marginBottom: '18px',
-            }}
-          >
-            Marketing & AI{' '}
-            <span style={gradText}>Services</span>
-          </h1>
-
-          <p
-            style={{
-              color: C.muted,
-              fontSize: '16px',
-              lineHeight: 1.7,
-              maxWidth: '720px',
-              margin: '0 auto',
-            }}
-          >
-            Funnels, automations, AI systems, branding, CRM optimization,
-            campaigns, SEO, and growth operations — built to scale your business.
-          </p>
+    <main className="min-h-screen px-5 py-16 text-white">
+      <section className="mx-auto max-w-6xl text-center">
+        <div className="mb-4 inline-flex rounded-full border border-cyan-400/25 bg-cyan-400/10 px-4 py-2 text-xs font-bold text-cyan-200">
+          SERVICES & EXECUTION
         </div>
+        <h1 className="text-4xl font-black md:text-6xl">
+          Marketing & AI <span className="bg-gradient-to-r from-cyan-300 to-green-300 bg-clip-text text-transparent">Services</span>
+        </h1>
+        <p className="mx-auto mt-5 max-w-3xl text-cyan-50/70">
+          Exact prices for campaigns, CRM setup, automations, branding, SEO, GMB, and AI strategy.
+        </p>
+      </section>
 
-        {/* SERVICES */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '36px',
-            marginBottom: '80px',
-          }}
-        >
-          {serviceGroups.map((group) => (
-            <div
-              key={group.title}
-              className="card-hover"
-              style={{
-                background: C.card,
-                border: `1px solid ${C.border}`,
-                borderRadius: '22px',
-                padding: '34px',
-              }}
-            >
-              <h2
-                style={{
-                  fontFamily: 'Montserrat,sans-serif',
-                  fontWeight: 800,
-                  fontSize: '28px',
-                  marginBottom: '28px',
-                }}
-              >
-                {group.title}
-              </h2>
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))',
-                  gap: '24px',
-                }}
-              >
-                {group.sections.map((section) => (
-                  <div
-                    key={section.name}
-                    style={{
-                      background: 'rgba(0,229,255,0.04)',
-                      border: `1px solid ${C.border}`,
-                      borderRadius: '16px',
-                      padding: '22px',
-                      backdropFilter: 'blur(10px)',
-                    }}
-                  >
-                    <div
-                      style={{
-                        color: C.cyan,
-                        fontWeight: 700,
-                        marginBottom: '16px',
-                        fontSize: '15px',
-                      }}
-                    >
-                      {section.name}
-                    </div>
-
-                    <ul
-                      style={{
-                        listStyle: 'none',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '10px',
-                      }}
-                    >
-                      {section.items.map((item) => (
-                        <li
-                          key={item}
-                          style={{
-                            display: 'flex',
-                            gap: '10px',
-                            color: C.muted,
-                            fontSize: '14px',
-                            lineHeight: 1.5,
-                          }}
-                        >
-                          <span style={{ color: C.green }}>✓</span>
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
+      <section className="mx-auto mt-14 max-w-6xl space-y-8">
+        {services.map((group) => (
+          <div key={group.title} className={card}>
+            <h2 className="text-3xl font-black">{group.title}</h2>
+            <div className="mt-6 grid gap-5 md:grid-cols-3">
+              {group.sections.map((section) => (
+                <div key={section.name} className="rounded-2xl border border-cyan-400/10 bg-cyan-400/5 p-5">
+                  <h3 className="font-bold text-cyan-200">{section.name}</h3>
+                  <div className="mt-4 space-y-3">
+                    {section.items.map(([name, price]) => (
+                      <div key={name} className="flex justify-between gap-4 text-sm">
+                        <span className="text-cyan-50/75">{name}</span>
+                        <span className="font-black text-white">{price}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <section className="mx-auto mt-16 max-w-6xl">
+        <h2 className="text-3xl font-black">Service Bundles</h2>
+        <div className="mt-6 grid gap-5 md:grid-cols-3">
+          {bundles.map((bundle) => (
+            <div key={bundle.name} className={`${card} relative ${bundle.popular ? "border-cyan-300/50 shadow-2xl shadow-cyan-500/10" : ""}`}>
+              {bundle.popular && <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-cyan-300 to-green-300 px-4 py-1 text-xs font-black text-black">MOST POPULAR</div>}
+              <h3 className="text-2xl font-black">{bundle.name}</h3>
+              <div className="mt-3 bg-gradient-to-r from-cyan-300 to-green-300 bg-clip-text text-4xl font-black text-transparent">{bundle.price}</div>
+              <ul className="mt-5 space-y-2 text-sm text-cyan-50/75">
+                {bundle.items.map((item) => <li key={item}>- {item}</li>)}
+              </ul>
+              <Link href="/contact" className="mt-6 block rounded-2xl border border-cyan-300/30 px-5 py-3 text-center font-bold text-cyan-100">Get Started</Link>
             </div>
           ))}
         </div>
+      </section>
 
-        {/* PRICING */}
-        <div style={{ marginBottom: '80px' }}>
-          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-            <h2
-              style={{
-                fontFamily: 'Montserrat,sans-serif',
-                fontWeight: 800,
-                fontSize: 'clamp(28px,5vw,42px)',
-                marginBottom: '12px',
-              }}
-            >
-              Service <span style={gradText}>Pricing</span>
-            </h2>
-
-            <p style={{ color: C.muted }}>
-              Flexible pricing based on complexity and execution depth.
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))',
-              gap: '18px',
-            }}
-          >
-            {pricing.map((p) => (
-              <div
-                key={p.name}
-                className="card-hover"
-                style={{
-                  background: C.card,
-                  border: `1px solid ${C.border}`,
-                  borderRadius: '18px',
-                  padding: '28px',
-                  textAlign: 'center',
-                }}
-              >
-                <div
-                  style={{
-                    fontFamily: 'Montserrat,sans-serif',
-                    fontWeight: 700,
-                    fontSize: '18px',
-                    marginBottom: '12px',
-                  }}
-                >
-                  {p.name}
-                </div>
-
-                <div
-                  style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: '26px',
-                    fontWeight: 700,
-                    ...gradText,
-                  }}
-                >
-                  {p.range}
-                </div>
-              </div>
-            ))}
-          </div>
+      <section className="mx-auto mt-16 max-w-6xl">
+        <h2 className="text-3xl font-black">Recurring Service Retainers</h2>
+        <div className="mt-6 grid gap-5 md:grid-cols-3">
+          {retainers.map(([name, price]) => (
+            <div key={name} className={card}>
+              <h3 className="text-2xl font-black">{name}</h3>
+              <div className="mt-3 text-3xl font-black text-cyan-200">{price}</div>
+            </div>
+          ))}
         </div>
-
-        {/* BUNDLES */}
-        <div style={{ marginBottom: '80px' }}>
-          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-            <h2
-              style={{
-                fontFamily: 'Montserrat,sans-serif',
-                fontWeight: 800,
-                fontSize: 'clamp(28px,5vw,42px)',
-                marginBottom: '12px',
-              }}
-            >
-              Service <span style={gradText}>Bundles</span>
-            </h2>
-          </div>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit,minmax(250px,1fr))',
-              gap: '20px',
-            }}
-          >
-            {bundles.map((bundle) => (
-              <div
-                key={bundle.name}
-                className="card-hover"
-                style={{
-                  position: 'relative',
-                  background: bundle.popular
-                    ? 'linear-gradient(160deg,rgba(9,26,19,0.78),rgba(17,24,39,0.78))'
-                    : C.card,
-                  border: `1px solid ${
-                    bundle.popular ? C.borderHot : C.border
-                  }`,
-                  borderRadius: '20px',
-                  padding: '28px',
-                }}
-              >
-                {bundle.popular && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '-11px',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      background:
-                        'linear-gradient(90deg,#00FFFF,#00E676)',
-                      color: '#0A0F1F',
-                      padding: '4px 16px',
-                      borderRadius: '999px',
-                      fontSize: '10px',
-                      fontWeight: 800,
-                      letterSpacing: '0.08em',
-                    }}
-                  >
-                    ⭐ MOST POPULAR
-                  </div>
-                )}
-
-                <div
-                  style={{
-                    fontFamily: 'Montserrat,sans-serif',
-                    fontWeight: 800,
-                    fontSize: '22px',
-                    marginBottom: '8px',
-                  }}
-                >
-                  {bundle.name}
-                </div>
-
-                <div
-                  style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontWeight: 700,
-                    fontSize: '34px',
-                    marginBottom: '20px',
-                    ...gradText,
-                  }}
-                >
-                  {bundle.price}
-                </div>
-
-                <ul
-                  style={{
-                    listStyle: 'none',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '10px',
-                    marginBottom: '24px',
-                  }}
-                >
-                  {bundle.items.map((item) => (
-                    <li
-                      key={item}
-                      style={{
-                        display: 'flex',
-                        gap: '10px',
-                        color: C.muted,
-                        fontSize: '14px',
-                      }}
-                    >
-                      <span style={{ color: C.green }}>✓</span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-
-                <Link
-                  href="/contact"
-                  className="cta-btn"
-                  style={{
-                    display: 'block',
-                    textAlign: 'center',
-                    background: bundle.popular
-                      ? C.green
-                      : 'transparent',
-                    color: bundle.popular ? '#0A0F1F' : C.cyan,
-                    border: bundle.popular
-                      ? 'none'
-                      : '1px solid rgba(0,229,255,0.35)',
-                    padding: '12px',
-                    borderRadius: '999px',
-                    fontWeight: 700,
-                    fontSize: '14px',
-                  }}
-                >
-                  Get Started
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* RECURRING */}
-        <div
-          className="card-hover"
-          style={{
-            background: C.card,
-            border: `1px solid ${C.border}`,
-            borderRadius: '24px',
-            padding: '42px 32px',
-            marginBottom: '70px',
-          }}
-        >
-          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <h2
-              style={{
-                fontFamily: 'Montserrat,sans-serif',
-                fontWeight: 800,
-                fontSize: 'clamp(28px,5vw,40px)',
-                marginBottom: '12px',
-              }}
-            >
-              Recurring <span style={gradText}>Growth Ops</span>
-            </h2>
-
-            <p style={{ color: C.muted }}>
-              Ongoing execution, optimization, automation, and scaling support.
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))',
-              gap: '20px',
-            }}
-          >
-            {recurring.map((plan) => (
-              <div
-                key={plan.name}
-                className="card-hover"
-                style={{
-                  background: 'rgba(0,229,255,0.04)',
-                  border: `1px solid ${C.border}`,
-                  borderRadius: '18px',
-                  padding: '28px',
-                  textAlign: 'center',
-                }}
-              >
-                <div
-                  style={{
-                    fontFamily: 'Montserrat,sans-serif',
-                    fontWeight: 700,
-                    fontSize: '22px',
-                    marginBottom: '12px',
-                  }}
-                >
-                  {plan.name}
-                </div>
-
-                <div
-                  style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: '34px',
-                    fontWeight: 700,
-                    marginBottom: '18px',
-                    ...gradText,
-                  }}
-                >
-                  {plan.price}
-                </div>
-
-                <Link
-                  href="/contact"
-                  className="cta-btn"
-                  style={{
-                    display: 'inline-block',
-                    background: 'linear-gradient(90deg,#00FFFF,#00E676)',
-                    color: '#0A0F1F',
-                    padding: '12px 28px',
-                    borderRadius: '999px',
-                    fontWeight: 700,
-                    fontSize: '14px',
-                  }}
-                >
-                  Book Strategy Call
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* CTA */}
-        <div style={{ textAlign: 'center' }}>
-          <h2
-            style={{
-              fontFamily: 'Montserrat,sans-serif',
-              fontWeight: 800,
-              fontSize: 'clamp(28px,5vw,46px)',
-              marginBottom: '16px',
-            }}
-          >
-            Ready to <span style={gradText}>Scale?</span>
-          </h2>
-
-          <p
-            style={{
-              color: C.muted,
-              maxWidth: '620px',
-              margin: '0 auto 28px',
-              lineHeight: 1.7,
-            }}
-          >
-            Get a custom growth system built around your business goals,
-            workflows, automation, and customer acquisition strategy.
-          </p>
-
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: '14px',
-              flexWrap: 'wrap',
-            }}
-          >
-            <Link
-              href="/trial"
-              className="cta-btn"
-              style={{
-                background: C.green,
-                color: '#0A0F1F',
-                padding: '14px 34px',
-                borderRadius: '999px',
-                fontWeight: 700,
-                fontSize: '15px',
-              }}
-            >
-              Start Free Trial
-            </Link>
-
-            <Link
-              href="/contact"
-              className="cta-btn"
-              style={{
-                background: 'transparent',
-                color: '#fff',
-                padding: '14px 34px',
-                borderRadius: '999px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                fontWeight: 700,
-                fontSize: '15px',
-              }}
-            >
-              Contact Sales
-            </Link>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+      </section>
+    </main>
+  );
 }

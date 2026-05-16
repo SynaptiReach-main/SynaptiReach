@@ -91,7 +91,7 @@ export default function Home() {
               href="/trial"
               className="px-7 py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-green-400 text-black font-semibold text-sm hover:opacity-90 transition shadow-lg shadow-cyan-500/20"
             >
-              Start Free Trial
+              Start 14-Day Trial
             </Link>
 
             <Link
@@ -664,9 +664,9 @@ export default function Home() {
 
           <div className="grid sm:grid-cols-3 gap-4">
             {[
-              ["Starter", "$29/mo"],
-              ["Growth", "$79/mo"],
-              ["Pro", "$149/mo"]
+              ["Basic Managed", "$49/mo"],
+              ["Growth Managed", "$99/mo"],
+              ["Premium Managed", "$199/mo"]
             ].map(([name, price], i) => (
               <div
                 key={i}
@@ -679,11 +679,14 @@ export default function Home() {
                 </div>
 
                 <button className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/20 transition text-sm">
-                  Choose Plan
+                  Start 14-Day Trial
                 </button>
               </div>
             ))}
           </div>
+          <p className="text-center text-sm text-cyan-200/80">
+            BYOK self-service starts at $29/mo when you connect your own provider keys.
+          </p>
         </section>
 
         {/* FAQ */}
@@ -744,7 +747,7 @@ export default function Home() {
             </h2>
 
             <p className="text-gray-400 text-sm max-w-lg mx-auto mb-6">
-              Start your free trial and see how SynaptiReach can automate your growth.
+              Start your 14-day free trial and see how SynaptiReach can automate your growth.
             </p>
 
             <div className="flex flex-col sm:flex-row justify-center gap-3">
@@ -752,7 +755,7 @@ export default function Home() {
                 href="/trial"
                 className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-cyan-400 to-green-400 text-black font-bold text-sm hover:opacity-90 transition shadow-xl shadow-cyan-500/20"
               >
-                Start Free Trial
+                Start 14-Day Trial
               </Link>
 
               <Link

@@ -9,9 +9,9 @@ export default function Pricing() {
 
       <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
         {[
-          { name: "Starter", price: "$29/mo" },
-          { name: "Growth", price: "$79/mo" },
-          { name: "Pro", price: "$149/mo" },
+          { name: "Basic Managed", price: "$49/mo" },
+          { name: "Growth Managed", price: "$99/mo" },
+          { name: "Premium Managed", price: "$199/mo" },
         ].map((plan, i) => (
           <div
             key={plan.name}

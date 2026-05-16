@@ -3,6 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
+  outputFileTracingRoot: __dirname,
 };
 
 module.exports = nextConfig;

@@ -4,6 +4,7 @@ import {
   Sparkles,
   Wand2,
   BrainCircuit,
+  Loader2,
 } from "lucide-react";
 
 interface Props {
@@ -12,6 +13,8 @@ interface Props {
   setPrompt: (value: string) => void;
   credits: number;
   onGenerate: () => void;
+  loading?: boolean;
+  error?: string;
 }
 
 export default function AIAssistantPanel({
@@ -20,6 +23,8 @@ export default function AIAssistantPanel({
   setPrompt,
   credits,
   onGenerate,
+  loading = false,
+  error,
 }: Props) {
   return (
     <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/[0.05] p-5">
@@ -64,13 +69,27 @@ export default function AIAssistantPanel({
 
         <button
           onClick={onGenerate}
+          disabled={loading || !prompt.trim()}
           className="px-5 py-3 rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 text-black font-black flex items-center gap-2"
         >
-          <Sparkles size={18} />
-          Generate Campaign
+          {loading ? (
+            <Loader2
+              size={18}
+              className="animate-spin"
+            />
+          ) : (
+            <Sparkles size={18} />
+          )}
+          {loading ? "Generating..." : "Generate Campaign"}
         </button>
 
       </div>
+
+      {error && (
+        <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-200">
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-5">
 

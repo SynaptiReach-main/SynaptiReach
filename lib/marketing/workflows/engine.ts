@@ -94,12 +94,16 @@ export async function executeWorkflow(
 
   await supabase
     .from(
-      "marketing_activity"
+      "marketing_events"
     )
     .insert({
-      title:
-        "Workflow Executed",
-      description:
+      type: "workflow",
+      event_type: "workflow",
+      action: "executed",
+      title: "Workflow Executed",
+      message:
+        `${workflow.name} executed for ${lead.email}`,
+      details:
         `${workflow.name} executed for ${lead.email}`,
     });
 }

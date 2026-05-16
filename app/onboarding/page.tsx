@@ -373,9 +373,9 @@ export default function OnboardingPage() {
                 </label>
                 <div className="grid grid-cols-1 gap-3">
                   {[
-                    { id: "starter", name: "Starter", price: "$97/mo", desc: "Up to 500 contacts, core automation, 1 user" },
-                    { id: "growth", name: "Growth", price: "$197/mo", desc: "Up to 2,500 contacts, full AI suite, 3 users" },
-                    { id: "pro", name: "Pro", price: "$397/mo", desc: "Unlimited contacts, white-label, 10 users" },
+                    { id: "basic_managed", name: "Basic Managed", price: "$49/mo", desc: "500 contacts, 3,000 AI actions, 1 lightweight AI agent" },
+                    { id: "growth_managed", name: "Growth Managed", price: "$99/mo", desc: "2,500 contacts, 12,000 AI actions, 3 AI agents" },
+                    { id: "premium_managed", name: "Premium Managed", price: "$199/mo", desc: "10,000 contacts, 40,000 AI actions, 8 AI agents" },
                   ].map((plan) => (
                     <div
                       key={plan.id}

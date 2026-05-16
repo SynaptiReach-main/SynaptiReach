@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { GEMINI_API_KEY } from "@/lib/marketing/env";
+import { generateAIText, providerErrorResponse } from "@/lib/ai/providers";
 
 export async function POST(req: Request) {
   try {
@@ -10,48 +10,65 @@ export async function POST(req: Request) {
       system,
     } = body;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+    if (!prompt) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Missing AI prompt.",
         },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: `
-SYSTEM:
-${system}
+        {
+          status: 400,
+        }
+      );
+    }
 
-USER:
-${prompt}
-                  `,
-                },
-              ],
-            },
-          ],
-        }),
-      }
-    );
+    const taskType = `${body.type || body.channel || ""} ${system || ""}`.toLowerCase();
+    const profile =
+      body.profile ||
+      (taskType.includes("sms") || taskType.includes("social")
+        ? "cheap"
+        : taskType.includes("email") && String(prompt).length > 400
+          ? "premium"
+          : "balanced");
 
-    const data = await response.json();
+    const result = await generateAIText([
+      {
+        role: "system",
+        content:
+          system ||
+          "You are SynaptiReach's CRM marketing assistant. Generate concise, conversion-oriented campaign content.",
+      },
+      {
+        role: "user",
+        content: prompt,
+      },
+    ], { profile });
 
-    const text =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    if (!result.text) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "AI generation returned no content.",
+        },
+        {
+          status: 502,
+        }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      text,
+      text: result.text,
+      provider: result.provider,
+      model: result.model,
+      fallback_used: result.fallback_used,
+      provider_errors: result.provider_errors,
+      provider_warnings: result.provider_warnings,
     });
   } catch (error: any) {
+    const response = providerErrorResponse(error);
     return NextResponse.json(
-      {
-        success: false,
-        error: error.message,
-      },
+      response,
       {
         status: 500,
       }

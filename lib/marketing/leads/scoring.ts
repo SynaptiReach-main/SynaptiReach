@@ -89,9 +89,12 @@ export async function runLeadScoring() {
     await supabase
       .from("leads")
       .update({
-        ai_score: score,
-        ai_segment:
-          segment,
+        score,
+        metadata: {
+          ...(lead.metadata || {}),
+          ai_segment:
+            segment,
+        },
       })
       .eq(
         "id",
@@ -100,20 +103,27 @@ export async function runLeadScoring() {
 
     updated.push({
       ...lead,
-      ai_score: score,
-      ai_segment:
-        segment,
+      score,
+      metadata: {
+        ...(lead.metadata || {}),
+        ai_segment:
+          segment,
+      },
     });
   }
 
   await supabase
     .from(
-      "marketing_activity"
+      "marketing_events"
     )
     .insert({
-      title:
-        "AI Lead Scoring Updated",
-      description:
+      type: "lead_scoring",
+      event_type: "lead_scoring",
+      action: "scored",
+      title: "AI Lead Scoring Updated",
+      message:
+        "Autonomous AI recalculated lead conversion probabilities.",
+      details:
         "Autonomous AI recalculated lead conversion probabilities.",
     });
 

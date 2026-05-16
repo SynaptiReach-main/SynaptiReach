@@ -170,13 +170,19 @@ export async function executeCampaign(
 
             await supabase
               .from(
-                "marketing_activity"
+                "marketing_events"
               )
               .insert({
-                title:
-                  "Campaign Delivered",
-                description:
-                  `${campaign.name} delivered to ${lead.name}`,
+                type: "campaign_delivery",
+                event_type: "campaign_delivery",
+                action: "delivered",
+                title: "Campaign Delivered",
+                message:
+                  `${campaign.name || campaign.subject || campaign.id} delivered to ${lead.name || lead.email || lead.id}`,
+                details:
+                  `${campaign.name || campaign.subject || campaign.id} delivered to ${lead.name || lead.email || lead.id}`,
+                campaign_id:
+                  campaign.id,
               });
           } catch (error) {
             console.error(

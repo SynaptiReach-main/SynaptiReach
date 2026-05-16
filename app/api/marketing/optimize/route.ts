@@ -8,10 +8,14 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
+      provider: null,
+      model: null,
+      fallback_used: false,
     });
   } catch (error: any) {
     return NextResponse.json(
       {
+        success: false,
         error:
           error.message,
       },

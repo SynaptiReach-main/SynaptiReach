@@ -29,8 +29,7 @@ export async function GET(
     );
 
   if (
-    campaign &&
-    lead
+    campaign
   ) {
     await supabase
       .from(
@@ -41,12 +40,41 @@ export async function GET(
           campaign,
 
         lead_id:
-          lead,
+          lead || null,
 
         event_type:
           "click",
 
         metadata: {
+          url,
+        },
+      });
+
+    const { data: existing } = await supabase
+      .from("marketing_campaigns")
+      .select("clicked_count")
+      .eq("id", campaign)
+      .maybeSingle();
+
+    await supabase
+      .from("marketing_campaigns")
+      .update({
+        clicked_count: Number(existing?.clicked_count || 0) + 1,
+      })
+      .eq("id", campaign);
+
+    await supabase
+      .from("marketing_events")
+      .insert({
+        campaign_id: campaign,
+        action: "clicked",
+        type: "click",
+        event_type: "click",
+        title: "Campaign link clicked",
+        message: url || "Tracked campaign link clicked",
+        details: url || "Tracked campaign link clicked",
+        metadata: {
+          lead,
           url,
         },
       });

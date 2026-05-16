@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { generateAIJson } from "@/lib/ai/providers";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -110,15 +111,50 @@ export async function generateAutonomousCampaign() {
       leads || []
     );
 
-  const subject =
-    generateSubject(
-      audience
-    );
+  const hasProvider =
+    Boolean(process.env.GEMINI_API_KEY) ||
+    Boolean(process.env.OPENROUTER_API_KEY) ||
+    Boolean(process.env.OPENAI_API_KEY && process.env.AI_ENABLE_OPENAI === "true");
 
-  const body =
-    generateBody(
-      audience
-    );
+  const generated =
+    hasProvider
+      ? (await generateAIJson(
+          [
+            {
+              role: "system",
+              content:
+                "You are SynaptiReach's safe autonomous campaign drafting agent. Use only the supplied audience and lead count. Create a reviewable draft only. Return JSON with subject and content.",
+            },
+            {
+              role: "user",
+              content: JSON.stringify({
+                audience,
+                lead_count:
+                  leads?.length || 0,
+              }),
+            },
+          ],
+          {
+            subject:
+              generateSubject(
+                audience
+              ),
+            content:
+              generateBody(
+                audience
+              ),
+          }
+        , { profile: "balanced" })).data
+      : {
+          subject:
+            generateSubject(
+              audience
+            ),
+          content:
+            generateBody(
+              audience
+            ),
+        };
 
   const {
     data: campaign,
@@ -131,8 +167,10 @@ export async function generateAutonomousCampaign() {
         `AI Campaign - ${new Date().toLocaleDateString()}`,
       type: "email",
       audience,
-      subject,
-      body,
+      subject:
+        generated.subject,
+      content:
+        generated.content,
       status: "draft",
       ai_generated: true,
     })
@@ -141,13 +179,17 @@ export async function generateAutonomousCampaign() {
 
   await supabase
     .from(
-      "marketing_activity"
+      "marketing_events"
     )
     .insert({
-      title:
-        "AI Campaign Generated",
-      description:
-        `AI generated campaign targeting ${audience} leads.`,
+      type: "ai_campaign",
+      event_type: "ai_campaign",
+      action: "draft_created",
+      title: "AI Campaign Generated",
+      message:
+        `AI generated draft campaign targeting ${audience} leads.`,
+      details:
+        `AI generated draft campaign targeting ${audience} leads.`,
     });
 
   return campaign;
