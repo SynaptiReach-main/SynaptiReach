@@ -30,6 +30,12 @@ export async function loadCRMContext() {
     communications,
     settings,
     recommendations,
+    deals,
+    tasks,
+    workflows,
+    workflowRuns,
+    appointments,
+    agentRuns,
   ] = await Promise.all([
     safeQuery(supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(200)),
     safeQuery(supabase.from("marketing_campaigns").select("*").order("created_at", { ascending: false }).limit(100)),
@@ -37,6 +43,12 @@ export async function loadCRMContext() {
     safeQuery(supabase.from("communications").select("*").order("created_at", { ascending: false }).limit(100)),
     safeQuery(supabase.from("crm_settings").select("*").limit(1).maybeSingle()),
     safeQuery(supabase.from("marketing_ai_recommendations").select("*").order("created_at", { ascending: false }).limit(50)),
+    safeQuery(supabase.from("crm_deals").select("*").eq("archived", false).order("created_at", { ascending: false }).limit(200)),
+    safeQuery(supabase.from("crm_tasks").select("*").neq("status", "archived").order("due_date", { ascending: true, nullsFirst: false }).limit(200)),
+    safeQuery(supabase.from("crm_workflows").select("*").neq("status", "archived").order("created_at", { ascending: false }).limit(100)),
+    safeQuery(supabase.from("crm_workflow_runs").select("*").order("started_at", { ascending: false }).limit(100)),
+    safeQuery(supabase.from("crm_appointments").select("*").order("starts_at", { ascending: true }).limit(100)),
+    safeQuery(supabase.from("crm_agent_runs").select("*").order("created_at", { ascending: false }).limit(100)),
   ]);
 
   const schemaWarnings = [
@@ -46,6 +58,12 @@ export async function loadCRMContext() {
     communications,
     settings,
     recommendations,
+    deals,
+    tasks,
+    workflows,
+    workflowRuns,
+    appointments,
+    agentRuns,
   ]
     .filter((result) => result.missingSchema)
     .map((result) => result.error);
@@ -54,6 +72,13 @@ export async function loadCRMContext() {
   const campaignRows = (campaigns.data || []) as any[];
   const activityRows = (activity.data || []) as any[];
   const communicationRows = (communications.data || []) as any[];
+  const dealRows = (deals.data || []) as any[];
+  const taskRows = (tasks.data || []) as any[];
+  const workflowRows = (workflows.data || []) as any[];
+  const workflowRunRows = (workflowRuns.data || []) as any[];
+  const appointmentRows = (appointments.data || []) as any[];
+  const agentRunRows = (agentRuns.data || []) as any[];
+  const now = Date.now();
 
   const metrics = {
     leads: {
@@ -108,6 +133,48 @@ export async function loadCRMContext() {
       scheduled: communicationRows.filter((item) => item.status === "scheduled")
         .length,
     },
+    deals: {
+      total: dealRows.length,
+      open: dealRows.filter((deal) => deal.status === "open").length,
+      won: dealRows.filter((deal) => deal.stage === "won" || deal.status === "won").length,
+      lost: dealRows.filter((deal) => deal.stage === "lost" || deal.status === "lost").length,
+      value: dealRows.reduce((sum, deal) => sum + Number(deal.value || 0), 0),
+      open_value: dealRows
+        .filter((deal) => deal.status === "open")
+        .reduce((sum, deal) => sum + Number(deal.value || 0), 0),
+    },
+    tasks: {
+      total: taskRows.length,
+      open: taskRows.filter((task) => task.status === "open").length,
+      completed: taskRows.filter((task) => task.status === "completed").length,
+      overdue: taskRows.filter(
+        (task) =>
+          task.status === "open" &&
+          task.due_date &&
+          new Date(task.due_date).getTime() < now
+      ).length,
+    },
+    workflows: {
+      total: workflowRows.length,
+      active: workflowRows.filter((workflow) => workflow.status === "active").length,
+      paused: workflowRows.filter((workflow) => workflow.status === "paused").length,
+      runs: workflowRunRows.length,
+      failed_runs: workflowRunRows.filter((run) => run.status === "failed").length,
+    },
+    appointments: {
+      total: appointmentRows.length,
+      upcoming: appointmentRows.filter(
+        (appointment) =>
+          appointment.status === "scheduled" &&
+          appointment.starts_at &&
+          new Date(appointment.starts_at).getTime() >= now
+      ).length,
+      cancelled: appointmentRows.filter((appointment) => appointment.status === "cancelled").length,
+    },
+    agents: {
+      runs: agentRunRows.length,
+      failed: agentRunRows.filter((run) => run.status === "failed").length,
+    },
   };
 
   return {
@@ -115,6 +182,12 @@ export async function loadCRMContext() {
     campaigns: campaignRows,
     activity: activityRows,
     communications: communicationRows,
+    deals: dealRows,
+    tasks: taskRows,
+    workflows: workflowRows,
+    workflowRuns: workflowRunRows,
+    appointments: appointmentRows,
+    agentRuns: agentRunRows,
     settings: settings.data || null,
     recommendations: (recommendations.data || []) as any[],
     metrics,

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CheckCircle2, Database, Loader2, Settings, Sparkles, XCircle, Zap } from "lucide-react";
+import { COMMITMENT_DISCOUNTS, MANAGED_PLANS, TRIAL_PLANS } from "@/lib/billing/plans";
 
 const defaultForm = {
   business_name: "",
@@ -246,6 +247,49 @@ export default function SettingsPage() {
                     {aiProviders.warnings.map((warning: any) => warning.reason).join(". ")}
                   </div>
                 )}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 h-fit xl:col-span-3">
+              <div className="flex items-center gap-3 mb-5">
+                <Zap className="text-cyan-300" size={22} />
+                <h2 className="text-xl font-black">Trial, Caps & Billing Rules</h2>
+              </div>
+              <div className="mb-5 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4 text-sm text-cyan-100">
+                14-day free trial. No managed SMS during trial unless the user connects their own Twilio/BYOK provider. Trial caps are hard caps, no overages. Commit before your trial ends and save up to 30%.
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {TRIAL_PLANS.map((plan) => (
+                  <div key={plan.name} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                    <div className="font-black text-white">{plan.name}</div>
+                    <div className="mt-3 space-y-2 text-sm text-gray-400">
+                      <div>AI actions: <span className="text-white">{plan.aiActions}</span></div>
+                      <div>Emails: <span className="text-white">{plan.emails}</span></div>
+                      <div>SMS: <span className="text-white">{plan.sms}</span></div>
+                      <div>Contacts: <span className="text-white">{plan.contacts}</span></div>
+                      <div>AI agents: <span className="text-white">{plan.agents}</span></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {MANAGED_PLANS.map((plan) => (
+                  <div key={plan.name} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="font-black text-white">{plan.name}</div>
+                      {plan.popular && <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2 py-1 text-xs text-cyan-100">popular</span>}
+                    </div>
+                    <div className="mt-1 text-cyan-300 font-black">{plan.price}</div>
+                    <div className="mt-3 text-sm text-gray-400">{plan.aiActions} AI actions, {plan.emails} emails, {plan.sms} SMS, {plan.contacts} contacts, {plan.agents} agents.</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {COMMITMENT_DISCOUNTS.map((item) => (
+                  <span key={item.duration} className="rounded-full border border-white/10 bg-black/30 px-3 py-2 text-xs text-gray-300">
+                    {item.duration}: {item.discount} off
+                  </span>
+                ))}
               </div>
             </div>
           </section>

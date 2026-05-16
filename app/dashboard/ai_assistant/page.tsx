@@ -9,7 +9,19 @@ const prompts = [
   "Which campaign is performing best?",
   "Suggest a campaign for qualified leads.",
   "Draft a follow-up for cold leads.",
+  "Summarize my pipeline.",
+  "Create a nurture workflow idea.",
 ];
+
+function recommendationHref(action?: string) {
+  if (action === "review_pipeline") return "/dashboard/pipeline";
+  if (action === "review_tasks") return "/dashboard/tasks";
+  if (action === "create_workflow_suggestion") return "/dashboard/workflow";
+  if (action === "create_variant") return "/dashboard/marketing";
+  if (action === "draft_follow_up") return "/dashboard/communications";
+  if (action === "review_lead") return "/dashboard/leads";
+  return "/dashboard";
+}
 
 export default function AIAssistantPage() {
   const [message, setMessage] = useState("");
@@ -22,6 +34,7 @@ export default function AIAssistantPage() {
   async function loadAgents() {
     try {
       setAgentLoading(true);
+      setError("");
       const response = await fetch("/api/crm/agents/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -41,13 +54,32 @@ export default function AIAssistantPage() {
     }
   }
 
+  async function runExecutiveReview() {
+    try {
+      setAgentLoading(true);
+      setError("");
+      const response = await fetch("/api/crm/agents/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agent: "executive" }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data?.error || "Executive agent failed.");
+      setAgentData(data);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Executive agent failed.");
+    } finally {
+      setAgentLoading(false);
+    }
+  }
+
   useEffect(() => {
     loadAgents();
   }, []);
 
   async function askAI(nextMessage = message) {
     try {
-      if (!nextMessage.trim()) return;
+      if (loading || !nextMessage.trim()) return;
       setLoading(true);
       setError("");
       setMessages((current) => [...current, { role: "user", content: nextMessage }]);
@@ -112,7 +144,12 @@ export default function AIAssistantPage() {
 
           <div className="flex flex-wrap gap-2 mb-5">
             {prompts.map((prompt) => (
-              <button key={prompt} onClick={() => askAI(prompt)} className="rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-gray-300">
+              <button
+                key={prompt}
+                onClick={() => askAI(prompt)}
+                disabled={loading}
+                className="rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
+              >
                 {prompt}
               </button>
             ))}
@@ -146,7 +183,14 @@ export default function AIAssistantPage() {
           </div>
 
           <div className="mt-4 flex gap-3">
-            <input value={message} onChange={(event) => setMessage(event.target.value)} onKeyDown={(event) => event.key === "Enter" && askAI()} placeholder="Ask your CRM assistant..." className="flex-1 rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
+            <input
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              onKeyDown={(event) => event.key === "Enter" && askAI()}
+              disabled={loading}
+              placeholder="Ask your CRM assistant..."
+              className="flex-1 rounded-2xl border border-white/10 bg-black/30 p-4 text-white disabled:cursor-not-allowed disabled:opacity-50"
+            />
             <button onClick={() => askAI()} disabled={loading} className="rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-5 font-black text-black flex items-center gap-2">
               {loading ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
               Ask
@@ -168,6 +212,9 @@ export default function AIAssistantPage() {
                   ["Hot Leads", agentData?.summary?.hot_leads || 0],
                   ["Follow-ups Due", agentData?.summary?.followups_due || 0],
                   ["Campaigns Reviewed", agentData?.summary?.campaign_count || 0],
+                  ["Open Deals", agentData?.summary?.open_deals || 0],
+                  ["Overdue Tasks", agentData?.summary?.overdue_tasks || 0],
+                  ["Active Workflows", agentData?.summary?.active_workflows || 0],
                   ["Confidence", `${Math.round((agentData?.confidence || 0) * 100)}%`],
                 ].map(([label, value]) => (
                   <div key={label} className="rounded-2xl border border-white/10 bg-black/30 p-4 flex items-center justify-between">
@@ -175,6 +222,23 @@ export default function AIAssistantPage() {
                     <span className="font-black text-cyan-300">{value}</span>
                   </div>
                 ))}
+                {(agentData?.provider || agentData?.model) && (
+                  <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4 text-sm text-cyan-100">
+                    {agentData.provider || "AI"} {agentData.model ? `/ ${agentData.model}` : ""}{agentData.fallback_used ? " - fallback used" : ""}
+                  </div>
+                )}
+                {agentData?.provider_errors?.length > 0 && (
+                  <div className="rounded-2xl border border-yellow-400/20 bg-yellow-500/10 p-4 text-xs text-yellow-100">
+                    Provider fallback notes: {agentData.provider_errors.map((item: any) => `${item.provider}: ${item.reason}`).join("; ")}
+                  </div>
+                )}
+                <button
+                  onClick={runExecutiveReview}
+                  disabled={agentLoading}
+                  className="w-full rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3 font-bold text-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {agentLoading ? "Running..." : "Run Executive Agent"}
+                </button>
               </div>
             )}
           </div>
@@ -192,6 +256,9 @@ export default function AIAssistantPage() {
                 <div key={index} className="rounded-2xl border border-white/10 bg-black/30 p-4">
                   <div className="font-bold text-white">{item.title}</div>
                   <div className="text-sm text-gray-400 mt-1">{item.description}</div>
+                  <a href={recommendationHref(item.action)} className="mt-3 inline-flex rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100">
+                    Review action
+                  </a>
                 </div>
               ))}
             </div>

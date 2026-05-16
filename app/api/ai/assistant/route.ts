@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { generateAIText, providerErrorResponse } from "@/lib/ai/providers";
 import { loadCRMContext } from "@/lib/crm/data";
 import { runDeterministicAgents } from "@/lib/agents/crmAgents";
+import { createSupabaseAdmin } from "@/lib/crm/supabaseAdmin";
 
 export async function POST(req: Request) {
   try {
@@ -42,10 +43,30 @@ export async function POST(req: Request) {
           recentCampaigns: context.campaigns.slice(0, 25),
           recentActivity: context.activity.slice(0, 25),
           recentCommunications: context.communications.slice(0, 25),
+          openDeals: context.deals.slice(0, 25),
+          openTasks: context.tasks.slice(0, 25),
+          workflows: context.workflows.slice(0, 25),
+          appointments: context.appointments.slice(0, 25),
           deterministicAgents: agentSnapshot,
         }),
       },
     ], { profile });
+
+    const supabase = createSupabaseAdmin();
+    await supabase.from("crm_agent_runs").insert({
+      workspace_id: body.workspace_id || body.workspaceId || null,
+      agent: "assistant",
+      status: "completed",
+      summary: { question: message },
+      recommendations: agentSnapshot.recommendations || [],
+      actions: agentSnapshot.actions || [],
+      confidence: agentSnapshot.confidence || null,
+      data_used: agentSnapshot.data_used || {},
+      provider: answer.provider,
+      model: answer.model,
+      fallback_used: answer.fallback_used,
+      provider_errors: answer.provider_errors || [],
+    });
 
     return NextResponse.json({
       success: true,

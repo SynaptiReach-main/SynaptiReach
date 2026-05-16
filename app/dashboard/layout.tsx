@@ -8,15 +8,20 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
+  KanbanSquare,
   Megaphone,
   Bot,
   Workflow,
   MessageSquare,
+  ListTodo,
+  CalendarDays,
+  BarChart3,
   Settings,
   Zap,
   LogOut,
   Menu,
   ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase/client";
@@ -33,6 +38,11 @@ const navItems = [
     icon: Users,
   },
   {
+    label: "Pipeline",
+    href: "/dashboard/pipeline",
+    icon: KanbanSquare,
+  },
+  {
     label: "Marketing",
     href: "/dashboard/marketing",
     icon: Megaphone,
@@ -43,7 +53,7 @@ const navItems = [
     icon: Bot,
   },
   {
-    label: "Workflow",
+    label: "Workflow/Automation",
     href: "/dashboard/workflow",
     icon: Workflow,
   },
@@ -51,6 +61,21 @@ const navItems = [
     label: "Communications",
     href: "/dashboard/communications",
     icon: MessageSquare,
+  },
+  {
+    label: "Tasks",
+    href: "/dashboard/tasks",
+    icon: ListTodo,
+  },
+  {
+    label: "Calendar",
+    href: "/dashboard/calendar",
+    icon: CalendarDays,
+  },
+  {
+    label: "Analytics",
+    href: "/dashboard/analytics",
+    icon: BarChart3,
   },
   {
     label: "Settings",
@@ -78,6 +103,18 @@ export default function DashboardLayout({
     useState<Workspace | null>(null);
   const [sidebarOpen, setSidebarOpen] =
     useState(false);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("synaptireach-crm-sidebar-expanded");
+    if (saved === "true") {
+      setSidebarOpen(true);
+    }
+  }, []);
+
+  function updateSidebar(open: boolean) {
+    setSidebarOpen(open);
+    window.localStorage.setItem("synaptireach-crm-sidebar-expanded", String(open));
+  }
 
   useEffect(() => {
     async function loadWorkspace() {
@@ -118,30 +155,30 @@ export default function DashboardLayout({
       {sidebarOpen && (
         <button
           aria-label="Close navigation"
-          onClick={() => setSidebarOpen(false)}
+          onClick={() => updateSidebar(false)}
           className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden"
         />
       )}
 
       <aside
-        className={`fixed left-0 top-0 h-screen border-r border-white/10 bg-black/85 backdrop-blur-xl p-4 flex flex-col z-40 transition-all duration-300 ${
+        className={`fixed left-0 top-0 h-screen border-r border-cyan-400/10 bg-black/85 backdrop-blur-2xl flex flex-col z-40 transition-all duration-300 ${
           sidebarOpen
-            ? "w-72 translate-x-0"
-            : "w-20 -translate-x-full lg:translate-x-0"
+            ? "w-72 translate-x-0 p-5"
+            : "w-20 -translate-x-full p-4 lg:translate-x-0"
         }`}
       >
 
         {/* LOGO + WORDMARK */}
-        <div className="flex items-center gap-3 mb-10">
+        <div className="flex items-center gap-3 mb-8">
 
-          <div className="w-12 h-12 rounded-2xl overflow-hidden border border-cyan-500/20 bg-cyan-500/10 flex items-center justify-center">
+          <div className="w-11 h-11 shrink-0 rounded-2xl overflow-hidden border border-cyan-400/25 bg-cyan-400/10 flex items-center justify-center shadow-lg shadow-cyan-500/10">
 
             {workspace?.logo_url ? (
               <Image
                 src={workspace.logo_url}
                 alt="Logo"
-                width={48}
-                height={48}
+                width={44}
+                height={44}
                 className="object-cover w-full h-full"
               />
             ) : (
@@ -171,11 +208,11 @@ export default function DashboardLayout({
           )}
 
           <button
-            onClick={() => setSidebarOpen(false)}
-            className="ml-auto hidden lg:flex w-9 h-9 rounded-xl border border-white/10 bg-white/[0.03] items-center justify-center text-gray-400 hover:text-white"
-            aria-label="Collapse navigation"
+            onClick={() => updateSidebar(!sidebarOpen)}
+            className="ml-auto hidden lg:flex w-10 h-10 rounded-2xl border border-white/10 bg-white/[0.04] items-center justify-center text-cyan-200 hover:bg-cyan-500/10"
+            aria-label={sidebarOpen ? "Collapse navigation" : "Expand navigation"}
           >
-            <ChevronLeft size={17} />
+            {sidebarOpen ? <ChevronLeft size={17} /> : <ChevronRight size={17} />}
           </button>
 
         </div>
@@ -195,11 +232,11 @@ export default function DashboardLayout({
                 href={item.href}
                 className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 border ${
                   active
-                    ? "bg-cyan-500/10 border-cyan-500/30 text-cyan-300"
+                    ? "bg-cyan-500/10 border-cyan-400/40 text-cyan-200 shadow-lg shadow-cyan-500/10"
                     : "border-transparent text-gray-500 hover:text-white hover:bg-white/5"
                 } ${sidebarOpen ? "justify-start" : "justify-center"}`}
                 title={item.label}
-                onClick={() => setSidebarOpen(false)}
+                onClick={() => window.innerWidth < 1024 && updateSidebar(false)}
               >
                 <Icon size={18} />
 
@@ -245,7 +282,7 @@ export default function DashboardLayout({
           <div className="flex items-center gap-3 min-w-0">
 
             <button
-              onClick={() => setSidebarOpen(true)}
+              onClick={() => updateSidebar(true)}
               className="w-11 h-11 rounded-2xl border border-white/10 bg-white/[0.03] flex items-center justify-center text-cyan-300 hover:bg-cyan-500/10"
               aria-label="Open navigation"
             >

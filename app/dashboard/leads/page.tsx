@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Archive,
   Bot,
+  BriefcaseBusiness,
   Edit2,
   Loader2,
   Mail,
@@ -12,6 +13,7 @@ import {
   Plus,
   Save,
   Search,
+  Tag,
   User,
   Users,
   X,
@@ -37,6 +39,7 @@ const emptyLead = {
   status: "new",
   score: 0,
   notes: "",
+  tags: "",
 };
 
 function formatDate(value?: string) {
@@ -62,9 +65,11 @@ export default function LeadsPage() {
   const [note, setNote] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [actionLoading, setActionLoading] = useState("");
   const [error, setError] = useState("");
 
   async function loadData() {
@@ -117,7 +122,16 @@ export default function LeadsPage() {
       const response = await fetch("/api/crm/leads", {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          metadata: {
+            ...(form.metadata || {}),
+            tags: String(form.tags || "")
+              .split(",")
+              .map((tag) => tag.trim())
+              .filter(Boolean),
+          },
+        }),
       });
       const data = await response.json();
 
@@ -138,56 +152,72 @@ export default function LeadsPage() {
   }
 
   async function updateStatus(lead: any, status: string) {
-    const response = await fetch("/api/crm/leads", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...lead, status }),
-    });
-    const data = await response.json();
+    try {
+      setActionLoading(`status-${status}`);
+      setError("");
+      const response = await fetch("/api/crm/leads", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...lead, status }),
+      });
+      const data = await response.json();
 
-    if (data.success) {
+      if (!response.ok || !data.success) throw new Error(data.error || "Failed to update status.");
       setSelected(data.lead);
       await loadData();
-    } else {
-      setError(data.error || "Failed to update status.");
+      await loadLeadActivity(data.lead.id);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to update status.");
+    } finally {
+      setActionLoading("");
     }
   }
 
   async function archiveLead(lead: any) {
-    const response = await fetch(`/api/crm/leads?id=${encodeURIComponent(lead.id)}`, {
-      method: "DELETE",
-    });
-    const data = await response.json();
+    try {
+      setActionLoading("archive");
+      setError("");
+      const response = await fetch(`/api/crm/leads?id=${encodeURIComponent(lead.id)}`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
 
-    if (data.success) {
+      if (!response.ok || !data.success) throw new Error(data.error || "Failed to archive lead.");
       setSelected(null);
       await loadData();
-    } else {
-      setError(data.error || "Failed to archive lead.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to archive lead.");
+    } finally {
+      setActionLoading("");
     }
   }
 
   async function addNote() {
     if (!selected || !note.trim()) return;
 
-    const response = await fetch("/api/crm/leads/activity", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        lead_id: selected.id,
-        type: "note",
-        title: "Lead note",
-        details: note,
-      }),
-    });
-    const data = await response.json();
+    try {
+      setActionLoading("note");
+      setError("");
+      const response = await fetch("/api/crm/leads/activity", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lead_id: selected.id,
+          type: "note",
+          title: "Lead note",
+          details: note,
+        }),
+      });
+      const data = await response.json();
 
-    if (data.success) {
+      if (!response.ok || !data.success) throw new Error(data.error || "Failed to add note.");
       setNote("");
       await loadLeadActivity(selected.id);
       await loadData();
-    } else {
-      setError(data.error || "Failed to add note.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to add note.");
+    } finally {
+      setActionLoading("");
     }
   }
 
@@ -197,7 +227,11 @@ export default function LeadsPage() {
   }
 
   function openEdit(lead: any) {
-    setForm({ ...emptyLead, ...lead });
+    setForm({
+      ...emptyLead,
+      ...lead,
+      tags: Array.isArray(lead.metadata?.tags) ? lead.metadata.tags.join(", ") : "",
+    });
     setFormOpen(true);
   }
 
@@ -216,14 +250,20 @@ export default function LeadsPage() {
             .filter(Boolean)
             .some((value) => String(value).toLowerCase().includes(q));
         const matchesStatus = statusFilter === "all" || lead.status === statusFilter;
-        return matchesSearch && matchesStatus;
+        const matchesSource = sourceFilter === "all" || (lead.source || "unknown") === sourceFilter;
+        return matchesSearch && matchesStatus && matchesSource;
       })
       .sort((a, b) => {
         if (sortBy === "score") return Number(b.score || 0) - Number(a.score || 0);
         if (sortBy === "status") return String(a.status || "").localeCompare(String(b.status || ""));
         return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       });
-  }, [leads, search, statusFilter, sortBy]);
+  }, [leads, search, statusFilter, sourceFilter, sortBy]);
+
+  const sources = useMemo(
+    () => Array.from(new Set(leads.map((lead) => lead.source || "unknown"))).sort(),
+    [leads]
+  );
 
   const leadComms = selected
     ? communications.filter((item) => item.lead_id === selected.id)
@@ -239,6 +279,65 @@ export default function LeadsPage() {
     converted: leads.filter((lead) => lead.status === "converted").length,
     hot: leads.filter((lead) => Number(lead.score || 0) >= 70).length,
   };
+
+  async function createFollowUpTask(lead: any) {
+    try {
+      setActionLoading("task");
+      setError("");
+      const response = await fetch("/api/crm/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lead_id: lead.id,
+          title: `Follow up with ${lead.name || lead.email || "lead"}`,
+          details: agentLead
+            ? `AI signal: ${agentLead.temperature} lead with recommended score ${agentLead.recommended_score}.`
+            : "Follow up from lead detail panel.",
+          priority: Number(lead.score || 0) >= 70 ? "high" : "medium",
+          status: "open",
+          due_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          metadata: { source: "leads_page" },
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data?.error || "Failed to create task.");
+      await loadLeadActivity(lead.id);
+      await loadData();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to create task.");
+    } finally {
+      setActionLoading("");
+    }
+  }
+
+  async function convertToDeal(lead: any) {
+    try {
+      setActionLoading("deal");
+      setError("");
+      const response = await fetch("/api/crm/deals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lead_id: lead.id,
+          title: `${lead.name || lead.company || "Lead"} opportunity`,
+          company: lead.company || null,
+          stage: lead.status === "qualified" ? "qualified" : "new",
+          status: "open",
+          value: 0,
+          probability: Number(lead.score || 0) >= 70 ? 60 : 25,
+          notes: lead.notes || null,
+          metadata: { source: "lead_conversion", lead_email: lead.email || null },
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data?.error || "Failed to create deal.");
+      await updateStatus(lead, "qualified");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to create deal.");
+    } finally {
+      setActionLoading("");
+    }
+  }
 
   return (
     <main className="min-h-screen text-white">
@@ -298,6 +397,10 @@ export default function LeadsPage() {
               <option value="all">All statuses</option>
               {statuses.map((status) => <option key={status}>{status}</option>)}
             </select>
+            <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)} className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white">
+              <option value="all">All sources</option>
+              {sources.map((source) => <option key={source} value={source}>{source}</option>)}
+            </select>
             <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white">
               <option value="newest">Newest</option>
               <option value="score">Score</option>
@@ -323,6 +426,11 @@ export default function LeadsPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <span className={`rounded-full border px-3 py-1 text-xs font-bold ${statusColors[lead.status] || statusColors.new}`}>{lead.status || "new"}</span>
                       <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-gray-300">{scoreLabel(Number(lead.score || 0))}: {lead.score || 0}</span>
+                      {(lead.metadata?.tags || []).slice(0, 2).map((tag: string) => (
+                        <span key={tag} className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-gray-400">
+                          {tag}
+                        </span>
+                      ))}
                       <span className="text-xs text-gray-500">{formatDate(lead.last_interaction || lead.created_at)}</span>
                     </div>
                   </div>
@@ -353,11 +461,26 @@ export default function LeadsPage() {
                 {selected.phone && <a href={`tel:${selected.phone}`} className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-cyan-100 flex items-center gap-2"><Phone size={14} />{selected.phone}</a>}
               </div>
 
+              {Array.isArray(selected.metadata?.tags) && selected.metadata.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {selected.metadata.tags.map((tag: string) => (
+                    <span key={tag} className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-gray-300 flex items-center gap-2">
+                      <Tag size={13} /> {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
               <div>
                 <div className="text-xs uppercase tracking-widest text-gray-500 mb-2">Status</div>
                 <div className="flex flex-wrap gap-2">
                   {statuses.map((status) => (
-                    <button key={status} onClick={() => updateStatus(selected, status)} className={`rounded-xl border px-3 py-2 text-xs font-bold ${selected.status === status ? statusColors[status] : "border-white/10 bg-black/30 text-gray-400"}`}>
+                    <button
+                      key={status}
+                      onClick={() => updateStatus(selected, status)}
+                      disabled={Boolean(actionLoading)}
+                      className={`rounded-xl border px-3 py-2 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-60 ${selected.status === status ? statusColors[status] : "border-white/10 bg-black/30 text-gray-400"}`}
+                    >
                       {status}
                     </button>
                   ))}
@@ -377,14 +500,30 @@ export default function LeadsPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => openEdit(selected)} className="rounded-2xl border border-white/10 bg-black/30 p-3 font-bold text-white flex items-center justify-center gap-2"><Edit2 size={16} /> Edit</button>
-                <button onClick={() => archiveLead(selected)} className="rounded-2xl border border-red-400/20 bg-red-500/10 p-3 font-bold text-red-100 flex items-center justify-center gap-2"><Archive size={16} /> Archive</button>
+                <button onClick={() => openEdit(selected)} disabled={Boolean(actionLoading)} className="rounded-2xl border border-white/10 bg-black/30 p-3 font-bold text-white flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"><Edit2 size={16} /> Edit</button>
+                <button onClick={() => archiveLead(selected)} disabled={Boolean(actionLoading)} className="rounded-2xl border border-red-400/20 bg-red-500/10 p-3 font-bold text-red-100 flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60">
+                  {actionLoading === "archive" ? <Loader2 className="animate-spin" size={16} /> : <Archive size={16} />}
+                  Archive
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <button disabled={actionLoading === "task"} onClick={() => createFollowUpTask(selected)} className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3 font-bold text-cyan-100 flex items-center justify-center gap-2 disabled:opacity-60">
+                  {actionLoading === "task" ? <Loader2 className="animate-spin" size={16} /> : <Plus size={16} />}
+                  Create Follow-Up
+                </button>
+                <button disabled={actionLoading === "deal"} onClick={() => convertToDeal(selected)} className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3 font-bold text-cyan-100 flex items-center justify-center gap-2 disabled:opacity-60">
+                  {actionLoading === "deal" ? <Loader2 className="animate-spin" size={16} /> : <BriefcaseBusiness size={16} />}
+                  Convert To Deal
+                </button>
               </div>
 
               <div>
                 <div className="font-bold text-white mb-3">Add Note</div>
                 <textarea value={note} onChange={(event) => setNote(event.target.value)} className="w-full min-h-[100px] rounded-2xl border border-white/10 bg-black/30 p-3 text-white" placeholder="Write a note..." />
-                <button onClick={addNote} className="mt-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-4 py-2 font-black text-black">Save Note</button>
+                <button onClick={addNote} disabled={actionLoading === "note" || !note.trim()} className="mt-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-4 py-2 font-black text-black disabled:cursor-not-allowed disabled:opacity-60">
+                  {actionLoading === "note" ? "Saving..." : "Save Note"}
+                </button>
               </div>
 
               <div>
@@ -427,6 +566,7 @@ export default function LeadsPage() {
                 ["company", "Company"],
                 ["source", "Source"],
                 ["score", "Score"],
+                ["tags", "Tags, comma separated"],
               ].map(([key, label]) => (
                 <input key={key} value={form[key] || ""} onChange={(event) => setForm({ ...form, [key]: key === "score" ? Number(event.target.value) : event.target.value })} placeholder={label} type={key === "score" ? "number" : "text"} className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
               ))}

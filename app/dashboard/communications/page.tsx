@@ -1,25 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bot, Loader2, Mail, MessageSquare, Phone, Send, Share2 } from "lucide-react";
+import { Bot, Loader2, Mail, MessageSquare, Phone, Search, Send, Share2 } from "lucide-react";
 
-const channels = ["all", "email", "sms", "social", "call"];
-const statuses = ["all", "draft", "sent", "failed", "scheduled"];
+const channels = ["all", "email", "sms", "social", "call", "note", "internal"];
+const statuses = ["all", "draft", "scheduled", "sent", "failed", "received"];
 
 export default function CommunicationsPage() {
   const [communications, setCommunications] = useState<any[]>([]);
   const [channel, setChannel] = useState("all");
   const [status, setStatus] = useState("all");
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [error, setError] = useState("");
+  const [aiMeta, setAiMeta] = useState<any>(null);
   const [form, setForm] = useState({
     channel: "email",
+    direction: "outbound",
     recipient: "",
     subject: "",
     content: "",
     status: "draft",
+    lead_id: "",
+    campaign_id: "",
   });
 
   async function loadData() {
@@ -67,6 +72,11 @@ export default function CommunicationsPage() {
       }
 
       setForm((current) => ({ ...current, content: data.text || "" }));
+      setAiMeta({
+        provider: data.provider,
+        model: data.model,
+        fallback_used: data.fallback_used,
+      });
     } catch (error) {
       setError(error instanceof Error ? error.message : "AI draft failed.");
     } finally {
@@ -97,11 +107,15 @@ export default function CommunicationsPage() {
 
       setForm({
         channel: "email",
+        direction: "outbound",
         recipient: "",
         subject: "",
         content: "",
         status: "draft",
+        lead_id: "",
+        campaign_id: "",
       });
+      setAiMeta(null);
       await loadData();
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to save communication.");
@@ -116,7 +130,19 @@ export default function CommunicationsPage() {
     sms: communications.filter((item) => item.channel === "sms").length,
     social: communications.filter((item) => item.channel === "social").length,
     call: communications.filter((item) => item.channel === "call").length,
+    internal: communications.filter((item) => ["note", "internal"].includes(item.channel)).length,
+    sent: communications.filter((item) => item.status === "sent").length,
+    failed: communications.filter((item) => item.status === "failed").length,
+    scheduled: communications.filter((item) => item.status === "scheduled").length,
   };
+
+  const visibleCommunications = communications.filter((item) => {
+    const q = search.toLowerCase();
+    if (!q) return true;
+    return [item.subject, item.recipient, item.content, item.channel, item.status, item.lead_id, item.campaign_id]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(q));
+  });
 
   return (
     <main className="min-h-screen text-white">
@@ -149,6 +175,10 @@ export default function CommunicationsPage() {
           { label: "SMS", value: stats.sms, icon: Phone },
           { label: "Social", value: stats.social, icon: Share2 },
           { label: "Calls", value: stats.call, icon: Phone },
+          { label: "Internal", value: stats.internal, icon: MessageSquare },
+          { label: "Sent", value: stats.sent, icon: Send },
+          { label: "Failed", value: stats.failed, icon: MessageSquare },
+          { label: "Scheduled", value: stats.scheduled, icon: MessageSquare },
         ].map((item) => {
           const Icon = item.icon;
           return (
@@ -164,6 +194,10 @@ export default function CommunicationsPage() {
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
           <div className="flex flex-wrap gap-3 mb-5">
+            <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
+              <Search className="text-gray-500" size={16} />
+              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search communications..." className="bg-transparent outline-none text-sm text-white placeholder:text-gray-600" />
+            </div>
             <select value={channel} onChange={(event) => setChannel(event.target.value)} className="rounded-2xl border border-white/10 bg-black/30 p-3 text-white">
               {channels.map((item) => <option key={item}>{item}</option>)}
             </select>
@@ -174,13 +208,13 @@ export default function CommunicationsPage() {
 
           {loading ? (
             <div className="flex justify-center p-10"><Loader2 className="animate-spin text-cyan-300" /></div>
-          ) : communications.length === 0 ? (
+          ) : visibleCommunications.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-black/30 p-8 text-center text-gray-400">
               No communications yet. Save a draft or connect send routes to start logging messages.
             </div>
           ) : (
             <div className="space-y-3">
-              {communications.map((item) => (
+              {visibleCommunications.map((item) => (
                 <div key={item.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
                     <div className="font-bold text-white">{item.subject || item.recipient || `${item.channel} communication`}</div>
@@ -188,6 +222,11 @@ export default function CommunicationsPage() {
                   </div>
                   <div className="text-sm text-gray-500 mb-2">{item.channel} - {item.status || "draft"} - {item.recipient || "No recipient"}</div>
                   <div className="text-sm text-gray-300">{item.content || ""}</div>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                    {item.lead_id && <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-gray-300">lead linked</span>}
+                    {item.campaign_id && <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-gray-300">campaign linked</span>}
+                    {item.direction && <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-gray-300">{item.direction}</span>}
+                  </div>
                 </div>
               ))}
             </div>
@@ -205,14 +244,39 @@ export default function CommunicationsPage() {
               <option>sms</option>
               <option>social</option>
               <option>call</option>
+              <option>note</option>
+              <option>internal</option>
             </select>
+            <div className="grid grid-cols-2 gap-3">
+              <select value={form.direction} onChange={(event) => setForm({ ...form, direction: event.target.value })} className="w-full rounded-2xl border border-white/10 bg-black/30 p-3 text-white">
+                <option>outbound</option>
+                <option>inbound</option>
+                <option>internal</option>
+              </select>
+              <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })} className="w-full rounded-2xl border border-white/10 bg-black/30 p-3 text-white">
+                <option>draft</option>
+                <option>scheduled</option>
+                <option>sent</option>
+                <option>failed</option>
+                <option>received</option>
+              </select>
+            </div>
             <input value={form.recipient} onChange={(event) => setForm({ ...form, recipient: event.target.value })} placeholder="Recipient" className="w-full rounded-2xl border border-white/10 bg-black/30 p-3 text-white" />
             <input value={form.subject} onChange={(event) => setForm({ ...form, subject: event.target.value })} placeholder="Subject" className="w-full rounded-2xl border border-white/10 bg-black/30 p-3 text-white" />
+            <div className="grid grid-cols-2 gap-3">
+              <input value={form.lead_id} onChange={(event) => setForm({ ...form, lead_id: event.target.value })} placeholder="Lead ID" className="w-full rounded-2xl border border-white/10 bg-black/30 p-3 text-white" />
+              <input value={form.campaign_id} onChange={(event) => setForm({ ...form, campaign_id: event.target.value })} placeholder="Campaign ID" className="w-full rounded-2xl border border-white/10 bg-black/30 p-3 text-white" />
+            </div>
             <textarea value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} placeholder="Message" className="w-full min-h-[180px] rounded-2xl border border-white/10 bg-black/30 p-3 text-white" />
-            <button onClick={draftWithAI} disabled={aiLoading} className="w-full rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3 font-bold text-cyan-100">
+            {aiMeta && (
+              <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-xs text-cyan-100">
+                Drafted by {aiMeta.provider || "AI"} {aiMeta.model ? `- ${aiMeta.model}` : ""}{aiMeta.fallback_used ? " using fallback" : ""}
+              </div>
+            )}
+            <button onClick={draftWithAI} disabled={aiLoading || submitting} className="w-full rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3 font-bold text-cyan-100 disabled:cursor-not-allowed disabled:opacity-60">
               {aiLoading ? "Drafting..." : "Draft with AI"}
             </button>
-            <button onClick={saveCommunication} disabled={submitting} className="w-full rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 p-3 font-black text-black flex items-center justify-center gap-2">
+            <button onClick={saveCommunication} disabled={submitting || aiLoading || !form.content.trim()} className="w-full rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 p-3 font-black text-black flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60">
               {submitting ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
               Save Communication
             </button>

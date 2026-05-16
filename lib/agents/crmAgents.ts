@@ -25,6 +25,10 @@ export function runDeterministicAgents(context: any) {
   const campaigns = context.campaigns || [];
   const communications = context.communications || [];
   const activity = context.activity || [];
+  const deals = context.deals || [];
+  const tasks = context.tasks || [];
+  const workflows = context.workflows || [];
+  const appointments = context.appointments || [];
 
   const scoredLeads = leads
     .map((lead: any) => ({
@@ -74,6 +78,27 @@ export function runDeterministicAgents(context: any) {
     return acc;
   }, {});
 
+  const overdueTasks = tasks.filter(
+    (task: any) =>
+      task.status === "open" &&
+      task.due_date &&
+      new Date(task.due_date).getTime() < Date.now()
+  );
+
+  const staleDeals = deals.filter((deal: any) => {
+    if (["won", "lost", "archived"].includes(deal.status)) return false;
+    const updatedAt = deal.updated_at || deal.created_at;
+    if (!updatedAt) return false;
+    return (Date.now() - new Date(updatedAt).getTime()) / 86400000 >= 14;
+  });
+
+  const upcomingAppointments = appointments.filter(
+    (appointment: any) =>
+      appointment.status === "scheduled" &&
+      appointment.starts_at &&
+      new Date(appointment.starts_at).getTime() >= Date.now()
+  );
+
   const recommendations = [
     leadsNeedingFollowUp.length > 0 && {
       type: "follow_up",
@@ -99,6 +124,32 @@ export function runDeterministicAgents(context: any) {
       action: "create_variant",
       confidence: 0.74,
     },
+    overdueTasks.length > 0 && {
+      type: "task_follow_up",
+      priority: "high",
+      title: "Clear overdue follow-up tasks",
+      description: `${overdueTasks.length} open tasks are past due.`,
+      action: "review_tasks",
+      confidence: 0.84,
+    },
+    staleDeals.length > 0 && {
+      type: "opportunity_detection",
+      priority: "medium",
+      title: "Review stale pipeline opportunities",
+      description: `${staleDeals.length} open deals have not been updated in 14+ days.`,
+      action: "review_pipeline",
+      confidence: 0.72,
+    },
+    workflows.filter((workflow: any) => workflow.status === "active").length === 0 &&
+      leadsNeedingFollowUp.length > 0 && {
+        type: "workflow_recommendation",
+        priority: "medium",
+        title: "Create a review-only nurture workflow",
+        description:
+          "Follow-up signals exist but no active workflow is currently recorded.",
+        action: "create_workflow_suggestion",
+        confidence: 0.7,
+      },
   ].filter(Boolean);
 
   return {
@@ -112,6 +163,11 @@ export function runDeterministicAgents(context: any) {
         .length,
       followups_due: leadsNeedingFollowUp.length,
       campaign_count: campaigns.length,
+      open_deals: deals.filter((deal: any) => deal.status === "open").length,
+      pipeline_value: deals.reduce((sum: number, deal: any) => sum + Number(deal.value || 0), 0),
+      overdue_tasks: overdueTasks.length,
+      active_workflows: workflows.filter((workflow: any) => workflow.status === "active").length,
+      upcoming_appointments: upcomingAppointments.length,
     },
     recommendations,
     actions: [
@@ -119,18 +175,28 @@ export function runDeterministicAgents(context: any) {
       "draft_followups",
       "optimize_campaigns",
       "segment_audience",
+      "review_pipeline",
+      "review_tasks",
+      "recommend_workflows",
     ],
-    confidence: leads.length || campaigns.length ? 0.76 : 0.35,
+    confidence: leads.length || campaigns.length || deals.length || tasks.length ? 0.76 : 0.35,
     data_used: {
       leads: leads.length,
       campaigns: campaigns.length,
       communications: communications.length,
       activity: activity.length,
+      deals: deals.length,
+      tasks: tasks.length,
+      workflows: workflows.length,
+      appointments: appointments.length,
       segments,
     },
     scored_leads: scoredLeads.slice(0, 10),
     followups: leadsNeedingFollowUp.slice(0, 10),
     top_campaigns: topCampaigns.slice(0, 5),
+    stale_deals: staleDeals.slice(0, 10),
+    overdue_tasks: overdueTasks.slice(0, 10),
+    upcoming_appointments: upcomingAppointments.slice(0, 10),
   };
 }
 
@@ -153,6 +219,10 @@ export async function runExecutiveAgent(context: any) {
           recent_campaigns: (context.campaigns || []).slice(0, 20),
           recent_activity: (context.activity || []).slice(0, 20),
           recent_communications: (context.communications || []).slice(0, 20),
+          open_deals: (context.deals || []).slice(0, 20),
+          open_tasks: (context.tasks || []).slice(0, 20),
+          workflows: (context.workflows || []).slice(0, 20),
+          appointments: (context.appointments || []).slice(0, 20),
         }),
       },
     ],

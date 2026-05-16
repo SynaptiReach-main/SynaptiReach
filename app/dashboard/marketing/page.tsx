@@ -16,6 +16,8 @@ import {
   XCircle,
   Save,
   Loader2,
+  Search,
+  Copy,
 } from "lucide-react";
 
 import EmailCampaignModal from "@/components/marketing/modals/EmailCampaignModal";
@@ -81,8 +83,23 @@ export default function MarketingPage() {
   ] = useState("");
 
   const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  const [
     recommendationLoading,
     setRecommendationLoading,
+  ] = useState("");
+
+  const [
+    campaignFilter,
+    setCampaignFilter,
+  ] = useState("all");
+
+  const [
+    campaignSearch,
+    setCampaignSearch,
   ] = useState("");
 
   const scheduledCampaigns =
@@ -90,6 +107,37 @@ export default function MarketingPage() {
       (campaign) =>
         campaign.status === "scheduled"
     );
+
+  const filteredCampaigns = campaigns.filter((campaign) => {
+    const matchesStatus =
+      campaignFilter === "all" ||
+      campaign.status === campaignFilter;
+    const search = campaignSearch.toLowerCase();
+    const matchesSearch =
+      !search ||
+      [
+        campaign.subject,
+        campaign.name,
+        campaign.type,
+        campaign.audience,
+        campaign.status,
+      ]
+        .filter(Boolean)
+        .some((value) =>
+          String(value).toLowerCase().includes(search)
+        );
+
+    return matchesStatus && matchesSearch;
+  });
+
+  const campaignTotals = {
+    delivered: campaigns.reduce((sum, campaign) => sum + Number(campaign.delivered_count || 0), 0),
+    opened: campaigns.reduce((sum, campaign) => sum + Number(campaign.opened_count || 0), 0),
+    clicked: campaigns.reduce((sum, campaign) => sum + Number(campaign.clicked_count || 0), 0),
+    converted: campaigns.reduce((sum, campaign) => sum + Number(campaign.converted_count || 0), 0),
+    sent: campaigns.filter((campaign) => campaign.status === "sent").length,
+    cancelled: campaigns.filter((campaign) => campaign.status === "cancelled").length,
+  };
 
   function closeEmailModal() {
     setEmailOpen(false);
@@ -315,6 +363,40 @@ export default function MarketingPage() {
     }
   }
 
+  async function cloneCampaign(campaign: any) {
+    try {
+      setActionLoading(`clone-${campaign.id}`);
+      setActionError("");
+
+      const response = await fetch("/api/marketing/campaigns/clone", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          campaignId: campaign.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data?.error || "Failed to duplicate campaign.");
+      }
+
+      window.dispatchEvent(new Event("marketing-data-refresh"));
+      await loadData();
+    } catch (error) {
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : "Failed to duplicate campaign."
+      );
+    } finally {
+      setActionLoading("");
+    }
+  }
+
   async function acceptRecommendation(item: any) {
     try {
       const key = item.id || item.title || item.content;
@@ -359,6 +441,8 @@ export default function MarketingPage() {
 
   async function loadData() {
     try {
+      setLoading(true);
+      setActionError("");
       const [
         campaignsRes,
         activityRes,
@@ -394,7 +478,13 @@ export default function MarketingPage() {
         recommendationsData.data || []
       );
     } catch (error) {
-      console.error(error);
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load marketing data."
+      );
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -538,6 +628,26 @@ export default function MarketingPage() {
                 recommendations.length,
               icon: Sparkles,
             },
+            {
+              label: "Opened",
+              value: campaignTotals.opened,
+              icon: Mail,
+            },
+            {
+              label: "Clicked",
+              value: campaignTotals.clicked,
+              icon: Activity,
+            },
+            {
+              label: "Converted",
+              value: campaignTotals.converted,
+              icon: TrendingUp,
+            },
+            {
+              label: "Cancelled",
+              value: campaignTotals.cancelled,
+              icon: XCircle,
+            },
           ].map((item) => {
             const Icon = item.icon;
 
@@ -584,6 +694,97 @@ export default function MarketingPage() {
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
         <div className="xl:col-span-2 space-y-6">
+
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-2xl font-black">
+                  Campaign Library
+                </h2>
+                <p className="text-sm text-gray-500">
+                  Real campaigns with status, audience, schedule, and engagement metrics
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
+                  <Search className="text-gray-500" size={16} />
+                  <input
+                    value={campaignSearch}
+                    onChange={(event) => setCampaignSearch(event.target.value)}
+                    placeholder="Search campaigns..."
+                    className="bg-transparent outline-none text-sm text-white placeholder:text-gray-600"
+                  />
+                </div>
+                <select
+                  value={campaignFilter}
+                  onChange={(event) => setCampaignFilter(event.target.value)}
+                  className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white"
+                >
+                  <option value="all">All statuses</option>
+                  <option value="draft">Draft</option>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="active">Active</option>
+                  <option value="processing">Processing</option>
+                  <option value="sent">Sent</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="failed">Failed</option>
+                </select>
+              </div>
+            </div>
+
+            {filteredCampaigns.length === 0 ? (
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-8 text-center text-gray-400">
+                {loading ? "Loading campaigns..." : "No campaigns match the current filters."}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredCampaigns.map((campaign) => (
+                  <div key={campaign.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                      <div>
+                        <div className="font-bold text-white">
+                          {campaign.subject || campaign.name || `${campaign.type || "Marketing"} Campaign`}
+                        </div>
+                        <div className="mt-1 text-sm text-gray-500">
+                          {[campaign.type, campaign.audience, campaign.status].filter(Boolean).join(" - ")}
+                        </div>
+                      </div>
+                      <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-xs font-bold text-cyan-100">
+                        {campaign.status || "draft"}
+                      </span>
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                      <span className="text-gray-400">Delivered: <b className="text-white">{campaign.delivered_count || 0}</b></span>
+                      <span className="text-gray-400">Opened: <b className="text-white">{campaign.opened_count || 0}</b></span>
+                      <span className="text-gray-400">Clicked: <b className="text-white">{campaign.clicked_count || 0}</b></span>
+                      <span className="text-gray-400">Converted: <b className="text-white">{campaign.converted_count || 0}</b></span>
+                    </div>
+                    {campaign.send_date && (
+                      <div className="mt-3 text-xs text-gray-500">
+                        Scheduled: {formatDateTime(campaign.send_date)}
+                      </div>
+                    )}
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => cloneCampaign(campaign)}
+                        disabled={actionLoading === `clone-${campaign.id}`}
+                        className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 disabled:cursor-not-allowed disabled:opacity-60 flex items-center gap-2"
+                      >
+                        {actionLoading === `clone-${campaign.id}` ? (
+                          <Loader2 className="animate-spin" size={14} />
+                        ) : (
+                          <Copy size={14} />
+                        )}
+                        Duplicate
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+          </div>
 
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
 

@@ -5,15 +5,23 @@ import {
   Activity,
   Bot,
   CalendarClock,
+  CalendarDays,
   CheckCircle2,
+  Cpu,
+  DollarSign,
+  GitBranch,
+  BarChart3,
   Loader2,
   Mail,
   Megaphone,
   MessageSquare,
   Plus,
+  RefreshCw,
   Share2,
   Target,
   Users,
+  Workflow,
+  ListTodo,
   XCircle,
 } from "lucide-react";
 
@@ -21,6 +29,24 @@ function formatDate(value?: string) {
   if (!value) return "";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "" : date.toLocaleString();
+}
+
+function formatMoney(value?: number) {
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(Number(value || 0));
+}
+
+function recommendationHref(action?: string) {
+  if (action === "review_pipeline") return "/dashboard/pipeline";
+  if (action === "review_tasks") return "/dashboard/tasks";
+  if (action === "create_workflow_suggestion") return "/dashboard/workflow";
+  if (action === "create_variant") return "/dashboard/marketing";
+  if (action === "draft_follow_up") return "/dashboard/communications";
+  if (action === "review_lead") return "/dashboard/leads";
+  return "/dashboard/ai_assistant";
 }
 
 export default function DashboardPage() {
@@ -71,6 +97,16 @@ export default function DashboardPage() {
   const recentCommunications = data?.communications?.slice(0, 5) || [];
   const recommendations = data?.agents?.recommendations || [];
   const topCampaigns = data?.campaigns?.slice(0, 4) || [];
+  const agentSummary = data?.agents?.summary || {};
+  const recentTasks = data?.tasks?.slice(0, 5) || [];
+  const recentDeals = data?.deals?.slice(0, 5) || [];
+  const recentAgentRuns = data?.agentRuns?.slice(0, 5) || [];
+  const staleDeals = data?.agents?.stale_deals || [];
+  const overdueTasks = data?.agents?.overdue_tasks || [];
+  const followups = data?.agents?.followups || [];
+  const upcomingAppointments = (data?.appointments || [])
+    .filter((appointment: any) => appointment.status === "scheduled")
+    .slice(0, 5);
 
   return (
     <main className="min-h-screen text-white">
@@ -92,8 +128,27 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
+            <button
+              onClick={loadDashboard}
+              disabled={loading}
+              className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-5 py-3 font-bold text-cyan-100 flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <RefreshCw size={18} /> Refresh
+            </button>
             <a href="/dashboard/leads" className="rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-5 py-3 font-black text-black flex items-center gap-2">
               <Plus size={18} /> Create Lead
+            </a>
+            <a href="/dashboard/pipeline" className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 font-bold text-white flex items-center gap-2">
+              <DollarSign size={18} /> View Pipeline
+            </a>
+            <a href="/dashboard/tasks" className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 font-bold text-white flex items-center gap-2">
+              <ListTodo size={18} /> Add Task
+            </a>
+            <a href="/dashboard/analytics" className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 font-bold text-white flex items-center gap-2">
+              <BarChart3 size={18} /> View Analytics
+            </a>
+            <a href="/dashboard/workflow" className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 font-bold text-white flex items-center gap-2">
+              <GitBranch size={18} /> Create Workflow
             </a>
             <a href="/dashboard/marketing" className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 font-bold text-white flex items-center gap-2">
               <Mail size={18} /> Email Campaign
@@ -130,6 +185,15 @@ export default function DashboardPage() {
           { label: "Campaign Opens", value: metrics.campaigns.opened || 0, icon: Mail },
           { label: "Campaign Clicks", value: metrics.campaigns.clicked || 0, icon: Activity },
           { label: "Communications", value: metrics.communications.total || 0, icon: MessageSquare },
+          { label: "Pipeline Value", value: formatMoney(metrics.deals?.open_value || 0), icon: DollarSign },
+          { label: "Open Deals", value: metrics.deals?.open || 0, icon: Target },
+          { label: "Won Deals", value: metrics.deals?.won || 0, icon: CheckCircle2 },
+          { label: "Lost Deals", value: metrics.deals?.lost || 0, icon: XCircle },
+          { label: "Open Tasks", value: metrics.tasks?.open || 0, icon: ListTodo },
+          { label: "Overdue Tasks", value: metrics.tasks?.overdue || 0, icon: CalendarClock },
+          { label: "Appointments", value: metrics.appointments?.upcoming || 0, icon: CalendarDays },
+          { label: "Active Workflows", value: metrics.workflows?.active || 0, icon: Workflow },
+          { label: "Workflow Runs", value: metrics.workflows?.runs || 0, icon: GitBranch },
         ].map((item) => {
           const Icon = item.icon;
           return (
@@ -146,6 +210,35 @@ export default function DashboardPage() {
 
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2 space-y-6">
+          <div className="rounded-3xl border border-white/10 bg-[#0b0b0b]/90 p-6 shadow-2xl shadow-cyan-500/5">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
+              <div>
+                <h2 className="text-2xl font-black">Autonomous Agent Status</h2>
+                <p className="text-sm text-gray-500">Real CRM agents reviewing leads, campaigns, communications, and follow-up signals.</p>
+              </div>
+              <span className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-sm font-bold text-cyan-100">Review mode</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              {[
+                ["Hot Leads", agentSummary.hot_leads || 0, Users],
+                ["Follow-ups Due", agentSummary.followups_due || 0, MessageSquare],
+                ["Campaigns Reviewed", agentSummary.campaign_count || 0, Megaphone],
+                ["Open Deals", agentSummary.open_deals || 0, Target],
+                ["Overdue Tasks", agentSummary.overdue_tasks || 0, ListTodo],
+                ["Active Workflows", agentSummary.active_workflows || 0, Workflow],
+                ["Agent Runs", metrics.agents?.runs || 0, Bot],
+                ["Appointments", agentSummary.upcoming_appointments || 0, CalendarDays],
+                ["Confidence", `${Math.round((data?.agents?.confidence || 0) * 100)}%`, Cpu],
+              ].map(([label, value, Icon]: any) => (
+                <div key={label} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <Icon className="mb-3 text-cyan-300" size={19} />
+                  <div className="text-2xl font-black">{value}</div>
+                  <div className="text-xs uppercase tracking-widest text-gray-500">{label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
             <h2 className="text-2xl font-black mb-5">Recent Leads</h2>
             {recentLeads.length === 0 ? (
@@ -171,14 +264,79 @@ export default function DashboardPage() {
           </div>
 
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
+              <div>
+                <h2 className="text-2xl font-black">Follow-Up Command Queue</h2>
+                <p className="text-sm text-gray-500">Real overdue tasks, stale deals, and leads needing communication.</p>
+              </div>
+              <a href="/dashboard/tasks" className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-sm font-bold text-cyan-100">
+                Open Tasks
+              </a>
+            </div>
+            {overdueTasks.length === 0 && staleDeals.length === 0 && followups.length === 0 ? (
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-8 text-center text-gray-400">
+                No urgent follow-ups detected from current CRM activity.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <div className="text-xs uppercase tracking-widest text-gray-500">Overdue Tasks</div>
+                  <div className="mt-2 text-3xl font-black text-cyan-300">{overdueTasks.length}</div>
+                  <div className="mt-3 space-y-2">
+                    {overdueTasks.slice(0, 3).map((task: any) => (
+                      <a key={task.id} href="/dashboard/tasks" className="block rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-gray-300">
+                        {task.title}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <div className="text-xs uppercase tracking-widest text-gray-500">Stale Deals</div>
+                  <div className="mt-2 text-3xl font-black text-cyan-300">{staleDeals.length}</div>
+                  <div className="mt-3 space-y-2">
+                    {staleDeals.slice(0, 3).map((deal: any) => (
+                      <a key={deal.id} href="/dashboard/pipeline" className="block rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-gray-300">
+                        {deal.title || "Untitled deal"} - {formatMoney(deal.value)}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <div className="text-xs uppercase tracking-widest text-gray-500">Leads To Contact</div>
+                  <div className="mt-2 text-3xl font-black text-cyan-300">{followups.length}</div>
+                  <div className="mt-3 space-y-2">
+                    {followups.slice(0, 3).map((lead: any) => (
+                      <a key={lead.id} href="/dashboard/leads" className="block rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-gray-300">
+                        {lead.name || lead.email || "Unnamed lead"}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
             <h2 className="text-2xl font-black mb-5">Pipeline Summary</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
               {["new", "contacted", "qualified", "nurture", "converted", "lost"].map((status) => (
                 <div key={status} className="rounded-2xl border border-white/10 bg-black/30 p-4">
                   <div className="text-xs uppercase tracking-widest text-gray-500">{status}</div>
                   <div className="mt-2 text-2xl font-black text-cyan-300">
                     {data?.leads?.filter((lead: any) => lead.status === status).length || 0}
                   </div>
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {recentDeals.length === 0 ? (
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-5 text-sm text-gray-400">
+                  No real deals yet. Add opportunities on the Pipeline page.
+                </div>
+              ) : recentDeals.map((deal: any) => (
+                <div key={deal.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <div className="font-bold">{deal.title}</div>
+                  <div className="text-sm text-gray-500">{deal.stage || "new"} - {formatMoney(Number(deal.value || 0))}</div>
                 </div>
               ))}
             </div>
@@ -221,6 +379,9 @@ export default function DashboardPage() {
                 <div key={index} className="rounded-2xl border border-white/10 bg-black/30 p-4">
                   <div className="font-bold text-white">{item.title}</div>
                   <div className="text-sm text-gray-400 mt-1">{item.description}</div>
+                  <a href={recommendationHref(item.action)} className="mt-3 inline-flex rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100">
+                    Review action
+                  </a>
                 </div>
               ))}
             </div>
@@ -253,11 +414,74 @@ export default function DashboardPage() {
           </div>
 
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+            <h2 className="text-xl font-black mb-5">Agent Run Log</h2>
+            <div className="space-y-3">
+              {recentAgentRuns.length === 0 ? (
+                <div className="text-sm text-gray-400">No agent runs logged yet. Run an agent review from Workflow or AI Assistant.</div>
+              ) : recentAgentRuns.map((run: any) => (
+                <div key={run.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="font-bold text-white">{run.agent || run.type || "CRM agent"}</div>
+                    <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2 py-1 text-xs text-cyan-100">{run.status || "completed"}</span>
+                  </div>
+                  <div className="text-sm text-gray-500 mt-1">{run.provider || "local"} {run.model ? `- ${run.model}` : ""}</div>
+                  <div className="text-xs text-gray-600 mt-2">{formatDate(run.created_at)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
             <h2 className="text-xl font-black mb-5">Quick Campaigns</h2>
             <div className="grid grid-cols-1 gap-3">
               <a href="/dashboard/marketing" className="rounded-2xl border border-white/10 bg-black/30 p-4 flex items-center gap-3 text-white"><Mail className="text-cyan-300" size={18} /> Email Campaign</a>
               <a href="/dashboard/marketing" className="rounded-2xl border border-white/10 bg-black/30 p-4 flex items-center gap-3 text-white"><MessageSquare className="text-cyan-300" size={18} /> SMS Campaign</a>
               <a href="/dashboard/marketing" className="rounded-2xl border border-white/10 bg-black/30 p-4 flex items-center gap-3 text-white"><Share2 className="text-cyan-300" size={18} /> Social Campaign</a>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <Workflow className="text-cyan-300" size={20} />
+              <h2 className="text-xl font-black">Workflow Overview</h2>
+            </div>
+            <div className="space-y-3 text-sm text-gray-400">
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                {metrics.leads.total || 0} leads available for scoring and follow-up workflows.
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                {metrics.campaigns.scheduled || 0} scheduled campaigns can feed reminder and conversion workflows.
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                {metrics.workflows?.active || 0} active workflows and {metrics.workflows?.runs || 0} recorded workflow runs.
+              </div>
+              <a href="/dashboard/workflow" className="block rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4 font-bold text-cyan-100">
+                Review workflow recommendations
+              </a>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+            <h2 className="text-xl font-black mb-5">Tasks & Appointments</h2>
+            <div className="space-y-3">
+              {recentTasks.length === 0 && upcomingAppointments.length === 0 ? (
+                <div className="text-sm text-gray-400">No tasks or appointments yet.</div>
+              ) : (
+                <>
+                  {recentTasks.map((task: any) => (
+                    <div key={task.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                      <div className="font-bold text-white">{task.title}</div>
+                      <div className="text-sm text-gray-500">{task.priority || "medium"} - {formatDate(task.due_date)}</div>
+                    </div>
+                  ))}
+                  {upcomingAppointments.map((appointment: any) => (
+                    <div key={appointment.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                      <div className="font-bold text-white">{appointment.title}</div>
+                      <div className="text-sm text-gray-500">{formatDate(appointment.starts_at)}</div>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           </div>
         </div>
