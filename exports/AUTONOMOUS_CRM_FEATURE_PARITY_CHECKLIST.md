@@ -29,6 +29,24 @@
 - `/dashboard/analytics`: completed current pass. Verify real lead conversion, campaign performance, communication volume, pipeline value, task/workflow/agent health, date-range filters, loading/error/empty states, and no sample metrics.
 - `/dashboard/settings`: completed current pass. Save business/AI settings, verify secret-safe provider/integration status, show OpenAI disabled behavior, display 14-day trial caps, managed plan caps, and commitment discounts.
 
+## CSV Lead Import Tests
+- `/dashboard`: verify the `Import CSV` quick action opens the shared import modal and refreshes dashboard metrics after import.
+- `/dashboard/leads`: verify the `Import CSV` button opens the same modal and refreshes the lead list after import.
+- Instruction modal: confirm suggested format, accepted columns, sample CSV, duplicate behavior, and hard validation rules are visible before import.
+- Accepted columns: `name`, `first_name`, `last_name`, `full_name`, `email`, `phone`, `company`, `source`, `status`, `tags`, `notes`, `address`, `city`, `state`, `zip`, `website`, `lead_score`, `score`, `last_interaction`, `created_at`.
+- Sample CSV:
+  ```csv
+  name,email,phone,company,source,status,tags,notes
+  Jane Smith,jane@example.com,555-123-4567,Smith Roofing,Website,new,"roofing,hot","Requested pricing"
+  Marcus Lee,marcus@example.com,555-222-9999,Lee HVAC,Referral,qualified,"hvac,commercial","Needs follow-up"
+  ```
+- Import preview/result: verify total rows, valid rows, skipped rows, duplicate rows, imported rows, and skipped-row reasons appear.
+- Duplicate handling: verify duplicate email first, then duplicate phone, are skipped safely without overwriting existing leads.
+- Supabase import: verify valid rows are inserted into `leads`, tags/extra fields are stored in `metadata`, CSV notes create `lead_activities`, and a review recommendation is created when supported.
+- Refresh after import: verify `crm-leads-imported` refreshes Dashboard and Leads data.
+- Mobile test: verify modal scrolls within viewport, file picker is tappable, preview table scrolls horizontally, and buttons do not overflow.
+- Desktop test: verify two-column instruction/upload layout, preview, and result panels render cleanly.
+
 ## Demo Navigation Tests
 - Verified implementation: demo-specific `DemoTopNav` is rendered from `app/(marketing)/demo/layout.tsx`; public marketing navigation remains outside the demo layout.
 - Verify public navigation remains intact on `/demo`.
@@ -40,6 +58,7 @@
 $base = "http://localhost:3000"
 Invoke-RestMethod "$base/api/crm/dashboard"
 Invoke-RestMethod "$base/api/crm/leads"
+Invoke-RestMethod -Method Post "$base/api/crm/leads/import" -ContentType "application/json" -Body '{"rows":[{"name":"CSV Test Lead","email":"csv-test@example.com","phone":"555-111-2222","company":"Test Co","source":"CSV Test","status":"new","tags":"test,import","notes":"Smoke test import"}]}'
 Invoke-RestMethod "$base/api/crm/deals"
 Invoke-RestMethod "$base/api/crm/tasks"
 Invoke-RestMethod "$base/api/crm/workflows"

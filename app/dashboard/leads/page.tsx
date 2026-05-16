@@ -14,10 +14,12 @@ import {
   Save,
   Search,
   Tag,
+  Upload,
   User,
   Users,
   X,
 } from "lucide-react";
+import LeadCsvImportModal from "@/components/leads/LeadCsvImportModal";
 
 const statuses = ["new", "contacted", "qualified", "nurture", "converted", "lost"];
 const statusColors: Record<string, string> = {
@@ -61,6 +63,7 @@ export default function LeadsPage() {
   const [agentData, setAgentData] = useState<any>(null);
   const [selected, setSelected] = useState<any | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [form, setForm] = useState<any>(emptyLead);
   const [note, setNote] = useState("");
   const [search, setSearch] = useState("");
@@ -112,6 +115,8 @@ export default function LeadsPage() {
 
   useEffect(() => {
     loadData();
+    window.addEventListener("crm-leads-imported", loadData);
+    return () => window.removeEventListener("crm-leads-imported", loadData);
   }, []);
 
   async function saveLead() {
@@ -341,6 +346,11 @@ export default function LeadsPage() {
 
   return (
     <main className="min-h-screen text-white">
+      <LeadCsvImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={loadData}
+      />
       <section className="mb-8">
         <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-5">
           <div>
@@ -358,10 +368,16 @@ export default function LeadsPage() {
               Real lead records, follow-up history, activity notes, and AI scoring guidance.
             </p>
           </div>
-          <button onClick={openCreate} className="rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-5 py-3 font-black text-black flex items-center gap-2 w-fit">
-            <Plus size={18} />
-            Create Lead
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button onClick={() => setImportOpen(true)} className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-5 py-3 font-bold text-cyan-100 flex items-center gap-2 w-fit">
+              <Upload size={18} />
+              Import CSV
+            </button>
+            <button onClick={openCreate} className="rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-5 py-3 font-black text-black flex items-center gap-2 w-fit">
+              <Plus size={18} />
+              Create Lead
+            </button>
+          </div>
         </div>
       </section>
 

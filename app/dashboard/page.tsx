@@ -19,11 +19,13 @@ import {
   RefreshCw,
   Share2,
   Target,
+  Upload,
   Users,
   Workflow,
   ListTodo,
   XCircle,
 } from "lucide-react";
+import LeadCsvImportModal from "@/components/leads/LeadCsvImportModal";
 
 function formatDate(value?: string) {
   if (!value) return "";
@@ -52,6 +54,7 @@ function recommendationHref(action?: string) {
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [importOpen, setImportOpen] = useState(false);
   const [error, setError] = useState("");
 
   async function loadDashboard() {
@@ -76,7 +79,11 @@ export default function DashboardPage() {
   useEffect(() => {
     loadDashboard();
     window.addEventListener("marketing-data-refresh", loadDashboard);
-    return () => window.removeEventListener("marketing-data-refresh", loadDashboard);
+    window.addEventListener("crm-leads-imported", loadDashboard);
+    return () => {
+      window.removeEventListener("marketing-data-refresh", loadDashboard);
+      window.removeEventListener("crm-leads-imported", loadDashboard);
+    };
   }, []);
 
   if (loading) {
@@ -110,6 +117,11 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen text-white">
+      <LeadCsvImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={loadDashboard}
+      />
       <section className="mb-8">
         <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-5">
           <div>
@@ -138,6 +150,9 @@ export default function DashboardPage() {
             <a href="/dashboard/leads" className="rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-5 py-3 font-black text-black flex items-center gap-2">
               <Plus size={18} /> Create Lead
             </a>
+            <button onClick={() => setImportOpen(true)} className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-5 py-3 font-bold text-cyan-100 flex items-center gap-2">
+              <Upload size={18} /> Import CSV
+            </button>
             <a href="/dashboard/pipeline" className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 font-bold text-white flex items-center gap-2">
               <DollarSign size={18} /> View Pipeline
             </a>
