@@ -22,6 +22,7 @@ import {
   Zap,
 } from "lucide-react";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
+import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
 
 function formatDate(value?: string) {
   if (!value) return "";
@@ -300,6 +301,7 @@ export default function WorkflowPage() {
 
   return (
     <main className="min-h-screen text-white">
+      <QueryRecordFocus keys={["workflowId"]} />
       <section className="mb-8 rounded-3xl border border-white/10 bg-[#0b0b0b]/90 p-6 md:p-8 shadow-2xl shadow-cyan-500/5">
         <div className="flex flex-col 2xl:flex-row 2xl:items-center 2xl:justify-between gap-6">
           <div className="flex items-center gap-5">
@@ -410,7 +412,7 @@ export default function WorkflowPage() {
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
                 {workflows.map((workflow: any) => (
-                  <div key={workflow.id} className="rounded-2xl border border-white/10 bg-black/30 p-5">
+                  <div key={workflow.id} data-record-id={workflow.id} className="rounded-2xl border border-white/10 bg-black/30 p-5">
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <Zap className="text-cyan-300" size={20} />
                       <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-xs text-cyan-100">{workflow.status}</span>

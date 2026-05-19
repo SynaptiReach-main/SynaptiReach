@@ -278,7 +278,7 @@ export default function DashboardPage() {
       )}
 
       <MiniBrainInsightPanel
-        title="Executive Mini-Brain"
+        title="Executive Business Intelligence"
         subtitle="CRM-wide scorecards, record helpers, risks, opportunities, and review-gated next actions."
         limit={6}
       />
@@ -304,7 +304,7 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div>
                 <div className="text-sm font-bold uppercase tracking-[0.18em] text-cyan-300">Built-in Intelligence</div>
-                <h2 className="mt-1 text-2xl font-black">Mini-Brain Executive Signals</h2>
+                <h2 className="mt-1 text-2xl font-black">Executive Smart Signals</h2>
                 <p className="mt-1 text-sm text-gray-500">
                   Deterministic, zero-cost CRM reasoning runs before external AI and keeps all external actions review-gated.
                 </p>

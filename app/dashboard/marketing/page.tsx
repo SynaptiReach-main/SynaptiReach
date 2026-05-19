@@ -24,6 +24,7 @@ import EmailCampaignModal from "@/components/marketing/modals/EmailCampaignModal
 import SMSCampaignModal from "@/components/marketing/modals/SMSCampaignModal";
 import SocialCampaignModal from "@/components/marketing/modals/SocialCampaignModal";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
+import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
 
 export default function MarketingPage() {
   const [
@@ -543,6 +544,7 @@ export default function MarketingPage() {
 
   return (
     <main className="min-h-screen text-white">
+      <QueryRecordFocus keys={["campaignId"]} />
       {selectedCampaign && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
           <div className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-3xl border border-cyan-400/20 bg-slate-950 shadow-2xl shadow-cyan-500/20">
@@ -856,7 +858,7 @@ export default function MarketingPage() {
             ) : (
               <div className="space-y-3">
                 {visibleCampaigns.map((campaign) => (
-                  <div key={campaign.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <div key={campaign.id} data-record-id={campaign.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
                     <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                       <div>
                         <div className="font-bold text-white">
@@ -1128,6 +1130,7 @@ export default function MarketingPage() {
                 .map((campaign) => (
                   <div
                     key={campaign.id}
+                    data-record-id={campaign.id}
                     className="rounded-2xl border border-white/10 bg-black/30 p-4"
                   >
 

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Archive, BriefcaseBusiness, ChevronLeft, ChevronRight, DollarSign, Edit2, Loader2, Plus, Save, Search, X } from "lucide-react";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
+import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
 
 const stages = ["new", "qualified", "proposal", "negotiation", "won", "lost"];
 const emptyDeal = { id: "", lead_id: "", title: "", company: "", value: 0, stage: "new", probability: 0, expected_close_date: "", notes: "" };
@@ -201,6 +202,7 @@ export default function PipelinePage() {
 
   return (
     <main className="min-h-screen text-white">
+      <QueryRecordFocus keys={["dealId"]} />
       <section className="mb-8 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-5">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-cyan-300">Real pipeline</div>
@@ -311,7 +313,7 @@ export default function PipelinePage() {
               </div>
               <div className="space-y-3">
                 {stageDeals.map((deal) => (
-                  <div key={deal.id} className="rounded-2xl border border-white/10 bg-black/40 p-4">
+                  <div key={deal.id} data-record-id={deal.id} className="rounded-2xl border border-white/10 bg-black/40 p-4">
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <div className="font-bold">{deal.title}</div>

@@ -134,7 +134,7 @@ export async function POST(request: Request) {
 
     if (!insight?.id || insight.source !== "mini_brain") {
       return NextResponse.json(
-        { success: false, error: "A Mini-Brain insight payload is required." },
+        { success: false, error: "A built-in intelligence insight payload is required." },
         { status: 400 }
       );
     }
@@ -150,7 +150,7 @@ export async function POST(request: Request) {
         decision,
         review_required: true,
         source: "mini_brain",
-        message: "Mini-Brain insight decision was recorded without taking external action.",
+        message: "Intelligence insight decision was recorded without taking external action.",
       });
     }
 
@@ -215,14 +215,14 @@ export async function POST(request: Request) {
       createdTable: table,
       created,
       href,
-      message: "Review-gated Mini-Brain action was created. No external message, charge, or post was sent.",
+      message: "Review-gated intelligence action was created. No external message, charge, or post was sent.",
     });
   } catch (error: any) {
     const friendly = friendlySupabaseError(error);
     return NextResponse.json(
       {
         success: false,
-        error: friendly.message || "Failed to apply Mini-Brain action.",
+        error: friendly.message || "Failed to apply intelligence action.",
         setup_required: friendly.setupRequired || false,
         missingSchema: friendly.missingSchema || false,
       },

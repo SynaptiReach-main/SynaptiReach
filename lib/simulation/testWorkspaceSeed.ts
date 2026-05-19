@@ -230,6 +230,40 @@ async function upsertRows(supabase: ReturnType<typeof createSupabaseAdmin>, tabl
   return rows.length;
 }
 
+async function loadMarkedTestWorkspace(supabase: ReturnType<typeof createSupabaseAdmin>, workspaceId: string) {
+  const { data, error } = await supabase
+    .from("workspaces")
+    .select("id, company_id, owner_id, is_test_workspace, simulation_enabled")
+    .eq("id", workspaceId)
+    .maybeSingle();
+
+  if (error) {
+    const friendly = friendlySupabaseError(error);
+    return {
+      workspace: null,
+      response: {
+        allowed: false,
+        setupRequired: friendly.missingSchema,
+        reason: friendly.message,
+      },
+    };
+  }
+
+  if (!data?.is_test_workspace) {
+    return {
+      workspace: null,
+      response: {
+        allowed: false,
+        setupRequired: true,
+        reason:
+          "Run POST /api/test/simulation/bootstrap first. Simulation controls only run for workspaces explicitly marked as test/simulation.",
+      },
+    };
+  }
+
+  return { workspace: data, response: null };
+}
+
 function makeLeads(workspaceId: string, companyId: string | null, userId: string | null) {
   const first = ["Avery", "Jordan", "Morgan", "Riley", "Taylor", "Casey", "Parker", "Quinn", "Hayden", "Reese", "Cameron", "Drew"];
   const last = ["Stone", "Miller", "Hayes", "Patel", "Brooks", "Rivera", "Kim", "Carter", "Reed", "Coleman", "Nguyen", "Bennett"];
@@ -563,7 +597,7 @@ function makeRecommendations(workspaceId: string, companyId: string | null, user
     model: "deterministic-rules",
     fallback_used: true,
     provider_errors: [],
-    error: index % 11 === 0 ? "Simulated provider failure, mini-brain fallback used." : null,
+    error: index % 11 === 0 ? "Simulated provider failure, built-in intelligence fallback used." : null,
     created_at: daysAgo(index % 10),
   }));
   return { crm, marketing, agentRuns };
@@ -663,6 +697,9 @@ export async function getTestSimulationStatus(request: Request, body?: any) {
   if (!auth.allowed) return auth;
 
   const supabase = createSupabaseAdmin();
+  const testWorkspace = await loadMarkedTestWorkspace(supabase, auth.workspaceId!);
+  if (testWorkspace.response) return { ...auth, ...testWorkspace.response };
+
   const { data, error } = await supabase
     .from("crm_test_simulation_state")
     .select("*")
@@ -688,6 +725,9 @@ export async function resetTestWorkspace(request: Request, body?: any) {
   if (!auth.allowed) return auth;
 
   const supabase = createSupabaseAdmin();
+  const testWorkspace = await loadMarkedTestWorkspace(supabase, auth.workspaceId!);
+  if (testWorkspace.response) return { ...auth, ...testWorkspace.response };
+
   for (const table of mutableTables) {
     const { error } = await supabase.from(table).delete().eq("workspace_id", auth.workspaceId);
     if (error) throw error;
@@ -712,23 +752,9 @@ export async function seedTestWorkspace(request: Request, body: any = {}) {
   const profile = (body.profile || process.env.CRM_TEST_SIMULATION_PROFILE || "normal") as SimulationProfile;
   const now = new Date().toISOString();
 
-  const { data: existingWorkspace, error: existingWorkspaceError } = await supabase
-    .from("workspaces")
-    .select("id, company_id, owner_id, is_test_workspace, simulation_enabled")
-    .eq("id", workspaceId)
-    .maybeSingle();
-
-  if (existingWorkspaceError) throw existingWorkspaceError;
-
-  if (!existingWorkspace?.is_test_workspace) {
-    return {
-      ...auth,
-      allowed: false,
-      setupRequired: true,
-      reason:
-        "Run POST /api/test/simulation/bootstrap first. Seed only runs for workspaces explicitly marked as test/simulation.",
-    };
-  }
+  const testWorkspace = await loadMarkedTestWorkspace(supabase, workspaceId);
+  if (testWorkspace.response) return { ...auth, ...testWorkspace.response };
+  const existingWorkspace = testWorkspace.workspace!;
 
   await supabase.from("workspaces").upsert({
     id: workspaceId,
@@ -953,6 +979,9 @@ export async function tickTestWorkspace(request: Request, body: any = {}) {
 
   const supabase = createSupabaseAdmin();
   const workspaceId = auth.workspaceId!;
+  const testWorkspace = await loadMarkedTestWorkspace(supabase, workspaceId);
+  if (testWorkspace.response) return { ...auth, ...testWorkspace.response };
+
   const { data: state } = await supabase
     .from("crm_test_simulation_state")
     .select("*")
@@ -1026,7 +1055,7 @@ export async function tickTestWorkspace(request: Request, body: any = {}) {
     user_id: auth.userId || state.user_id || null,
     type: "simulation_signal",
     title: `Review simulation day ${nextDay} changes`,
-    description: "Mini-brain generated a reviewable action after deterministic CRM changes.",
+    description: "Built-in intelligence generated a reviewable action after deterministic CRM changes.",
     action: "review_dashboard",
     status: "pending",
     confidence: 0.76,
@@ -1056,6 +1085,9 @@ export async function pauseTestWorkspace(request: Request, paused: boolean, body
   const auth = await requireSimulationAccess(request, body);
   if (!auth.allowed) return auth;
   const supabase = createSupabaseAdmin();
+  const testWorkspace = await loadMarkedTestWorkspace(supabase, auth.workspaceId!);
+  if (testWorkspace.response) return { ...auth, ...testWorkspace.response };
+
   await supabase.from("crm_test_simulation_state").update({ paused, updated_at: new Date().toISOString() }).eq("workspace_id", auth.workspaceId);
   await supabase.from("workspaces").update({ simulation_enabled: !paused }).eq("id", auth.workspaceId);
   return { ...auth, paused };

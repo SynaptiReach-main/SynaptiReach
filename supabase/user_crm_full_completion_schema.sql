@@ -254,7 +254,8 @@ create table if not exists public.marketing_campaigns (
   audience text null,
   stagger integer not null default 50,
   subject text null,
-  content text null
+  content text null,
+  metadata jsonb not null default '{}'::jsonb
 );
 
 create table if not exists public.marketing_events (
@@ -464,6 +465,7 @@ alter table if exists public.marketing_campaigns add column if not exists platfo
 alter table if exists public.marketing_campaigns add column if not exists scheduled_for timestamptz null;
 alter table if exists public.marketing_campaigns add column if not exists stagger_size integer null;
 alter table if exists public.marketing_campaigns add column if not exists ai_recommendations jsonb not null default '[]'::jsonb;
+alter table if exists public.marketing_campaigns add column if not exists metadata jsonb not null default '{}'::jsonb;
 alter table if exists public.marketing_events add column if not exists user_id uuid null;
 alter table if exists public.marketing_events add column if not exists company_id uuid null;
 alter table if exists public.marketing_events add column if not exists event_type text null;

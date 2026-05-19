@@ -42,7 +42,7 @@ export function billingUsageInsights(context: MiniBrainContext): MiniBrainInsigh
       summary: "Communication usage is recorded, but no billing account record was loaded.",
       reasoning: [
         "Usage should be visible before caps or trials are enforced.",
-        "Billing actions remain checkout/webhook-gated and are not changed by mini-brain.",
+        "Billing actions remain checkout/webhook-gated and are not changed by built-in intelligence.",
       ],
       recommendedAction: "Review billing setup and usage caps before enabling high-volume sends.",
       actionType: "review_billing",

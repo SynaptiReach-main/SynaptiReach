@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 import LeadCsvImportModal from "@/components/leads/LeadCsvImportModal";
+import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
 
 const statuses = ["new", "contacted", "qualified", "nurture", "converted", "lost"];
 const statusColors: Record<string, string> = {
@@ -452,6 +453,7 @@ export default function LeadsPage() {
 
   return (
     <main className="min-h-screen text-white">
+      <QueryRecordFocus keys={["leadId"]} />
       <LeadCsvImportModal
         open={importOpen}
         onClose={() => setImportOpen(false)}
@@ -545,7 +547,7 @@ export default function LeadsPage() {
           ) : (
             <div className="space-y-3">
               {filtered.map((lead) => (
-                <button key={lead.id} onClick={() => selectLead(lead)} className="w-full text-left rounded-2xl border border-white/10 bg-black/30 p-4 hover:border-cyan-400/30 transition">
+                <button key={lead.id} data-record-id={lead.id} onClick={() => selectLead(lead)} className="w-full text-left rounded-2xl border border-white/10 bg-black/30 p-4 hover:border-cyan-400/30 transition">
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                     <div className="min-w-0">
                       <div className="font-bold text-white truncate">{lead.name || lead.email || lead.phone || "Unnamed lead"}</div>

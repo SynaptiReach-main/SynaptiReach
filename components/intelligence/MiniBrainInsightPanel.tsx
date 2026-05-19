@@ -11,16 +11,45 @@ type MiniBrainInsightPanelProps = {
 };
 
 function hrefForInsight(item: any) {
-  if (item.metadata?.destinationPage) return item.metadata.destinationPage;
-  if (item.type === "lead_intelligence") return "/dashboard/leads";
-  if (["deal_intelligence", "pipeline_intelligence", "forecast"].includes(item.type)) return "/dashboard/pipeline";
-  if (item.type === "communication_intelligence") return "/dashboard/communications";
-  if (item.type === "campaign_intelligence") return "/dashboard/marketing";
-  if (item.type === "workflow_intelligence") return "/dashboard/workflow";
-  if (item.type === "task_intelligence") return "/dashboard/tasks";
-  if (item.type === "appointment_intelligence") return "/dashboard/calendar";
-  if (["billing_usage_intelligence", "onboarding_setup"].includes(item.type)) return "/dashboard/settings";
-  return "/dashboard/ai_assistant";
+  const base =
+    item.metadata?.destinationPage ||
+    (item.type === "lead_intelligence"
+      ? "/dashboard/leads"
+      : ["deal_intelligence", "pipeline_intelligence", "forecast"].includes(item.type)
+        ? "/dashboard/pipeline"
+        : item.type === "communication_intelligence"
+          ? "/dashboard/communications"
+          : item.type === "campaign_intelligence"
+            ? "/dashboard/marketing"
+            : item.type === "workflow_intelligence"
+              ? "/dashboard/workflow"
+              : item.type === "task_intelligence"
+                ? "/dashboard/tasks"
+                : item.type === "appointment_intelligence"
+                  ? "/dashboard/calendar"
+                  : ["billing_usage_intelligence", "onboarding_setup"].includes(item.type)
+                    ? "/dashboard/settings"
+                    : "/dashboard/ai_assistant");
+  const first = Array.isArray(item.relatedRecords) ? item.relatedRecords[0] : null;
+  return hrefForRelatedRecord(first, base);
+}
+
+function hrefForRelatedRecord(record: any, fallback: string) {
+  if (!record?.id) {
+    return fallback === "/dashboard/settings" ? "/dashboard/settings#billing" : fallback;
+  }
+
+  const type = String(record.type || "").toLowerCase();
+  const id = encodeURIComponent(String(record.id));
+  if (type.includes("lead")) return `/dashboard/leads?leadId=${id}`;
+  if (type.includes("deal") || type.includes("pipeline")) return `/dashboard/pipeline?dealId=${id}`;
+  if (type.includes("task")) return `/dashboard/tasks?taskId=${id}`;
+  if (type.includes("appointment") || type.includes("calendar")) return `/dashboard/calendar?appointmentId=${id}`;
+  if (type.includes("campaign") || type.includes("marketing")) return `/dashboard/marketing?campaignId=${id}`;
+  if (type.includes("conversation") || type.includes("communication") || type.includes("message")) return `/dashboard/communications?conversationId=${id}`;
+  if (type.includes("workflow")) return `/dashboard/workflow?workflowId=${id}`;
+  if (type.includes("billing") || type.includes("usage") || type.includes("setup")) return "/dashboard/settings#billing";
+  return fallback;
 }
 
 function actionLabel(actionType: string) {
@@ -279,7 +308,7 @@ export default function MiniBrainInsightPanel({
       });
       const data = await response.json();
       if (!response.ok || !data.success) {
-        throw new Error(data?.error || "Mini-Brain action could not be recorded.");
+        throw new Error(data?.error || "Intelligence action could not be recorded.");
       }
       setActionState((state) => ({
         ...state,
@@ -294,7 +323,7 @@ export default function MiniBrainInsightPanel({
       setActionState((state) => ({
         ...state,
         [key]: {
-          error: error instanceof Error ? error.message : "Mini-Brain action could not be recorded.",
+          error: error instanceof Error ? error.message : "Intelligence action could not be recorded.",
         },
       }));
     }
@@ -306,7 +335,7 @@ export default function MiniBrainInsightPanel({
         <div>
           <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-cyan-300">
             <Brain size={16} />
-            Mini-Brain
+            Business Intelligence
           </div>
           <h2 className="mt-1 text-xl font-black text-white">{title}</h2>
           <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
@@ -369,7 +398,7 @@ export default function MiniBrainInsightPanel({
                     Domain helpers
                   </div>
                   <div className="mt-1 text-sm text-gray-400">
-                    Structured scorecards and summaries generated from the same deterministic Mini-Brain run.
+                    Structured scorecards and summaries generated from deterministic CRM intelligence.
                   </div>
                 </div>
                 <div className="text-xs text-emerald-100/70">No external AI call</div>
@@ -502,7 +531,7 @@ export default function MiniBrainInsightPanel({
               </div>
               <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
                 <div className="text-xs text-gray-500">Source</div>
-                <div className="mt-1 font-bold text-white">Mini-Brain</div>
+                <div className="mt-1 font-bold text-white">Built-in Intelligence</div>
               </div>
             </div>
 
@@ -537,7 +566,7 @@ export default function MiniBrainInsightPanel({
                           <div className="font-bold text-white">{record.label || record.id}</div>
                           <div className="mt-1 text-gray-500">{record.type}</div>
                         </div>
-                        <a href={hrefForInsight(selectedInsight)} className="shrink-0 rounded-lg border border-cyan-400/20 bg-cyan-500/10 px-2 py-1 font-bold text-cyan-100">
+                        <a href={hrefForRelatedRecord(record, hrefForInsight(selectedInsight))} className="shrink-0 rounded-lg border border-cyan-400/20 bg-cyan-500/10 px-2 py-1 font-bold text-cyan-100">
                           Open
                         </a>
                       </div>

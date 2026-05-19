@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, CreditCard, Database, KeyRound, Loader2, Settings, Sparkles, UserPlus, XCircle, Zap } from "lucide-react";
 import { COMMITMENT_DISCOUNTS, CREDIT_PACKS, MANAGED_PLANS, SELF_SERVICE_BYOK_PLANS, TRIAL_PLANS } from "@/lib/billing/plans";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
+import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
 
 const defaultForm = {
   business_name: "",
@@ -327,6 +328,7 @@ export default function SettingsPage() {
 
   return (
     <main className="min-h-screen text-white">
+      <QueryRecordFocus keys={["settingsId"]} hashIds={["billing", "usage", "providers"]} />
       <div className="mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-400/20 bg-cyan-400/10 text-cyan-300 text-xs mb-4">
           <Settings size={14} />
@@ -392,7 +394,7 @@ export default function SettingsPage() {
 
           <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div className="xl:col-span-2 space-y-6">
-              <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+              <div id="providers" className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
                 <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <h2 className="text-2xl font-black">Business Profile</h2>
                   <button onClick={() => saveSettingsPatch({
@@ -594,7 +596,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 h-fit xl:col-span-3">
+            <div id="billing" className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 h-fit xl:col-span-3">
               <div className="flex items-center gap-3 mb-5">
                 <Zap className="text-cyan-300" size={22} />
                 <h2 className="text-xl font-black">Trial, Caps & Billing Rules</h2>

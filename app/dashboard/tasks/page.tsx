@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Bot, CheckCircle2, Clock, Loader2, Plus, Save, Search, Trash2, UserPlus, X } from "lucide-react";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
+import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
 
 const emptyTask = {
   id: "",
@@ -320,6 +321,7 @@ export default function TasksPage() {
 
   return (
     <main className="min-h-screen text-white">
+      <QueryRecordFocus keys={["taskId"]} />
       <section className="mb-8 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-5">
         <div>
           <div className="inline-flex rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-cyan-300">Follow-up system</div>
@@ -426,7 +428,7 @@ export default function TasksPage() {
         {filtered.length === 0 ? (
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-10 text-center text-gray-400">No real tasks yet. Add a follow-up task or run the agent review to find next actions.</div>
         ) : filtered.map((task) => (
-          <div key={task.id} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div key={task.id} data-record-id={task.id} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <div className="font-black text-lg">{task.title}</div>
               <div className="mt-1 text-sm text-gray-500">{task.details || "No details"}</div>

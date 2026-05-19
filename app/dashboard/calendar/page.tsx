@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Bell, CalendarDays, CheckCircle2, Edit2, Loader2, MessageSquare, Plus, Sparkles, X } from "lucide-react";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
+import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
 
 const emptyAppointment = { id: "", title: "", starts_at: "", ends_at: "", location: "", notes: "", status: "scheduled", lead_id: "", deal_id: "" };
 
@@ -222,6 +223,7 @@ export default function CalendarPage() {
 
   return (
     <main className="min-h-screen text-white">
+      <QueryRecordFocus keys={["appointmentId"]} />
       <section className="mb-8 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-5">
         <div>
           <div className="inline-flex rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-cyan-300">Real appointments</div>
@@ -304,7 +306,7 @@ export default function CalendarPage() {
           ) : (
             <div className="space-y-3">
               {upcomingAppointments.map((appointment: any) => (
-                <div key={appointment.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                <div key={appointment.id} data-record-id={appointment.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div className="font-bold text-white">{appointment.title}</div>
@@ -325,7 +327,7 @@ export default function CalendarPage() {
         {appointments.length === 0 ? (
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-10 text-center text-gray-400">No appointments yet. Add a real appointment when a lead books time.</div>
         ) : appointments.map((appointment) => (
-          <div key={appointment.id} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div key={appointment.id} data-record-id={appointment.id} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="flex items-start gap-4">
               <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3"><CalendarDays className="text-cyan-300" size={20} /></div>
               <div>

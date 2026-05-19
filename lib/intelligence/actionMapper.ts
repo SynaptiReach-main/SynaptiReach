@@ -1,6 +1,16 @@
 import type { MiniBrainInsight } from "./types";
 
 export function routeForInsight(insight: MiniBrainInsight) {
+  const first = Array.isArray(insight.relatedRecords) ? insight.relatedRecords[0] : null;
+  const type = String(first?.type || "").toLowerCase();
+  const id = first?.id ? encodeURIComponent(String(first.id)) : "";
+  if (id && type.includes("lead")) return `/dashboard/leads?leadId=${id}`;
+  if (id && (type.includes("deal") || type.includes("pipeline"))) return `/dashboard/pipeline?dealId=${id}`;
+  if (id && type.includes("task")) return `/dashboard/tasks?taskId=${id}`;
+  if (id && (type.includes("appointment") || type.includes("calendar"))) return `/dashboard/calendar?appointmentId=${id}`;
+  if (id && (type.includes("campaign") || type.includes("marketing"))) return `/dashboard/marketing?campaignId=${id}`;
+  if (id && (type.includes("conversation") || type.includes("communication") || type.includes("message"))) return `/dashboard/communications?conversationId=${id}`;
+  if (id && type.includes("workflow")) return `/dashboard/workflow?workflowId=${id}`;
   if (insight.type === "lead_intelligence") return "/dashboard/leads";
   if (insight.type === "deal_intelligence" || insight.type === "pipeline_intelligence" || insight.type === "forecast") return "/dashboard/pipeline";
   if (insight.type === "communication_intelligence") return "/dashboard/communications";
@@ -8,7 +18,7 @@ export function routeForInsight(insight: MiniBrainInsight) {
   if (insight.type === "workflow_intelligence") return "/dashboard/workflow";
   if (insight.type === "task_intelligence") return "/dashboard/tasks";
   if (insight.type === "appointment_intelligence") return "/dashboard/calendar";
-  if (insight.type === "billing_usage_intelligence" || insight.type === "onboarding_setup") return "/dashboard/settings";
+  if (insight.type === "billing_usage_intelligence" || insight.type === "onboarding_setup") return "/dashboard/settings#billing";
   return "/dashboard/ai_assistant";
 }
 

@@ -687,3 +687,210 @@ Invoke-RestMethod -Method Post "$base/api/intelligence/run" `
   -ContentType "application/json" `
   -Body '{"persist":false}'
 ```
+
+## Task 3 / Task 2A - Test Workspace Live Verification Pass - 2026-05-19
+
+- [x] Read `docs/codex/SYNAPTIREACH_MASTER_V9.md` and `docs/codex/CODEX_TASK_LEDGER.md` before continuing.
+- [x] Continued Task 3 / Task 2A only; no billing, services, waitlist, public page, or Task 20 implementation work was performed.
+- [x] Updated `docs/codex/CODEX_TASK_LEDGER.md` at each checkpoint.
+- [x] Inspected all protected simulation routes:
+  - `POST /api/test/simulation/bootstrap`
+  - `GET /api/test/simulation/status`
+  - `POST /api/test/simulation/seed`
+  - `POST /api/test/simulation/tick`
+  - `POST /api/test/simulation/pause`
+  - `POST /api/test/simulation/reset`
+- [x] Inspected `lib/simulation/testWorkspaceSeed.ts` and confirmed the seed foundation covers:
+  - 84 leads
+  - 32 deals
+  - 64 tasks
+  - 26 appointments
+  - 22 campaigns plus campaign events/interactions
+  - communications, CRM conversations, and CRM messages
+  - workflows and workflow runs
+  - CRM and marketing AI recommendations plus agent runs
+  - notifications
+  - billing account and usage events
+  - service requests
+  - waitlist and contact submissions
+  - provider setup-required rows
+  - staff roles and staff permissions
+- [x] Confirmed seed IDs are deterministic and rows are upserted by stable IDs, so repeated seed calls are designed to be idempotent instead of endlessly duplicating records.
+- [x] Confirmed seeded rows use `metadata: testMeta(...)` where supported, including:
+  - `is_test_data: true`
+  - `simulation_source: "synaptireach_test_workspace"`
+  - `simulation_version`
+  - `generated_at`
+- [x] Confirmed bootstrap creates or finds the Supabase Auth user for `donovan.mike966@gmail.com`, creates/fixes the workspace, links `workspace_members`, writes onboarding/settings records, marks the workspace as test/simulation, and returns `workspace_id`, `company_id`, and `user_id`.
+- [x] Confirmed dashboard/settings simulation UI is only shown when `/api/test/simulation/status` returns `allowed`.
+- [x] Hardened simulation controls so status, seed, tick, pause, and reset now all verify `workspaces.is_test_workspace=true` before reading or mutating simulation state.
+- [x] Confirmed `npm.cmd run build` passes after the simulation guard hardening.
+- [x] Build artifact check: `.next/routes-manifest.json` exists after the final build.
+- [ ] Live bootstrap was not executed because this shell and `.env.local` do not currently expose the required local env vars.
+- [ ] Live status/seed/tick/pause/reset API verification remains blocked until local `CRM_TEST_*` and Supabase service credentials are configured.
+- [ ] Seeded record counts, metadata, normal-user isolation, and browser page population still need live Supabase verification after bootstrap.
+- [ ] Local HTTP fail-closed probes were attempted, but the local Next server exited during route probing in this shell; do not treat route probes as passed until rerun after env/server setup.
+
+### Required Local Env For Live Test Workspace Verification
+
+Set these in `.env.local` before rerunning the live bootstrap flow:
+
+```powershell
+Add-Content .env.local "CRM_ENABLE_TEST_SIMULATION=true"
+Add-Content .env.local "CRM_TEST_ACCOUNT_EMAILS=donovan.mike966@gmail.com"
+Add-Content .env.local "CRM_TEST_BOOTSTRAP_SECRET=replace-with-local-dev-secret"
+Add-Content .env.local "CRM_TEST_SIMULATION_SEED_SECRET=replace-with-local-dev-secret"
+Add-Content .env.local "NEXT_PUBLIC_SUPABASE_URL=replace-with-project-url"
+Add-Content .env.local "SUPABASE_SERVICE_ROLE_KEY=replace-with-service-role-key"
+```
+
+After bootstrap returns a workspace ID, add:
+
+```powershell
+Add-Content .env.local "CRM_TEST_WORKSPACE_IDS=returned-workspace-id"
+```
+
+### Live Bootstrap / Seed / Tick Commands
+
+```powershell
+npm.cmd run build
+npm.cmd run start -- -H 127.0.0.1 -p 3000
+
+$base = "http://127.0.0.1:3000"
+
+$bootstrap = Invoke-RestMethod -Method Post "$base/api/test/simulation/bootstrap" `
+  -ContentType "application/json" `
+  -Body '{"email":"donovan.mike966@gmail.com","bootstrap_secret":"YOUR_BOOTSTRAP_SECRET","test_password":"LOCAL_ONLY_TEST_PASSWORD"}'
+
+$bootstrap.workspace_id
+$bootstrap.company_id
+$bootstrap.user_id
+
+# Add CRM_TEST_WORKSPACE_IDS=$($bootstrap.workspace_id) to .env.local, restart the server, then run:
+
+Invoke-RestMethod "$base/api/test/simulation/status?workspace_id=$($bootstrap.workspace_id)&secret=YOUR_SEED_SECRET"
+
+Invoke-RestMethod -Method Post "$base/api/test/simulation/seed" `
+  -ContentType "application/json" `
+  -Body (@{ workspace_id = $bootstrap.workspace_id; seed_secret = "YOUR_SEED_SECRET" } | ConvertTo-Json)
+
+Invoke-RestMethod -Method Post "$base/api/test/simulation/tick" `
+  -ContentType "application/json" `
+  -Body (@{ workspace_id = $bootstrap.workspace_id; seed_secret = "YOUR_SEED_SECRET" } | ConvertTo-Json)
+
+Invoke-RestMethod -Method Post "$base/api/test/simulation/pause" `
+  -ContentType "application/json" `
+  -Body (@{ workspace_id = $bootstrap.workspace_id; seed_secret = "YOUR_SEED_SECRET"; paused = $true } | ConvertTo-Json)
+
+Invoke-RestMethod -Method Post "$base/api/test/simulation/pause" `
+  -ContentType "application/json" `
+  -Body (@{ workspace_id = $bootstrap.workspace_id; seed_secret = "YOUR_SEED_SECRET"; paused = $false } | ConvertTo-Json)
+
+# Reset is destructive only inside the marked test workspace.
+Invoke-RestMethod -Method Post "$base/api/test/simulation/reset" `
+  -ContentType "application/json" `
+  -Body (@{ workspace_id = $bootstrap.workspace_id; seed_secret = "YOUR_SEED_SECRET" } | ConvertTo-Json)
+```
+
+### Browser Pages To Verify After Live Seed
+
+- `/signin`
+- `/dashboard`
+- `/dashboard/analytics`
+- `/dashboard/leads`
+- `/dashboard/pipeline`
+- `/dashboard/tasks`
+- `/dashboard/calendar`
+- `/dashboard/marketing`
+- `/dashboard/communications`
+- `/dashboard/workflow`
+- `/dashboard/ai_assistant`
+- `/dashboard/settings`
+
+Verify that the test user sees normal CRM pages populated with seeded simulated data, while normal users do not see simulation controls, the simulated workspace badge, or test records.
+
+## Task 3 / Task 2A - Live Verification and Polish Completion - 2026-05-19
+
+- [x] Task 3 / Task 2A continued only; billing/services/waitlist/public pages were not changed.
+- [x] Live bootstrap succeeded for the dedicated test account:
+  - Email: `donovan.mike966@gmail.com`
+  - Workspace ID: `cc2d162a-33e9-4d0b-8a8f-b9d35f68d4a8`
+  - Company ID: `c833d54d-20f9-4760-bf3c-d72619e7ada9`
+  - User ID: `26525fd4-c5ad-4139-bb23-c607c6b73645`
+- [x] Live seed succeeded and returned rich simulated counts across leads, deals, tasks, appointments, marketing, communications, conversations, workflows, recommendations, notifications, billing, services, waitlist, contacts, providers, staff, and audit logs.
+- [x] Live tick succeeded twice and advanced the simulation to day 3.
+- [x] CRM API smoke checks returned seeded data during live verification.
+- [x] Browser login now works after adding `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+- [x] Confirmed browser auth code requires `NEXT_PUBLIC_SUPABASE_ANON_KEY`:
+  - `lib/supabase/client.ts`
+  - `lib/supabase/server.ts`
+- [x] Manual browser verification confirmed the test user loads normal CRM pages, not fake separate pages:
+  - `/dashboard`
+  - `/dashboard/analytics`
+  - `/dashboard/leads`
+  - `/dashboard/pipeline`
+  - `/dashboard/tasks`
+  - `/dashboard/calendar`
+  - `/dashboard/marketing`
+  - `/dashboard/communications`
+  - `/dashboard/workflow`
+  - `/dashboard/ai_assistant`
+  - `/dashboard/settings`
+- [x] Normal-user simulation isolation is enforced by code:
+  - Simulation controls call `/api/test/simulation/status`.
+  - Dashboard/settings simulation UI only appears when status returns `allowed`.
+  - Simulation routes require configured test env/secret or allowed test account context.
+  - Status, seed, tick, pause, and reset all verify `workspaces.is_test_workspace=true` before proceeding.
+  - Seeded records are scoped by the configured test workspace ID and use normal CRM pages/data APIs.
+- [x] Added schema repair for the live seed issue:
+  - `public.marketing_campaigns.metadata jsonb not null default '{}'::jsonb` is now in the create-table definition.
+  - `alter table if exists public.marketing_campaigns add column if not exists metadata jsonb not null default '{}'::jsonb;` is now included for existing databases.
+- [x] Seeded test rows use deterministic IDs/upserts and `metadata: testMeta(...)` where supported, including test/simulation metadata.
+- [x] Removed active customer-facing `mini-brain` wording from CRM UI/API messages and replaced it with polished intelligence language:
+  - Built-in Intelligence
+  - Business Intelligence
+  - Smart Signals
+  - Review-gated intelligence action
+- [x] Internal code identifiers such as `MiniBrainInsight` and `miniBrain.ts` remain unchanged to avoid breakage; they are not customer-facing labels.
+- [x] Added `components/dashboard/QueryRecordFocus.tsx` to support safe query/hash focus patterns from intelligence and recommendation links.
+- [x] Added related-record routing/focus patterns:
+  - `/dashboard/leads?leadId=...`
+  - `/dashboard/pipeline?dealId=...`
+  - `/dashboard/tasks?taskId=...`
+  - `/dashboard/calendar?appointmentId=...`
+  - `/dashboard/marketing?campaignId=...`
+  - `/dashboard/communications?conversationId=...`
+  - `/dashboard/workflow?workflowId=...`
+  - `/dashboard/settings#billing`
+  - `/dashboard/settings#providers`
+- [x] Updated intelligence card routing so related records prefer exact item links where possible.
+- [x] Page loads still use transient intelligence summaries and do not persist duplicate durable recommendations.
+- [x] Review-gated intelligence actions remain internal only; no email, SMS, social post, Stripe charge, payment status update, or destructive action is triggered.
+- [x] Verified `npm.cmd run build` passes after Task 3 polish.
+- [x] Build artifact checks:
+  - `.next/routes-manifest.json` exists.
+  - `.next/BUILD_ID` exists.
+- [x] Static customer-facing phrase check: active `app`, `components`, and `lib` UI/API strings no longer contain `mini-brain` / `mini brain`; remaining matches are internal code identifiers only.
+- [ ] Local `next start` HTTP probes exited immediately after reporting "Ready" in this shell, so this pass did not add fresh local HTTP API probe results. Use the already successful live API/browser verification above and rerun route probes in a clean local shell if needed.
+
+### Task 3 Final Verification Commands
+
+```powershell
+npm.cmd run build
+
+# Start in a clean shell if local route probes are needed:
+npm.cmd run start -- -H 127.0.0.1 -p 3000
+
+$base = "http://127.0.0.1:3000"
+$workspace = "cc2d162a-33e9-4d0b-8a8f-b9d35f68d4a8"
+
+Invoke-RestMethod "$base/api/test/simulation/status?workspace_id=$workspace&secret=YOUR_SEED_SECRET"
+
+Invoke-RestMethod -Method Post "$base/api/intelligence/run" `
+  -ContentType "application/json" `
+  -Body '{"persist":false}'
+```
+
+### Task 3 Status
+
+Task 3 / Task 2A is marked complete for launch-readiness tracking. The dedicated simulated workspace exists, has rich seeded data, advances with ticks, uses normal CRM pages, and is protected by test-workspace guards. Continue to use this workspace for Task 20 tuning and later CRM/browser smoke tests.

@@ -145,7 +145,7 @@ export default function AIAssistantPage() {
       {error && <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>}
 
       <MiniBrainInsightPanel
-        title="AI Command Center Mini-Brain"
+        title="AI Command Center Intelligence"
         subtitle="Structured helper cards, scorecards, draft-safe actions, and deterministic recommendations before external AI is used."
         limit={8}
       />
@@ -252,7 +252,7 @@ export default function AIAssistantPage() {
                 )}
                 {(agentData?.insights || []).length > 0 && (
                   <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                    <div className="text-sm font-bold text-white">Mini-brain insights</div>
+                    <div className="text-sm font-bold text-white">Built-in intelligence insights</div>
                     <div className="mt-1 text-xs text-gray-400">
                       {(agentData.insights || []).length} deterministic insight{(agentData.insights || []).length === 1 ? "" : "s"} generated before external AI.
                     </div>
@@ -297,7 +297,7 @@ export default function AIAssistantPage() {
             </div>
             <div className="space-y-3">
               {(agentData?.insights || []).length === 0 && (
-                <div className="text-sm text-gray-500">No mini-brain insights available for the current CRM data.</div>
+                <div className="text-sm text-gray-500">No built-in intelligence insights available for the current CRM data.</div>
               )}
               {(agentData?.insights || []).slice(0, 8).map((item: any) => (
                 <div key={item.id || item.title} className="rounded-2xl border border-white/10 bg-black/30 p-4">

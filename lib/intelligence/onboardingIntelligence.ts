@@ -29,7 +29,7 @@ export function onboardingInsights(context: MiniBrainContext): MiniBrainInsight[
       type: "onboarding_setup",
       priority: "medium",
       title: "CRM settings are not fully configured",
-      summary: "The mini-brain could not find a complete CRM settings record.",
+      summary: "Built-in intelligence could not find a complete CRM settings record.",
       reasoning: ["Settings define workspace goals, provider state, and safe automation defaults."],
       recommendedAction: "Open settings and complete the CRM setup fields.",
       actionType: "fix_setup",

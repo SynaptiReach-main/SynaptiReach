@@ -8,7 +8,7 @@ export function safetyInsights(_context: MiniBrainContext): MiniBrainInsight[] {
       type: "safety_compliance",
       priority: "low",
       title: "External actions remain review-gated",
-      summary: "Mini-brain recommendations can draft, queue, and guide, but do not send externally by themselves.",
+      summary: "Built-in intelligence recommendations can draft, queue, and guide, but do not send externally by themselves.",
       reasoning: [
         "Review-gated autonomy prevents irreversible sends or billing actions without human confirmation.",
       ],

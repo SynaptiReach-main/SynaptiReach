@@ -392,7 +392,7 @@ function buildSafetyChecks(context: MiniBrainContext, providers: any[]): SafetyC
       category: "external_send_readiness",
       passed: true,
       severity: "low",
-      message: "Mini-Brain outputs remain review-gated before external sends.",
+      message: "Built-in intelligence outputs remain review-gated before external sends.",
       recommendedAction: "Review and confirm every email/SMS/social draft before sending.",
       reviewRequired: true,
       relatedRecords: [],

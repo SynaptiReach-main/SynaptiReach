@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Bot, Eye, Loader2, Mail, MessageSquare, Phone, Search, Send, Share2, X } from "lucide-react";
 import { aiClient } from "@/src/ai/aiClient";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
+import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
 
 const channels = ["all", "email", "sms", "social", "call", "note", "internal"];
 const statuses = ["all", "draft", "scheduled", "sent", "failed", "received"];
@@ -289,6 +290,7 @@ export default function CommunicationsPage() {
 
   return (
     <main className="min-h-screen text-white">
+      <QueryRecordFocus keys={["conversationId", "communicationId", "leadId"]} />
       <div className="mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-400/20 bg-cyan-400/10 text-cyan-300 text-xs mb-4">
           <MessageSquare size={14} />
@@ -457,6 +459,9 @@ export default function CommunicationsPage() {
             {conversations.map((conversation: any) => (
               <button
                 key={conversation.key}
+                data-record-id={conversation.key}
+                data-conversation-id={conversation.messages[0]?.conversation_id || conversation.messages[0]?.id || conversation.key}
+                data-lead-id={conversation.lead_id || undefined}
                 onClick={() => {
                   setSelectedConversation(conversation);
                   setReply({

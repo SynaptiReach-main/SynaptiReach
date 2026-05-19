@@ -15,7 +15,7 @@ Codex must update this after every pass.
 |---|---|---|---|---|---|
 | 1 | Build/deployment health | Partial | npm.cmd run build passes | Keep verifying each pass | |
 | 2 | Supabase schema/features | Partial | schema ran successfully | feature live-write tests | |
-| 3 | Test user/simulated workspace | Partial | bootstrap routes exist | live bootstrap/seed/tick verification | |
+| 3 | Test user/simulated workspace | Complete | live bootstrap/seed/tick succeeded for `donovan.mike966@gmail.com`; workspace `cc2d162a-33e9-4d0b-8a8f-b9d35f68d4a8`; seed returned rich CRM counts; tick advanced to day 3; browser login/pages verified by user; build passes; controls verify `workspaces.is_test_workspace=true` | Continue monitoring with future browser smoke tests; no Task 3 blocker remains | 2026-05-19 |
 | 4 | Demo/nav/performance | Complete | demo overview removed, nav non-sticky, build passes | monitor | |
 | 5 | Trial subscriptions/autorenewal | Not Started |  |  | |
 | 6 | Tiers/caps/BYOK/managed | Not Started |  |  | |
@@ -153,6 +153,90 @@ Files changed: `app/dashboard/page.tsx`, `app/dashboard/ai_assistant/page.tsx`, 
 Build result: Passed.
 Tests run: `npm.cmd run build`; `GET /api/intelligence/summary`; `POST /api/intelligence/run` with `{"persist":false}`; build artifact checks; destructive SQL grep.
 Next recommended task: Live Task 3 seeded-workspace bootstrap/seed/tick verification, then tune Task 20 against real seeded CRM data and verify approve/dismiss DB writes.
+
+### 2026-05-19 - Task 3 / 2A Live Verification Checkpoint 1
+
+Date: 2026-05-19
+Model: Codex
+Prompt/Goal: Move to Task 3 / Task 2A only and verify the live dedicated test user/simulated workspace flow.
+Completed: Read `docs/codex/SYNAPTIREACH_MASTER_V9.md` and `docs/codex/CODEX_TASK_LEDGER.md`; inspected all `/api/test/simulation/*` routes and `lib/simulation/testWorkspaceSeed.ts`; confirmed the route set exists and delegates bootstrap/status/seed/tick/pause/reset to the shared guarded simulation engine.
+Skipped: Billing/services/waitlist/public pages and Task 20 code work per user instruction.
+Partial: Live bootstrap/seed/tick verification is blocked because this shell and `.env.local` do not currently expose the required `CRM_TEST_*` or Supabase service-role env vars.
+Blocked: Missing `CRM_ENABLE_TEST_SIMULATION`, `CRM_TEST_ACCOUNT_EMAILS`, `CRM_TEST_BOOTSTRAP_SECRET`, `CRM_TEST_SIMULATION_SEED_SECRET`, `CRM_TEST_WORKSPACE_IDS`, `NEXT_PUBLIC_SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY`.
+Files changed: `docs/codex/CODEX_TASK_LEDGER.md`
+Build result: Not run at this checkpoint.
+Tests run: Documentation reads, route discovery, simulation source inspection, and non-secret env presence checks.
+Next recommended task: Run fail-closed API probes without env, then provide exact local env and bootstrap/seed/tick commands for the live Supabase verification.
+
+### 2026-05-19 - Task 3 / 2A Live Verification Checkpoint 2
+
+Date: 2026-05-19
+Model: Codex
+Prompt/Goal: Harden simulation controls before live Task 3 verification.
+Completed: Added an explicit `workspaces.is_test_workspace` guard shared by status, reset, seed, tick, and pause controls so secret-authenticated mutation routes refuse to act unless bootstrap has marked the workspace as test/simulation.
+Skipped: Live bootstrap/seed/tick execution because required local env vars are not present.
+Partial: Route protection is safer at code level; runtime fail-closed probes and build verification are still pending.
+Blocked: Live Supabase verification still requires local `CRM_TEST_*` and Supabase service-role configuration.
+Files changed: `lib/simulation/testWorkspaceSeed.ts`, `docs/codex/CODEX_TASK_LEDGER.md`
+Build result: Not run at this checkpoint.
+Tests run: Static route/engine inspection.
+Next recommended task: Run `npm.cmd run build` and local API fail-closed probes for bootstrap/status/seed/tick/pause/reset without secrets.
+
+### 2026-05-19 - Task 3 / 2A Live Verification Checkpoint 3
+
+Date: 2026-05-19
+Model: Codex
+Prompt/Goal: Build and document live Task 3 verification status.
+Completed: `npm.cmd run build` passed after simulation hardening. Confirmed seed coverage includes leads, deals, tasks, appointments, campaigns/activity, communications/conversations/messages, workflows/runs, AI recommendations, agent runs, notifications, billing/usage, services, waitlist/contact submissions, provider setup rows, and staff/team rows. Confirmed seeded rows use deterministic IDs and `metadata: testMeta(...)` where supported.
+Skipped: Billing/services/waitlist/public page work per user instruction.
+Partial: Local HTTP route probes were attempted without env, but the local Next server exited during probing in this shell; route-level fail-closed verification remains unconfirmed in this run.
+Blocked: Live bootstrap could not run because this shell and `.env.local` do not expose required `CRM_TEST_*`, `NEXT_PUBLIC_SUPABASE_URL`, or `SUPABASE_SERVICE_ROLE_KEY` values.
+Files changed: `lib/simulation/testWorkspaceSeed.ts`, `docs/codex/CODEX_TASK_LEDGER.md`, `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`
+Build result: Passed.
+Tests run: `npm.cmd run build`; build artifact check for `.next/routes-manifest.json`; static simulation coverage/metadata inspection.
+Next recommended task: Configure local env, run bootstrap/status/seed/tick against live Supabase, then sign in as `donovan.mike966@gmail.com` and verify populated normal CRM pages plus normal-user isolation.
+
+### 2026-05-19 - Task 3 / 2A Verification Polish Checkpoint 1
+
+Date: 2026-05-19
+Model: Codex
+Prompt/Goal: Continue Task 3 / Task 2A verification and polish only after live bootstrap/seed/tick/browser verification succeeded.
+Completed: Read `docs/codex/SYNAPTIREACH_MASTER_V9.md` and `docs/codex/CODEX_TASK_LEDGER.md`; accepted the latest user-provided live verification results: bootstrap succeeded for `donovan.mike966@gmail.com`, seed succeeded, tick advanced to day 3, CRM APIs returned seeded data, browser login works after adding `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and normal CRM pages load for the test user.
+Skipped: Billing/services/waitlist/public page work per user instruction.
+Partial: Schema idempotency, customer-facing intelligence language cleanup, and related-record query/hash routing polish are in progress.
+Blocked: None at this checkpoint.
+Files changed: `docs/codex/CODEX_TASK_LEDGER.md`
+Build result: Not run at this checkpoint.
+Tests run: Documentation reads only.
+Next recommended task: Patch schema for `marketing_campaigns.metadata`, inspect other seed-referenced columns, and remove user-facing "mini-brain" language.
+
+### 2026-05-19 - Task 3 / 2A Verification Polish Checkpoint 2
+
+Date: 2026-05-19
+Model: Codex
+Prompt/Goal: Polish Task 3 / Task 2A after live seed/browser verification.
+Completed: Added idempotent `public.marketing_campaigns.metadata` coverage to the Supabase schema; removed active customer-facing "Mini-Brain" phrasing from CRM UI/API messages and replaced it with Built-in Intelligence/Business Intelligence language; added related-record query/hash routing and focus highlighting support for leads, deals, tasks, appointments, campaigns, conversations, workflows, and settings billing/provider sections.
+Skipped: Internal code identifiers such as `MiniBrainInsight` and `miniBrain.ts` were left unchanged to avoid unnecessary breakage; they are not user-facing.
+Partial: Build and API smoke tests are pending.
+Blocked: None at this checkpoint.
+Files changed: `supabase/user_crm_full_completion_schema.sql`, `components/intelligence/MiniBrainInsightPanel.tsx`, `components/dashboard/QueryRecordFocus.tsx`, dashboard pages, intelligence action/mapper files, simulation/intelligence wording files, `docs/codex/CODEX_TASK_LEDGER.md`
+Build result: Not run at this checkpoint.
+Tests run: Static search for active user-facing `mini-brain` strings in `app`, `components`, and `lib`.
+Next recommended task: Run build, verify intelligence APIs, and update the final checklist.
+
+### 2026-05-19 - Task 3 / 2A Verification Polish Checkpoint 3
+
+Date: 2026-05-19
+Model: Codex
+Prompt/Goal: Finalize Task 3 / Task 2A polish and verification documentation.
+Completed: Verified browser auth code requires `NEXT_PUBLIC_SUPABASE_ANON_KEY`; verified env presence for `CRM_TEST_*`, Supabase URL, anon key, and service role without printing secrets; `npm.cmd run build` passed; confirmed `.next/routes-manifest.json` and `.next/BUILD_ID` exist; confirmed active user-facing `mini-brain` phrase search in `app`, `components`, and `lib` returns no matches except internal code identifiers; documented live IDs and user-confirmed seeded browser verification.
+Skipped: No billing/services/waitlist/public page work.
+Partial: Local `next start` HTTP probes still exited immediately after "Ready" in this shell, so this checkpoint relies on the user's successful live API/browser verification plus build/static checks rather than new local HTTP results.
+Blocked: None for Task 3.
+Files changed: `app/api/intelligence/actions/route.ts`, `app/dashboard/*`, `components/dashboard/QueryRecordFocus.tsx`, `components/intelligence/MiniBrainInsightPanel.tsx`, `lib/intelligence/*`, `lib/simulation/testWorkspaceSeed.ts`, `supabase/user_crm_full_completion_schema.sql`, `docs/codex/CODEX_TASK_LEDGER.md`, `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`
+Build result: Passed.
+Tests run: `npm.cmd run build`; env presence check; customer-facing intelligence wording grep; schema metadata grep; build artifact checks.
+Next recommended task: Continue next master task after Task 3, or use the seeded workspace to tune remaining Task 20 intelligence behavior.
 
 ### Template
 
