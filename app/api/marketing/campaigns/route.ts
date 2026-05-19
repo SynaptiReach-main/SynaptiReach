@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { createSupabaseAdmin, friendlySupabaseError } from "@/lib/crm/supabaseAdmin";
 import { applyWorkspaceScope, getWorkspaceContext } from "@/lib/auth/getWorkspaceContext";
 
-const supabase = createSupabaseAdmin();
-
 function normalizeScheduledAt(
   sendDate?: string,
   sendTime?: string,
@@ -42,6 +40,7 @@ function normalizeScheduledAt(
 
 export async function GET(request: Request) {
   try {
+    const supabase = createSupabaseAdmin();
     const context = await getWorkspaceContext(request);
     const { data, error } = await applyWorkspaceScope(supabase
       .from("marketing_campaigns")
@@ -66,6 +65,7 @@ export async function GET(request: Request) {
 
 export async function POST(req: Request) {
   try {
+    const supabase = createSupabaseAdmin();
     const body = await req.json();
     const context = await getWorkspaceContext(req);
 
@@ -139,6 +139,7 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
+    const supabase = createSupabaseAdmin();
     const body = await req.json();
     const context = await getWorkspaceContext(req);
 
@@ -215,6 +216,7 @@ export async function PATCH(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    const supabase = createSupabaseAdmin();
     const { searchParams } = new URL(req.url);
     const context = await getWorkspaceContext(req);
     const id = searchParams.get("id");

@@ -127,6 +127,7 @@ export default function DashboardLayout({
   const [commandQuery, setCommandQuery] = useState("");
   const [commandData, setCommandData] = useState<any>(null);
   const [commandLoading, setCommandLoading] = useState(false);
+  const [simulationStatus, setSimulationStatus] = useState<any>(null);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("synaptireach-crm-sidebar-expanded");
@@ -180,6 +181,20 @@ export default function DashboardLayout({
 
   useEffect(() => {
     loadNotifications();
+  }, [pathname]);
+
+  useEffect(() => {
+    async function loadSimulationStatus() {
+      try {
+        const response = await fetch("/api/test/simulation/status", { cache: "no-store" });
+        const data = await response.json();
+        setSimulationStatus(data?.allowed ? data : null);
+      } catch {
+        setSimulationStatus(null);
+      }
+    }
+
+    loadSimulationStatus();
   }, [pathname]);
 
   useEffect(() => {
@@ -426,13 +441,18 @@ export default function DashboardLayout({
             </h2>
 
             <p className="text-sm text-gray-500">
-              Live AI CRM Workspace
+              {simulationStatus ? "Simulated test workspace data" : "Live AI CRM Workspace"}
             </p>
 
           </div>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            {simulationStatus && (
+              <div className="hidden rounded-xl border border-green-400/20 bg-green-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.14em] text-green-200 md:block">
+                Simulated Test Workspace
+              </div>
+            )}
             <button
               onClick={() => setCommandOpen(true)}
               className="flex h-11 w-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] text-sm text-gray-400 transition hover:border-cyan-400/20 hover:bg-cyan-500/10 hover:text-cyan-100 md:w-auto md:px-4"

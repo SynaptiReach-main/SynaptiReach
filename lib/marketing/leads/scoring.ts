@@ -1,9 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { createMarketingSupabaseAdmin } from "@/lib/marketing/supabaseAdmin";
 
 function calculateLeadScore(
   lead: any
@@ -63,6 +58,8 @@ function classifyLead(
 }
 
 export async function runLeadScoring() {
+  const supabase = createMarketingSupabaseAdmin();
+
   const {
     data: leads,
   } = await supabase

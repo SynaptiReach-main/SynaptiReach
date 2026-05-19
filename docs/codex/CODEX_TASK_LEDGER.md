@@ -32,7 +32,7 @@ Codex must update this after every pass.
 | 17 | Workflow templates/signals | Not Started |  |  | |
 | 18 | Marketing recommendations polish | Not Started |  |  | |
 | 19 | AI task recommendations polish | Not Started |  |  | |
-| 20 | Mini-brain intelligence | Partial | foundation/helper types exist; dashboard and AI Assistant have initial integration | populate helperResults and wire across all CRM pages, modals, workflow signals, recommendations | |
+| 20 | Mini-brain intelligence | Partial | helperResults are populated; shared MiniBrainInsightPanel is wired across required CRM pages; summary/run APIs return 200 without external AI | live seeded-workspace tuning, authenticated approve/dismiss DB-write verification, and deeper page-native metric modal wiring | 2026-05-19 |
 | 21 | Review-gated email/SMS replies | Not Started |  |  | |
 | 22 | Notification mark-read | Not Started |  |  | |
 | 23 | Contact/support/admin notifications | Not Started |  |  | |
@@ -111,6 +111,48 @@ Files changed: `lib/intelligence/contextBuilder.ts`, `docs/codex/CODEX_TASK_LEDG
 Build result: Passed.
 Tests run: `npm.cmd run build`; local production `GET /api/intelligence/summary`; local production `POST /api/intelligence/run` with `{"persist":false}`; build artifact checks.
 Next recommended task: Update final checklist, then continue Task 20 per-record/modal tuning or run live test-workspace verification when env secrets are available.
+
+### 2026-05-19 - Task 20 Continuation Checkpoint 1
+
+Date: 2026-05-19
+Model: Codex
+Prompt/Goal: Continue Task 20 only; finish per-record modal/page-panel integration as much as possible.
+Completed: Read `docs/codex/SYNAPTIREACH_MASTER_V9.md`, `docs/codex/CODEX_TASK_LEDGER.md`, and latest checklist Task 20 sections. Confirmed current status: helperResults populated, shared MiniBrainInsightPanel exists, intelligence summary/run endpoints previously passed, and Task 20 remains partial due to live seeded-workspace tuning and per-record modal depth.
+Skipped: Non-Task-20 launch work per user instruction.
+Partial: Implementation work for this continuation is in progress.
+Blocked: Live seeded-workspace verification remains dependent on configured `CRM_TEST_*` env and browser/session checks.
+Files changed: `docs/codex/CODEX_TASK_LEDGER.md`
+Build result: Not run at this checkpoint.
+Tests run: Documentation/file reads only.
+Next recommended task: Add shared dashboard/AI Assistant helperResults panels and deepen per-record helper modal actions.
+
+### 2026-05-19 - Task 20 Continuation Checkpoint 2
+
+Date: 2026-05-19
+Model: Codex
+Prompt/Goal: Wire helperResults into remaining CRM page panels and deepen per-record modal actions.
+Completed: Added shared `MiniBrainInsightPanel` to `/dashboard` and `/dashboard/ai_assistant`, completing shared helperResults panel coverage across the required CRM pages. Updated the Mini-Brain detail modal with related-record open links and inline action feedback for review-gated approve/dismiss actions.
+Skipped: Non-Task-20 work.
+Partial: Browser modal interaction testing still requires running app/session; live seeded-data tuning remains.
+Blocked: Live seeded workspace verification requires `CRM_TEST_*` env and Supabase session setup.
+Files changed: `app/dashboard/page.tsx`, `app/dashboard/ai_assistant/page.tsx`, `components/intelligence/MiniBrainInsightPanel.tsx`, `docs/codex/CODEX_TASK_LEDGER.md`
+Build result: Not run at this checkpoint.
+Tests run: Static code wiring only.
+Next recommended task: Run production build and intelligence API smoke tests.
+
+### 2026-05-19 - Task 20 Continuation Checkpoint 3
+
+Date: 2026-05-19
+Model: Codex
+Prompt/Goal: Build, smoke-test, and document Task 20 continuation.
+Completed: `npm.cmd run build` passed. Local production API probes returned 200 for `GET /api/intelligence/summary` and `POST /api/intelligence/run` with `{"persist":false}`. Confirmed `.next/routes-manifest.json` exists and `.next/server/vendor-chunks/@supabase.js` is generated/present, so the prior missing Supabase vendor chunk condition is not reproduced. Confirmed no destructive SQL was added.
+Skipped: Live seeded workspace/browser verification and authenticated Mini-Brain action DB-write verification due to missing configured test/session environment in this run.
+Partial: Task 20 is CRM-wide integrated with shared panels/helper cards/modals and API smoke-tested, but remains partial until live seeded-workspace tuning and authenticated action verification are complete.
+Blocked: Live seeded workspace tuning requires `CRM_TEST_*` env secrets and browser sign-in as the test user.
+Files changed: `app/dashboard/page.tsx`, `app/dashboard/ai_assistant/page.tsx`, `components/intelligence/MiniBrainInsightPanel.tsx`, `docs/codex/CODEX_TASK_LEDGER.md`, `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`
+Build result: Passed.
+Tests run: `npm.cmd run build`; `GET /api/intelligence/summary`; `POST /api/intelligence/run` with `{"persist":false}`; build artifact checks; destructive SQL grep.
+Next recommended task: Live Task 3 seeded-workspace bootstrap/seed/tick verification, then tune Task 20 against real seeded CRM data and verify approve/dismiss DB writes.
 
 ### Template
 

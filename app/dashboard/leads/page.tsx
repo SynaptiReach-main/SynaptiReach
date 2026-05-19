@@ -19,6 +19,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 import LeadCsvImportModal from "@/components/leads/LeadCsvImportModal";
 
 const statuses = ["new", "contacted", "qualified", "nurture", "converted", "lost"];
@@ -491,6 +492,12 @@ export default function LeadsPage() {
           {error}
         </div>
       )}
+
+      <MiniBrainInsightPanel
+        title="Lead Intelligence"
+        subtitle="Lead fit, intent, freshness, duplicates, and review-gated next steps generated without external AI."
+        types={["lead_intelligence", "safety_compliance"]}
+      />
 
       <section className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         {[

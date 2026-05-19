@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Archive, BriefcaseBusiness, ChevronLeft, ChevronRight, DollarSign, Edit2, Loader2, Plus, Save, Search, X } from "lucide-react";
+import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 
 const stages = ["new", "qualified", "proposal", "negotiation", "won", "lost"];
 const emptyDeal = { id: "", lead_id: "", title: "", company: "", value: 0, stage: "new", probability: 0, expected_close_date: "", notes: "" };
@@ -210,6 +211,12 @@ export default function PipelinePage() {
       </section>
 
       {error && <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>}
+
+      <MiniBrainInsightPanel
+        title="Pipeline Intelligence"
+        subtitle="Deal health, stale-stage risk, weighted forecast, and revenue-at-risk signals."
+        types={["pipeline_intelligence", "deal_intelligence", "forecast"]}
+      />
 
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {[["Pipeline Value", money(totals.value), DollarSign], ["Weighted Value", money(totals.weighted), DollarSign], ["Open Deals", totals.open, BriefcaseBusiness], ["Won Deals", totals.won, Save], ["Lost Deals", totals.lost, X], ["Stale Deals", totals.stale, Archive]].map(([label, value, Icon]: any) => (

@@ -1,9 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { createMarketingSupabaseAdmin } from "@/lib/marketing/supabaseAdmin";
 
 async function sendEmail(
   campaign: any,
@@ -77,6 +72,8 @@ function sleep(ms: number) {
 export async function executeCampaign(
   campaignId: string
 ) {
+  const supabase = createMarketingSupabaseAdmin();
+
   const {
     data: campaign,
   } = await supabase
@@ -98,11 +95,15 @@ export async function executeCampaign(
     })
     .eq("id", campaignId);
 
+  let leadsQuery = supabase.from("leads").select("*");
+
+  if (campaign.workspace_id) {
+    leadsQuery = leadsQuery.eq("workspace_id", campaign.workspace_id);
+  }
+
   const {
     data: leads,
-  } = await supabase
-    .from("crm_leads")
-    .select("*");
+  } = await leadsQuery;
 
   const stagger =
     campaign.stagger_size || 50;

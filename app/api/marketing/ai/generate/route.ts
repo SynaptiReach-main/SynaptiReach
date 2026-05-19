@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { generateAIText, providerErrorResponse } from "@/lib/ai/providers";
+import { providerErrorResponse } from "@/lib/ai/providers";
+import { aiClient } from "@/src/ai/aiClient";
 
 export async function POST(req: Request) {
   try {
@@ -31,18 +32,21 @@ export async function POST(req: Request) {
           ? "premium"
           : "balanced");
 
-    const result = await generateAIText([
-      {
-        role: "system",
-        content:
-          system ||
-          "You are SynaptiReach's CRM marketing assistant. Generate concise, conversion-oriented campaign content.",
-      },
-      {
-        role: "user",
-        content: prompt,
-      },
-    ], { profile });
+    const result = await aiClient.runTask(body.task || "campaign_ideas", {
+      messages: [
+        {
+          role: "system",
+          content:
+            system ||
+            "You are SynaptiReach's CRM marketing assistant. Generate concise, conversion-oriented campaign content.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      metadata: { profile },
+    });
 
     if (!result.text) {
       return NextResponse.json(
@@ -59,11 +63,12 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       text: result.text,
-      provider: result.provider,
-      model: result.model,
-      fallback_used: result.fallback_used,
-      provider_errors: result.provider_errors,
-      provider_warnings: result.provider_warnings,
+      provider: result.providerUsed,
+      model: result.providerUsed,
+      fallback_used: result.fallbackUsed,
+      provider_errors: result.error ? [{ provider: result.providerUsed, reason: result.error }] : [],
+      provider_warnings: [],
+      ai_result: result,
     });
   } catch (error: any) {
     const response = providerErrorResponse(error);

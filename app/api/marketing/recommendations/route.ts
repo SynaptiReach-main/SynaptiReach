@@ -1,15 +1,11 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createMarketingSupabaseAdmin } from "@/lib/marketing/supabaseAdmin";
 import { loadCRMContext } from "@/lib/crm/data";
 import { runExecutiveAgent } from "@/lib/agents/crmAgents";
 import { providerErrorResponse } from "@/lib/ai/providers";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 export async function GET(request: Request) {
+  const supabase = createMarketingSupabaseAdmin();
   const { searchParams } = new URL(request.url);
   const workspaceId = searchParams.get("workspace_id") || searchParams.get("workspaceId");
   let query = supabase
@@ -84,6 +80,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(req: Request) {
   try {
+    const supabase = createMarketingSupabaseAdmin();
     const body = await req.json();
     const accepting = body.action !== "deny" && body.action !== "dismiss";
 

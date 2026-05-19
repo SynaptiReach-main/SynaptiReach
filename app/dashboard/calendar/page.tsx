@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Bell, CalendarDays, CheckCircle2, Edit2, Loader2, MessageSquare, Plus, Sparkles, X } from "lucide-react";
+import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 
 const emptyAppointment = { id: "", title: "", starts_at: "", ends_at: "", location: "", notes: "", status: "scheduled", lead_id: "", deal_id: "" };
 
@@ -232,6 +233,12 @@ export default function CalendarPage() {
 
       {error && <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>}
       {success && <div className="mb-6 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4 text-sm text-cyan-100">{success}</div>}
+
+      <MiniBrainInsightPanel
+        title="Appointment Intelligence"
+        subtitle="No-show risk, meeting prep, appointment intent, and review-gated follow-up signals."
+        types={["appointment_intelligence", "communication_intelligence"]}
+      />
 
       <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {[

@@ -15,6 +15,7 @@ import {
   Users,
   Workflow,
 } from "lucide-react";
+import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 
 type RangeKey = "7d" | "30d" | "90d" | "all";
 
@@ -398,6 +399,12 @@ export default function AnalyticsPage() {
           Some analytics tables are not available yet. Apply the CRM migrations listed in the testing checklist.
         </div>
       )}
+
+      <MiniBrainInsightPanel
+        title="Analytics Intelligence"
+        subtitle="Business health, trend interpretation, forecast, and anomaly signals from deterministic CRM rules."
+        types={["business_health", "forecast", "anomaly", "pipeline_intelligence"]}
+      />
 
       {loading ? (
         <div className="flex min-h-[360px] items-center justify-center rounded-3xl border border-white/10 bg-white/[0.03]">

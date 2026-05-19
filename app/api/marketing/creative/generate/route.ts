@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { generateAIText, providerErrorResponse } from "@/lib/ai/providers";
+import { providerErrorResponse } from "@/lib/ai/providers";
+import { aiClient } from "@/src/ai/aiClient";
 
 export async function POST(
   request: Request
@@ -23,8 +24,9 @@ export async function POST(
       );
     }
 
-    const text =
-      await generateAIText([
+    const result =
+      await aiClient.runTask("campaign_ideas", {
+        messages: [
         {
           role: "system",
           content:
@@ -35,16 +37,19 @@ export async function POST(
           content:
             `Generate a high-performing marketing creative concept for: ${prompt}`,
         },
-      ], { profile: body.profile || "balanced" });
+      ],
+        metadata: { profile: body.profile || "balanced" },
+      });
 
     return NextResponse.json({
       success: true,
-      text: text.text,
-      provider: text.provider,
-      model: text.model,
-      fallback_used: text.fallback_used,
-      provider_errors: text.provider_errors,
-      provider_warnings: text.provider_warnings,
+      text: result.text,
+      provider: result.providerUsed,
+      model: result.providerUsed,
+      fallback_used: result.fallbackUsed,
+      provider_errors: result.error ? [{ provider: result.providerUsed, reason: result.error }] : [],
+      provider_warnings: [],
+      ai_result: result,
     });
   } catch (error: any) {
     const response = providerErrorResponse(error);

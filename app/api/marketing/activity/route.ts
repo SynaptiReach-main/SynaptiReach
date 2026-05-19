@@ -2,10 +2,9 @@ import { NextResponse } from "next/server";
 import { createSupabaseAdmin, friendlySupabaseError } from "@/lib/crm/supabaseAdmin";
 import { applyWorkspaceScope, getWorkspaceContext } from "@/lib/auth/getWorkspaceContext";
 
-const supabase = createSupabaseAdmin();
-
 export async function GET(request: Request) {
   try {
+    const supabase = createSupabaseAdmin();
     const context = await getWorkspaceContext(request);
     const { data, error } = await applyWorkspaceScope(supabase
       .from("marketing_events")
@@ -26,6 +25,7 @@ export async function GET(request: Request) {
 
 export async function POST(req: Request) {
   try {
+    const supabase = createSupabaseAdmin();
     const body = await req.json();
     const context = await getWorkspaceContext(req);
     const { campaign_id, action, details, workspace_id, type, message, metadata } = body;

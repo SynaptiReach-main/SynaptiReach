@@ -1,25 +1,20 @@
 import { NextResponse }
 from "next/server";
 
-import { createClient }
-from "@supabase/supabase-js";
-
 import {
   getFileType,
 } from "@/lib/marketing/media/getFileType";
 
-const supabase = createClient(
-  process.env
-    .NEXT_PUBLIC_SUPABASE_URL || "",
-
-  process.env
-    .SUPABASE_SERVICE_ROLE_KEY || ""
-);
+import { createMarketingSupabaseAdmin }
+from "@/lib/marketing/supabaseAdmin";
 
 export async function POST(
   request: Request
 ) {
   try {
+    const supabase =
+      createMarketingSupabaseAdmin();
+
     const form =
       await request.formData();
 

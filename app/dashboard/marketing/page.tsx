@@ -23,6 +23,7 @@ import {
 import EmailCampaignModal from "@/components/marketing/modals/EmailCampaignModal";
 import SMSCampaignModal from "@/components/marketing/modals/SMSCampaignModal";
 import SocialCampaignModal from "@/components/marketing/modals/SocialCampaignModal";
+import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 
 export default function MarketingPage() {
   const [
@@ -600,6 +601,12 @@ export default function MarketingPage() {
       <SocialCampaignModal
         open={socialOpen}
         onClose={closeSocialModal}
+      />
+
+      <MiniBrainInsightPanel
+        title="Marketing Intelligence"
+        subtitle="Campaign health, opened-not-clicked recovery, underperformance warnings, and next test ideas."
+        types={["campaign_intelligence", "workflow_intelligence", "anomaly"]}
       />
 
       <section className="mb-10">

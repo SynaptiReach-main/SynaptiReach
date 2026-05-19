@@ -4,21 +4,26 @@ import {
   decrypt,
 } from "@/lib/security/encryption";
 
-const supabaseUrl =
-  process.env
-    .NEXT_PUBLIC_SUPABASE_URL ||
-  "";
+function getSupabaseAdmin() {
+  const supabaseUrl =
+    process.env
+      .NEXT_PUBLIC_SUPABASE_URL;
 
-const supabaseKey =
-  process.env
-    .SUPABASE_SERVICE_ROLE_KEY ||
-  "";
+  const supabaseKey =
+    process.env
+      .SUPABASE_SERVICE_ROLE_KEY;
 
-const supabase =
-  createClient(
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error(
+      "Supabase setup required. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY."
+    );
+  }
+
+  return createClient(
     supabaseUrl,
     supabaseKey
   );
+}
 
 export async function getWorkspaceIntegrations(
   workspaceId: string
@@ -26,6 +31,9 @@ export async function getWorkspaceIntegrations(
   if (!workspaceId) {
     return null;
   }
+
+  const supabase =
+    getSupabaseAdmin();
 
   const {
     data,

@@ -48,6 +48,11 @@ export async function loadCRMContext(request?: Request) {
     workflowRuns,
     appointments,
     agentRuns,
+    notifications,
+    staff,
+    providerConnections,
+    billing,
+    usage,
   ] = await Promise.all([
     safeQuery(applyScope(supabase.from("leads").select("*"), context).order("created_at", { ascending: false }).limit(200)),
     safeQuery(applyScope(supabase.from("marketing_campaigns").select("*"), context).order("created_at", { ascending: false }).limit(100)),
@@ -61,6 +66,11 @@ export async function loadCRMContext(request?: Request) {
     safeQuery(applyScope(supabase.from("crm_workflow_runs").select("*"), context).order("started_at", { ascending: false }).limit(100)),
     safeQuery(applyScope(supabase.from("crm_appointments").select("*"), context).order("starts_at", { ascending: true }).limit(100)),
     safeQuery(applyScope(supabase.from("crm_agent_runs").select("*"), context).order("created_at", { ascending: false }).limit(100)),
+    safeQuery(applyScope(supabase.from("crm_notifications").select("*"), context).order("created_at", { ascending: false }).limit(100)),
+    safeQuery(applyScope(supabase.from("crm_staff").select("*"), context).order("created_at", { ascending: false }).limit(100)),
+    safeQuery(applyScope(supabase.from("crm_provider_connections").select("*"), context).order("created_at", { ascending: false }).limit(100)),
+    safeQuery(applyScope(supabase.from("crm_billing_accounts").select("*"), context).limit(1).maybeSingle()),
+    safeQuery(applyScope(supabase.from("crm_usage_events").select("*"), context).order("created_at", { ascending: false }).limit(200)),
   ]);
 
   const schemaWarnings = [
@@ -76,6 +86,11 @@ export async function loadCRMContext(request?: Request) {
     workflowRuns,
     appointments,
     agentRuns,
+    notifications,
+    staff,
+    providerConnections,
+    billing,
+    usage,
   ]
     .filter((result) => result.missingSchema)
     .map((result) => result.error);
@@ -90,6 +105,10 @@ export async function loadCRMContext(request?: Request) {
   const workflowRunRows = (workflowRuns.data || []) as any[];
   const appointmentRows = (appointments.data || []) as any[];
   const agentRunRows = (agentRuns.data || []) as any[];
+  const notificationRows = (notifications.data || []) as any[];
+  const staffRows = (staff.data || []) as any[];
+  const providerConnectionRows = (providerConnections.data || []) as any[];
+  const usageRows = (usage.data || []) as any[];
   const now = Date.now();
 
   const metrics = {
@@ -187,6 +206,26 @@ export async function loadCRMContext(request?: Request) {
       runs: agentRunRows.length,
       failed: agentRunRows.filter((run) => run.status === "failed").length,
     },
+    notifications: {
+      total: notificationRows.length,
+      unread: notificationRows.filter((item) => item.status !== "read").length,
+      high: notificationRows.filter((item) => ["high", "urgent"].includes(item.priority)).length,
+    },
+    staff: {
+      total: staffRows.length,
+      active: staffRows.filter((member) => member.status === "active").length,
+      invited: staffRows.filter((member) => member.status === "invited").length,
+    },
+    providers: {
+      total: providerConnectionRows.length,
+      active: providerConnectionRows.filter((item) => ["active", "connected"].includes(item.status)).length,
+      setup_required: providerConnectionRows.filter((item) => ["setup_required", "missing", "error"].includes(item.status)).length,
+    },
+    usage: usageRows.reduce((totals: Record<string, number>, event) => {
+      const key = event.usage_type || "unknown";
+      totals[key] = (totals[key] || 0) + Number(event.quantity || 0);
+      return totals;
+    }, {}),
   };
 
   return {
@@ -200,6 +239,11 @@ export async function loadCRMContext(request?: Request) {
     workflowRuns: workflowRunRows,
     appointments: appointmentRows,
     agentRuns: agentRunRows,
+    notifications: notificationRows,
+    staff: staffRows,
+    providerConnections: providerConnectionRows,
+    billing: billing.data || null,
+    usage: usageRows,
     settings: settings.data || null,
     recommendations: (recommendations.data || []) as any[],
     metrics,

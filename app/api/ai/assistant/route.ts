@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { generateAIText, providerErrorResponse } from "@/lib/ai/providers";
+import { providerErrorResponse } from "@/lib/ai/providers";
 import { loadCRMContext } from "@/lib/crm/data";
 import { runDeterministicAgents } from "@/lib/agents/crmAgents";
 import { createSupabaseAdmin } from "@/lib/crm/supabaseAdmin";
+import { aiClient } from "@/src/ai/aiClient";
 
 export async function POST(req: Request) {
   try {
@@ -26,31 +27,37 @@ export async function POST(req: Request) {
         ? "premium"
         : "balanced");
 
-    const answer = await generateAIText([
+    const answer = await aiClient.runTask(
+      profile === "premium" ? "pipeline_analysis" : "lead_summary",
       {
-        role: "system",
-        content:
-          "You are SynaptiReach's autonomous CRM assistant. Answer using only supplied CRM data. If data is missing, say it is missing. Do not invent metrics. Keep answers concise and action-oriented.",
-      },
-      {
-        role: "user",
-        content: JSON.stringify({
-          question: message,
-          metrics: context.metrics,
-          settings: context.settings,
-          schemaWarnings: context.schemaWarnings,
-          recentLeads: context.leads.slice(0, 25),
-          recentCampaigns: context.campaigns.slice(0, 25),
-          recentActivity: context.activity.slice(0, 25),
-          recentCommunications: context.communications.slice(0, 25),
-          openDeals: context.deals.slice(0, 25),
-          openTasks: context.tasks.slice(0, 25),
-          workflows: context.workflows.slice(0, 25),
-          appointments: context.appointments.slice(0, 25),
-          deterministicAgents: agentSnapshot,
-        }),
-      },
-    ], { profile });
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are SynaptiReach's autonomous CRM assistant. Answer using only supplied CRM data. If data is missing, say it is missing. Do not invent metrics. Keep answers concise and action-oriented.",
+          },
+          {
+            role: "user",
+            content: JSON.stringify({
+              question: message,
+              metrics: context.metrics,
+              settings: context.settings,
+              schemaWarnings: context.schemaWarnings,
+              recentLeads: context.leads.slice(0, 25),
+              recentCampaigns: context.campaigns.slice(0, 25),
+              recentActivity: context.activity.slice(0, 25),
+              recentCommunications: context.communications.slice(0, 25),
+              openDeals: context.deals.slice(0, 25),
+              openTasks: context.tasks.slice(0, 25),
+              workflows: context.workflows.slice(0, 25),
+              appointments: context.appointments.slice(0, 25),
+              deterministicAgents: agentSnapshot,
+            }),
+          },
+        ],
+        metadata: { profile },
+      }
+    );
 
     const supabase = createSupabaseAdmin();
     await supabase.from("crm_agent_runs").insert({
@@ -62,10 +69,10 @@ export async function POST(req: Request) {
       actions: agentSnapshot.actions || [],
       confidence: agentSnapshot.confidence || null,
       data_used: agentSnapshot.data_used || {},
-      provider: answer.provider,
-      model: answer.model,
-      fallback_used: answer.fallback_used,
-      provider_errors: answer.provider_errors || [],
+      provider: answer.providerUsed,
+      model: answer.providerUsed,
+      fallback_used: answer.fallbackUsed,
+      provider_errors: answer.error ? [{ provider: answer.providerUsed, reason: answer.error }] : [],
     });
 
     return NextResponse.json({
@@ -73,11 +80,12 @@ export async function POST(req: Request) {
       answer: answer.text,
       actions: agentSnapshot.actions,
       data_used: agentSnapshot.data_used,
-      provider: answer.provider,
-      model: answer.model,
-      fallback_used: answer.fallback_used,
-      provider_errors: answer.provider_errors,
-      provider_warnings: answer.provider_warnings,
+      provider: answer.providerUsed,
+      model: answer.providerUsed,
+      fallback_used: answer.fallbackUsed,
+      provider_errors: answer.error ? [{ provider: answer.providerUsed, reason: answer.error }] : [],
+      provider_warnings: [],
+      ai_result: answer,
     });
   } catch (error: any) {
     const response = providerErrorResponse(error);

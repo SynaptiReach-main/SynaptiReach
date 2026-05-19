@@ -25,6 +25,7 @@ import {
   ListTodo,
   XCircle,
 } from "lucide-react";
+import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 import LeadCsvImportModal from "@/components/leads/LeadCsvImportModal";
 
 function formatDate(value?: string) {
@@ -43,11 +44,20 @@ function formatMoney(value?: number) {
 
 function recommendationHref(action?: string) {
   if (action === "review_pipeline") return "/dashboard/pipeline";
+  if (action === "review_record") return "/dashboard";
   if (action === "review_tasks") return "/dashboard/tasks";
+  if (action === "create_task") return "/dashboard/tasks";
   if (action === "create_workflow_suggestion") return "/dashboard/workflow";
+  if (action === "create_workflow") return "/dashboard/workflow";
   if (action === "create_variant") return "/dashboard/marketing";
+  if (action === "review_campaign") return "/dashboard/marketing";
   if (action === "draft_follow_up") return "/dashboard/communications";
+  if (action === "draft_message") return "/dashboard/communications";
   if (action === "review_lead") return "/dashboard/leads";
+  if (action === "schedule_appointment") return "/dashboard/calendar";
+  if (action === "review_billing") return "/dashboard/settings";
+  if (action === "fix_setup") return "/dashboard/settings";
+  if (action === "assign_staff") return "/dashboard/tasks";
   return "/dashboard/ai_assistant";
 }
 
@@ -104,6 +114,7 @@ export default function DashboardPage() {
   const recentActivity = data?.activity?.slice(0, 6) || [];
   const recentCommunications = data?.communications?.slice(0, 5) || [];
   const recommendations = data?.agents?.recommendations || [];
+  const topInsights = (data?.agents?.insights || []).slice(0, 5);
   const topCampaigns = data?.campaigns?.slice(0, 4) || [];
   const agentSummary = data?.agents?.summary || {};
   const recentTasks = data?.tasks?.slice(0, 5) || [];
@@ -266,6 +277,12 @@ export default function DashboardPage() {
         </div>
       )}
 
+      <MiniBrainInsightPanel
+        title="Executive Mini-Brain"
+        subtitle="CRM-wide scorecards, record helpers, risks, opportunities, and review-gated next actions."
+        limit={6}
+      />
+
       <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
         {metricCards.map((item) => {
           const Icon = item.icon;
@@ -283,6 +300,51 @@ export default function DashboardPage() {
 
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2 space-y-6">
+          <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/[0.05] p-6 shadow-2xl shadow-cyan-500/5">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <div className="text-sm font-bold uppercase tracking-[0.18em] text-cyan-300">Built-in Intelligence</div>
+                <h2 className="mt-1 text-2xl font-black">Mini-Brain Executive Signals</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Deterministic, zero-cost CRM reasoning runs before external AI and keeps all external actions review-gated.
+                </p>
+              </div>
+              <a href="/dashboard/ai_assistant" className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-sm font-bold text-cyan-100">
+                Open Command Center
+              </a>
+            </div>
+            {topInsights.length === 0 ? (
+              <div className="mt-5 rounded-2xl border border-white/10 bg-black/30 p-5 text-sm text-gray-400">
+                No urgent built-in intelligence findings were detected from the current CRM data.
+              </div>
+            ) : (
+              <div className="mt-5 grid gap-3 md:grid-cols-2">
+                {topInsights.map((item: any) => (
+                  <div key={item.id || item.title} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2 py-1 text-xs font-bold text-cyan-100">
+                        {item.priority || "medium"}
+                      </span>
+                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-xs text-gray-400">
+                        {Math.round(Number(item.confidence || 0) * 100)}% confidence
+                      </span>
+                    </div>
+                    <div className="mt-3 font-bold text-white">{item.title}</div>
+                    <div className="mt-1 text-sm text-gray-400">{item.summary}</div>
+                    {(item.reasoning || []).length > 0 && (
+                      <div className="mt-3 border-t border-white/10 pt-3 text-xs text-gray-500">
+                        {(item.reasoning || []).slice(0, 2).join(" ")}
+                      </div>
+                    )}
+                    <a href={recommendationHref(item.actionType)} className="mt-3 inline-flex rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100">
+                      Review safely
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="rounded-3xl border border-white/10 bg-[#0b0b0b]/90 p-6 shadow-2xl shadow-cyan-500/5">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
               <div>

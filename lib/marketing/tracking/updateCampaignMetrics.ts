@@ -1,14 +1,11 @@
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { createMarketingSupabaseAdmin } from "@/lib/marketing/supabaseAdmin";
 
 export async function incrementMetric(
   campaignId: string,
   field: string
 ) {
+  const supabase = createMarketingSupabaseAdmin();
+
   const {
     data: campaign,
   } = await supabase

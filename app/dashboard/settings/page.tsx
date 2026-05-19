@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, CreditCard, Database, KeyRound, Loader2, Settings, Sparkles, UserPlus, XCircle, Zap } from "lucide-react";
 import { COMMITMENT_DISCOUNTS, CREDIT_PACKS, MANAGED_PLANS, SELF_SERVICE_BYOK_PLANS, TRIAL_PLANS } from "@/lib/billing/plans";
+import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 
 const defaultForm = {
   business_name: "",
@@ -49,17 +50,20 @@ export default function SettingsPage() {
   const [savingSection, setSavingSection] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [simulationStatus, setSimulationStatus] = useState<any>(null);
 
   async function loadSettings() {
     try {
       setLoading(true);
       setError("");
-      const [response, staffResponse] = await Promise.all([
+      const [response, staffResponse, simulationResponse] = await Promise.all([
         fetch("/api/crm/settings"),
         fetch("/api/crm/staff"),
+        fetch("/api/test/simulation/status"),
       ]);
       const data = await response.json();
       const staffData = await staffResponse.json().catch(() => ({}));
+      const simulationData = await simulationResponse.json().catch(() => null);
 
       if (!response.ok || !data.success) {
         throw new Error(data?.error || "Failed to load settings.");
@@ -76,6 +80,7 @@ export default function SettingsPage() {
         setStaffMembers(staffData.staff || staffData.data || []);
         setStaffPermissions(staffData.permissions || []);
       }
+      setSimulationStatus(simulationData?.allowed ? simulationData : null);
       setForm({ ...defaultForm, ...(data.settings || {}) });
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to load settings.");
@@ -230,6 +235,40 @@ export default function SettingsPage() {
     }
   }
 
+  async function runSimulationAction(action: "seed" | "tick" | "reset" | "pause" | "resume") {
+    try {
+      setSavingSection(`simulation_${action}`);
+      setError("");
+      setSuccess("");
+      const endpoint = action === "resume" ? "pause" : action;
+      const response = await fetch(`/api/test/simulation/${endpoint}`, {
+        method: action === "seed" || action === "tick" || action === "reset" || action === "pause" || action === "resume" ? "POST" : "GET",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(action === "pause" ? { paused: true } : action === "resume" ? { paused: false } : {}),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data?.reason || data?.error || "Simulation action failed.");
+      }
+      setSuccess(
+        action === "seed"
+          ? "Test workspace seeded with simulated CRM data."
+          : action === "tick"
+            ? `Simulation advanced to day ${data.simulation_day}.`
+            : action === "reset"
+              ? "Test workspace simulation data reset."
+              : action === "pause"
+                ? "Test workspace simulation paused."
+                : "Test workspace simulation resumed."
+      );
+      await loadSettings();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Simulation action failed.");
+    } finally {
+      setSavingSection("");
+    }
+  }
+
   async function saveStaffMember() {
     try {
       setSavingSection("staff");
@@ -310,6 +349,46 @@ export default function SettingsPage() {
         <>
           {error && <div className="mb-5 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>}
           {success && <div className="mb-5 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4 text-sm text-cyan-100">{success}</div>}
+          {simulationStatus && (
+            <div className="mb-5 rounded-3xl border border-green-400/20 bg-green-500/10 p-5 text-sm text-green-100">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <div className="text-xs font-black uppercase tracking-[0.18em] text-green-200">Simulated Test Workspace</div>
+                  <div className="mt-2 text-white">
+                    {simulationStatus.seeded
+                      ? `Seeded. Day ${simulationStatus.state?.simulation_day || 0}. Last tick ${simulationStatus.state?.last_tick_at ? new Date(simulationStatus.state.last_tick_at).toLocaleString() : "not run yet"}.`
+                      : "Configured but not seeded yet."}
+                  </div>
+                  <div className="mt-1 text-xs text-green-100/70">
+                    Version {simulationStatus.simulationVersion}. These controls are hidden from normal workspaces.
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    ["seed", "Seed"],
+                    ["tick", "Run Tick"],
+                    [simulationStatus.state?.paused ? "resume" : "pause", simulationStatus.state?.paused ? "Resume" : "Pause"],
+                    ["reset", "Reset"],
+                  ].map(([action, label]) => (
+                    <button
+                      key={action}
+                      onClick={() => runSimulationAction(action as any)}
+                      disabled={savingSection === `simulation_${action}`}
+                      className="rounded-2xl border border-green-300/20 bg-black/30 px-4 py-3 text-xs font-black text-green-100 disabled:opacity-60"
+                    >
+                      {savingSection === `simulation_${action}` ? "Working..." : label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <MiniBrainInsightPanel
+            title="Setup & Usage Intelligence"
+            subtitle="Provider readiness, BYOK setup, billing usage, and launch-readiness checks without exposing secrets."
+            types={["billing_usage_intelligence", "onboarding_setup", "safety_compliance", "simulation"]}
+          />
 
           <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div className="xl:col-span-2 space-y-6">

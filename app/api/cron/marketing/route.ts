@@ -103,14 +103,19 @@ export async function GET() {
       results,
     });
   } catch (error: any) {
+    const setupRequired = String(error?.message || "").includes(
+      "Supabase setup required"
+    );
+
     return NextResponse.json(
       {
         success: false,
+        setup_required: setupRequired,
         error:
           error.message,
       },
       {
-        status: 500,
+        status: setupRequired ? 503 : 500,
       }
     );
   }

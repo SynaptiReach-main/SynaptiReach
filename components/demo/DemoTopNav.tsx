@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   Megaphone,
   MessageSquare,
-  PlayCircle,
   Settings,
   Sparkles,
   Users,
@@ -16,7 +15,6 @@ import {
 } from "lucide-react";
 
 const demoTabs = [
-  { label: "Overview", href: "/demo", icon: PlayCircle },
   { label: "Dashboard", href: "/demo/dashboard", icon: LayoutDashboard },
   { label: "Leads", href: "/demo/leads", icon: Users },
   { label: "Marketing", href: "/demo/marketing", icon: Megaphone },
@@ -35,7 +33,7 @@ export default function DemoTopNav() {
   const pathname = usePathname();
 
   return (
-    <div className="sticky top-20 z-30 mb-6 rounded-3xl border border-cyan-400/15 bg-black/70 p-3 shadow-2xl shadow-cyan-500/10 backdrop-blur-2xl">
+    <div className="relative z-10 mb-6 rounded-3xl border border-cyan-400/15 bg-black/70 p-3 shadow-2xl shadow-cyan-500/10 backdrop-blur-2xl">
       <div className="mb-3 flex flex-col gap-2 px-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">

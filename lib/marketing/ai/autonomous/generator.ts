@@ -1,10 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
-import { generateAIJson } from "@/lib/ai/providers";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { aiClient } from "@/src/ai/aiClient";
+import { createMarketingSupabaseAdmin } from "@/lib/marketing/supabaseAdmin";
 
 function determineAudience(
   leads: any[]
@@ -100,6 +95,8 @@ We generated personalized growth recommendations specifically for your business 
 }
 
 export async function generateAutonomousCampaign() {
+  const supabase = createMarketingSupabaseAdmin();
+
   const {
     data: leads,
   } = await supabase
@@ -111,19 +108,12 @@ export async function generateAutonomousCampaign() {
       leads || []
     );
 
-  const hasProvider =
-    Boolean(process.env.GEMINI_API_KEY) ||
-    Boolean(process.env.OPENROUTER_API_KEY) ||
-    Boolean(process.env.OPENAI_API_KEY && process.env.AI_ENABLE_OPENAI === "true");
-
-  const generated =
-    hasProvider
-      ? (await generateAIJson(
-          [
+  const generatedResult = await aiClient.runTask("campaign_ideas", {
+    messages: [
             {
               role: "system",
               content:
-                "You are SynaptiReach's safe autonomous campaign drafting agent. Use only the supplied audience and lead count. Create a reviewable draft only. Return JSON with subject and content.",
+          "You are SynaptiReach's safe autonomous campaign drafting agent. Use only the supplied audience and lead count. Create a reviewable draft only. Return valid JSON with subject and content.",
             },
             {
               role: "user",
@@ -133,28 +123,32 @@ export async function generateAutonomousCampaign() {
                   leads?.length || 0,
               }),
             },
-          ],
-          {
-            subject:
-              generateSubject(
-                audience
-              ),
-            content:
-              generateBody(
-                audience
-              ),
-          }
-        , { profile: "balanced" })).data
-      : {
-          subject:
-            generateSubject(
-              audience
-            ),
-          content:
-            generateBody(
-              audience
-            ),
-        };
+    ],
+    metadata: { profile: "balanced" },
+  });
+
+  let generated = {
+    subject:
+      generateSubject(
+        audience
+      ),
+    content:
+      generateBody(
+        audience
+      ),
+  };
+
+  try {
+    generated = {
+      ...generated,
+      ...JSON.parse(generatedResult.text),
+    };
+  } catch {
+    generated = {
+      ...generated,
+      content: generatedResult.text || generated.content,
+    };
+  }
 
   const {
     data: campaign,

@@ -253,3 +253,437 @@ Invoke-RestMethod -Method Post "$base/api/crm/workflows/run" `
 - `/dashboard/settings`
 - `/demo`
 - `/demo/dashboard`
+
+## Reusable Final Upgrade Pass - 2026-05-19
+
+- [x] Started pass from clean git state at `81f9a692 Finalize CRM portal Stripe billing and production readiness`.
+- [x] Verified clean rebuild flow for local smoke tests: stop local server, delete `.next`, run `npm.cmd run build`, then restart `npm.cmd run start -- -p 3000`.
+- [x] Confirmed `npm.cmd run build` passes after a clean `.next` rebuild.
+- [x] Confirmed the earlier `/_not-found` page-data build issue is not present; build output includes `○ /_not-found`.
+- [x] Confirmed `.next/routes-manifest.json` is regenerated after clean build.
+- [x] Confirmed the stale missing `.next/server/vendor-chunks/@supabase.js` path does not reappear as a generated file in the current Next build; local production route and API probes no longer fail from that stale path after a clean rebuild.
+- [x] Local production smoke test returned 200 for the required public, demo, and dashboard route list after warm-up. Cold-start requests on this Windows local environment can take several seconds; repeat probes returned 200.
+- [x] Production smoke test against `https://synapti-reach.vercel.app` returned 200 for the full required route list.
+- [x] Optimized demo navigation behavior: removed the unnecessary `/demo` “Overview” tab and changed the demo tab bar from sticky to normal page flow so it does not block mobile scrolling.
+- [x] Verified `/ai-agents`, `/demo`, and `/demo/settings` return 200 locally and in production.
+- [x] Verified core CRM API routes return clean 200 responses locally: `/api/crm/dashboard`, `/api/crm/notifications`, `/api/crm/staff`, `/api/crm/tasks`, `/api/crm/appointments`, `/api/crm/communications`, `/api/crm/workflows`, `/api/marketing/recommendations`, and `/api/marketing/campaigns`.
+- [x] Added missing additive Supabase schema support for marketing tables used by API/lib code: `marketing_ai_recommendations`, `marketing_campaign_steps`, `marketing_campaign_logs`, `marketing_automation_queue`, `marketing_retry_queue`, `marketing_suppression_list`, `marketing_audit_logs`, and `marketing_media`.
+- [x] Added missing additive Supabase schema support for launch-readiness service and waitlist features: `crm_service_catalog`, `crm_service_requests`, `crm_service_orders`, and `waitlist_signups`.
+- [x] Added required additive marketing columns used by existing routes: `marketing_campaigns.body`, `platforms`, `scheduled_for`, `stagger_size`, `ai_recommendations`, plus `marketing_events.event_type` and `title`.
+- [x] Corrected legacy campaign execution lookup from nonexistent `crm_leads` to canonical `leads`, scoped by campaign workspace when available.
+- [x] Confirmed this pass introduced no `DROP TABLE`, `TRUNCATE TABLE`, or `DELETE FROM` statements to `supabase/user_crm_full_completion_schema.sql`.
+- [x] Build verification after this pass: `npm.cmd run build` passed.
+- [ ] Still pending for later passes: full implementation of Stripe subscription trial checkout/autorenewal UX, CRM services request UI, working public contact form notification flow, waitlist widget/admin management, expanded industry pages, expanded informational pages, CRM metric modal expansion, AI Command Center, workflow signal expansion, mini-brain modules, and review-gated Resend/Twilio replies.
+
+## Dedicated Test Workspace Simulation Foundation - 2026-05-19
+
+- [x] Added additive schema support for isolated test simulation state: `crm_test_simulation_state`, `crm_test_simulation_events`, `crm_test_simulation_snapshots`, and `crm_test_simulation_settings`.
+- [x] Added additive compatibility schema support for `workspace_members` and `onboarding_sessions`, matching the legacy Supabase workspace model.
+- [x] Added additive workspace flags: `is_test_workspace`, `simulation_enabled`, and `simulation_profile`.
+- [x] Added server-only simulation library at `lib/simulation/testWorkspaceSeed.ts`.
+- [x] Confirmed active CRM auth architecture: public signup/signin and `/dashboard` use Supabase Auth, workspace ownership uses `workspaces.owner_id`, and NextAuth exists only as a separate/static legacy route.
+- [x] Added protected bootstrap API: `POST /api/test/simulation/bootstrap`.
+- [x] Added protected simulation APIs: `GET /api/test/simulation/status`, `POST /api/test/simulation/seed`, `POST /api/test/simulation/tick`, `POST /api/test/simulation/reset`, and `POST /api/test/simulation/pause`.
+- [x] Bootstrap target email is `donovan.mike966@gmail.com`.
+- [x] Bootstrap can create/find the Supabase Auth user server-side with the service-role key, then create/find the test workspace, `workspace_members`, `onboarding_sessions`, baseline `crm_settings`, and simulation state.
+- [x] Bootstrap is idempotent and returns the exact `CRM_TEST_WORKSPACE_IDS` value to place in `.env.local`.
+- [x] Simulation controls require either an authenticated workspace/account listed in `CRM_TEST_WORKSPACE_IDS` / `CRM_TEST_ACCOUNT_EMAILS` or `CRM_TEST_SIMULATION_SEED_SECRET`; normal public requests receive setup-required or forbidden responses.
+- [x] Seed now refuses to run until the workspace has already been explicitly marked as test/simulation by bootstrap.
+- [x] Seed data is deterministic and uses stable IDs so re-running seed upserts instead of duplicating indefinitely.
+- [x] Every seeded CRM row includes `metadata.is_test_data=true`, `simulation_source="synaptireach_test_workspace"`, `simulation_version`, and `generated_at`.
+- [x] Seed foundation covers workspace profile, settings, staff, leads, deals, tasks, appointments, campaigns, campaign events/interactions, conversations/messages, workflows/runs, AI recommendations, marketing recommendations, agent runs, notifications, billing usage, credit/billing state, provider setup states, service requests, contact submissions, waitlist signups, and audit logs.
+- [x] Simulation tick advances a deterministic subset of lead/deal/task/campaign state and creates test-only notifications/recommendations/events.
+- [x] Reset is implemented only through the protected simulation API and deletes records scoped to the configured test workspace ID; do not run it against any real workspace ID.
+- [x] Dashboard shell shows a “Simulated Test Workspace” badge only when the server validates the current workspace as simulation-enabled.
+- [x] Settings shows test-only seed/tick/pause/reset controls only for validated test simulation workspaces.
+- [x] Local protected-route smoke test passed: `/api/test/simulation/status`, `/api/test/simulation/bootstrap`, and `/api/test/simulation/seed` fail closed with HTTP 403 when called without a valid authenticated test workspace or bootstrap/seed secret.
+- [x] Build verification after simulation foundation: `npm.cmd run build` passed.
+- [x] Local page smoke after this pass: `/ai-agents`, `/demo`, and `/demo/settings` returned 200 from `npm.cmd run start -- -p 3000` after build warm-up and redirects.
+- [x] Clean build artifact check after this pass: `.next/routes-manifest.json` exists and stale `.next/server/vendor-chunks/@supabase.js` is not generated.
+- [ ] To enable a real test workspace, set `CRM_ENABLE_TEST_SIMULATION=true`, `CRM_TEST_ACCOUNT_EMAILS=donovan.mike966@gmail.com`, optionally `CRM_TEST_BOOTSTRAP_SECRET=<secret>`, optionally `CRM_TEST_SIMULATION_SEED_SECRET=<secret>`, and run `supabase/user_crm_full_completion_schema.sql` before bootstrap/seed.
+- [x] Bootstrap refuses to run if `CRM_TEST_ACCOUNT_EMAILS` is missing, and only allows the requested email when it is explicitly listed there.
+- [x] Bootstrap can optionally set or update a local test password through a protected request body field (`test_password`); it returns only `password_set=true/false` and never returns the password.
+- [ ] Test workspace seed/tick was not executed against production Supabase in this pass because no explicit test workspace ID was provided in the prompt.
+- [ ] Remaining Task 3 work for a later pass: run bootstrap/seed against the configured Supabase project, sign in as the test user, verify every CRM page is populated with simulated data, add snapshot/restore if needed, and tune tick behavior after observing real dashboard data.
+
+### Test Workspace Simulation Commands
+
+```powershell
+$base = "http://localhost:3000"
+
+# Required local env before bootstrap:
+# CRM_ENABLE_TEST_SIMULATION=true
+# CRM_TEST_ACCOUNT_EMAILS=donovan.mike966@gmail.com
+# CRM_TEST_BOOTSTRAP_SECRET=<local-dev-secret>
+# CRM_TEST_SIMULATION_SEED_SECRET=<local-dev-secret-or-another-secret>
+
+# Bootstrap. This creates/finds the Supabase Auth test user and workspace.
+Invoke-RestMethod -Method Post "$base/api/test/simulation/bootstrap" `
+  -ContentType "application/json" `
+  -Body '{"email":"donovan.mike966@gmail.com","bootstrap_secret":"YOUR_BOOTSTRAP_SECRET"}'
+
+# Optional local/dev bootstrap with a known test password for browser sign-in.
+# The password is accepted only by the protected bootstrap route and is never returned.
+Invoke-RestMethod -Method Post "$base/api/test/simulation/bootstrap" `
+  -ContentType "application/json" `
+  -Body '{"email":"donovan.mike966@gmail.com","bootstrap_secret":"YOUR_BOOTSTRAP_SECRET","test_password":"LOCAL_ONLY_TEST_PASSWORD"}'
+
+# Put the returned value into .env.local:
+# CRM_TEST_WORKSPACE_IDS=<returned workspace_id>
+
+# Status. Should return setup-required until env vars are configured.
+Invoke-RestMethod "$base/api/test/simulation/status"
+
+# Seed with an authenticated configured test workspace, or with the seed secret.
+Invoke-RestMethod -Method Post "$base/api/test/simulation/seed" `
+  -ContentType "application/json" `
+  -Body '{"workspace_id":"YOUR_TEST_WORKSPACE_ID","seed_secret":"YOUR_SEED_SECRET"}'
+
+# Advance deterministic simulation activity.
+Invoke-RestMethod -Method Post "$base/api/test/simulation/tick" `
+  -ContentType "application/json" `
+  -Body '{"workspace_id":"YOUR_TEST_WORKSPACE_ID","seed_secret":"YOUR_SEED_SECRET"}'
+
+# Pause/resume.
+Invoke-RestMethod -Method Post "$base/api/test/simulation/pause" `
+  -ContentType "application/json" `
+  -Body '{"workspace_id":"YOUR_TEST_WORKSPACE_ID","seed_secret":"YOUR_SEED_SECRET","paused":true}'
+
+Invoke-RestMethod -Method Post "$base/api/test/simulation/pause" `
+  -ContentType "application/json" `
+  -Body '{"workspace_id":"YOUR_TEST_WORKSPACE_ID","seed_secret":"YOUR_SEED_SECRET","paused":false}'
+
+# Protected reset. This deletes only records scoped to the configured test workspace.
+Invoke-RestMethod -Method Post "$base/api/test/simulation/reset" `
+  -ContentType "application/json" `
+  -Body '{"workspace_id":"YOUR_TEST_WORKSPACE_ID","seed_secret":"YOUR_SEED_SECRET"}'
+```
+
+To disable simulation in production, set `CRM_ENABLE_TEST_SIMULATION=false`, remove `CRM_TEST_BOOTSTRAP_SECRET`, remove `CRM_TEST_SIMULATION_SEED_SECRET`, and remove or empty `CRM_TEST_WORKSPACE_IDS`. Normal users do not receive seed data because all simulation APIs require explicit test env configuration and a workspace marked `is_test_workspace=true`.
+
+## Local-First AI Provider Layer Correction - 2026-05-19
+
+- [x] Preserved the local-first AI provider layer added in the previous pass.
+- [x] Corrected Ollama development configuration for Next.js by preferring server-side env vars: `AI_DEFAULT_PROVIDER`, `AI_ENABLE_LOCAL`, `AI_ENABLE_OLLAMA_DEV`, `OLLAMA_BASE_URL`, and `OLLAMA_MODEL`.
+- [x] Kept existing `VITE_*` local AI env vars as backward-compatible aliases.
+- [x] Confirmed `ollama-dev` routing remains development-only and local-allowed-task-only.
+- [x] Added future-ready `customer-local` provider interface with disabled-by-default workspace config fields for status, endpoint URL, model, and workspace ID.
+- [x] Added `POST /api/ai/customer-local/test` as the future test connection action.
+- [x] Updated `aiClient.runTask` routing order documentation: deterministic mini-brain, Ollama dev, customer-local, SynaptiReach backend/cloud, safe mock fallback.
+- [x] Added Supabase env guards for `/api/cron/marketing/retries` and `getRetryCampaigns()` so missing Supabase env returns setup-required at runtime instead of crashing page-data collection at build import time.
+- [x] Build verification for this correction pass: `npm.cmd run build` passed with local `.env.local` missing Supabase credentials.
+
+## Expanded Deterministic Mini-Brain Intelligence - 2026-05-19
+
+- [x] Added normalized deterministic intelligence types and result shape under `lib/intelligence/types.ts`.
+- [x] Added the core deterministic mini-brain orchestrator at `lib/intelligence/miniBrain.ts`.
+- [x] Added zero-cost intelligence modules for lead scoring, deal scoring, pipeline, campaigns, communications, tasks, appointments, workflow signals, billing usage, onboarding/setup, business health, safety checks, recommendations, executive summaries, forecasting, anomaly detection, next-best action, CRM hygiene, staff extension points, intent detection, and simulation signal metadata.
+- [x] Mini-brain outputs are structured, explainable, review-gated, and tagged with `source="mini_brain"`.
+- [x] Existing CRM deterministic agent now uses the mini-brain output first while preserving legacy summary/detail arrays used by current dashboard pages.
+- [x] AI router deterministic provider can now return precomputed mini-brain text or run a supplied mini-brain context before trying Ollama/customer-local/backend providers.
+- [x] AI Assistant page now surfaces when mini-brain deterministic insights are available and maps new action types to the correct CRM pages.
+- [x] Mini-brain does not perform irreversible external sends, payment changes, or destructive data actions.
+- [x] Build verification after mini-brain expansion: `npm.cmd run build` passed.
+- [ ] Live test workspace bootstrap/seed/tick/browser verification still requires configured local secrets/env and a real run against Supabase.
+
+## V8 Mini-Brain Integration Upgrade - 2026-05-19
+
+- [x] Preserved the corrected local-first AI architecture and did not redo the provider layer from scratch.
+- [x] Verified `npm.cmd run build` passes after this V8 integration pass.
+- [x] Confirmed `.next/routes-manifest.json` exists after build and the stale `.next/server/vendor-chunks/@supabase.js` file is not generated.
+- [x] Added a mini-brain rule registry at `lib/intelligence/ruleRegistry.ts` so deterministic CRM rules run in a stable, extensible order.
+- [x] Added reusable mini-brain support modules: scoring config, confidence helpers, explanation helpers, action/page mapping, CRM context builder, and optional persistence helper.
+- [x] Added deeper deterministic lead intelligence covering hot unconverted leads, stale leads, missing contact details, duplicate lead groups, suggested channels, confidence, and review-gated next actions.
+- [x] Added simulation-aware mini-brain output that only appears when the workspace context is explicitly marked as a test workspace.
+- [x] Updated the mini-brain orchestrator to use registered rules, deduplicate insights, and include rule IDs in `data_used`.
+- [x] Added `GET /api/intelligence/summary` for transient built-in intelligence summaries.
+- [x] Added `POST /api/intelligence/run` for transient runs plus optional, explicit persistence into existing `marketing_ai_recommendations`.
+- [x] Kept persistence opt-in only; mini-brain does not auto-create durable recommendations unless the API caller sends `persist=true`.
+- [x] Updated AI provider metadata to support `providerUsed="mini_brain"` while preserving `mock` for safe dev/demo fallback.
+- [x] Dashboard now shows a compact Built-in Intelligence / Mini-Brain executive signal panel with priority, confidence, reasoning, and review-gated links.
+- [x] AI Assistant now shows detailed mini-brain insight cards with source, confidence, reasoning, recommended action, and review-gated routing.
+- [x] Local shell did not contain `CRM_ENABLE_TEST_SIMULATION`, `CRM_TEST_ACCOUNT_EMAILS`, or `CRM_TEST_WORKSPACE_IDS`, so live bootstrap/seed/tick/browser verification was not run in this pass.
+- [ ] Remaining Task 20 work: deeper per-page metric modal integration, approve/deny feedback loops, richer persistence idempotency, notification/task/workflow draft conversion actions, and tuning against the live simulated test workspace.
+
+### V8 Mini-Brain API Smoke Tests
+
+```powershell
+npm.cmd run build
+npm.cmd run start -- -p 3000
+
+$base = "http://localhost:3000"
+
+# Requires Supabase env for real CRM data. If missing, returns setup-required.
+Invoke-RestMethod "$base/api/intelligence/summary"
+
+# Transient deterministic run.
+Invoke-RestMethod -Method Post "$base/api/intelligence/run" `
+  -ContentType "application/json" `
+  -Body '{"persist":false}'
+
+# Optional review-queue persistence into marketing_ai_recommendations.
+# Keep this off unless you intentionally want durable pending recommendations.
+Invoke-RestMethod -Method Post "$base/api/intelligence/run" `
+  -ContentType "application/json" `
+  -Body '{"persist":true,"limit":5}'
+```
+
+## V9 CRM-Wide Mini-Brain Integration Upgrade - 2026-05-19
+
+- [x] Preserved the local-first AI architecture: deterministic mini-brain first, Ollama dev-only, customer-local future/setup-required, backend/cloud fallback, safe mock fallback.
+- [x] Verified `npm.cmd run build` passes after the V9 page integration pass.
+- [x] Confirmed `.next/routes-manifest.json` exists after build.
+- [x] Confirmed stale `.next/server/vendor-chunks/@supabase.js` is not generated after build.
+- [x] Added reusable CRM-wide built-in intelligence UI at `components/intelligence/MiniBrainInsightPanel.tsx`.
+- [x] Integrated compact Mini-Brain / Built-in Intelligence panels into:
+  - `/dashboard/analytics`
+  - `/dashboard/leads`
+  - `/dashboard/pipeline`
+  - `/dashboard/tasks`
+  - `/dashboard/calendar`
+  - `/dashboard/marketing`
+  - `/dashboard/communications`
+  - `/dashboard/workflow`
+  - `/dashboard/settings`
+- [x] Preserved existing Dashboard and AI Assistant mini-brain integrations from the previous pass.
+- [x] Expanded `lib/crm/data.ts` context loading to include notifications, staff, billing account state, and usage events where Supabase tables are available.
+- [x] Expanded `MiniBrainContext` to carry staff, billing, and usage inputs safely.
+- [x] Added rule metadata to the mini-brain registry: stable rule IDs, categories, severity, required inputs, action types, destination pages, and enabled-by-default state.
+- [x] Mini-brain insights now carry review metadata such as `rule_id`, `rule_category`, `destinationPage`, and `review_required`.
+- [x] Deepened staff/team intelligence with unassigned-work and overdue-workload signals.
+- [x] Deepened billing/usage intelligence with usage-event totals, cap-risk warnings, and usage-without-billing setup warnings.
+- [x] Page integrations fetch transient summaries only and do not persist duplicate recommendations on page load.
+- [x] Mini-brain UI labels deterministic output as Built-in Intelligence / Mini-Brain and does not imply an external paid AI call was used.
+- [x] Mini-brain remains review-gated and never auto-sends external messages, auto-posts social content, or changes billing/payment state.
+- [x] No Supabase schema changes were required in this pass.
+- [ ] Live test workspace bootstrap/seed/tick/browser verification still requires configured local Supabase and `CRM_TEST_*` env secrets.
+- [ ] Remaining Task 20 work: per-record metric modal insight wiring, approve/deny/dismiss feedback loops across every page, richer durable idempotency keys, task/workflow/message draft conversion actions, and tuning against the live seeded test workspace.
+
+### V9 Mini-Brain Page Smoke Targets
+
+```powershell
+npm.cmd run build
+npm.cmd run start -- -p 3000
+
+$base = "http://localhost:3000"
+
+Invoke-RestMethod "$base/api/intelligence/summary"
+Invoke-RestMethod -Method Post "$base/api/intelligence/run" `
+  -ContentType "application/json" `
+  -Body '{"persist":false}'
+
+# Browser-check these pages for compact Built-in Intelligence panels:
+# /dashboard
+# /dashboard/analytics
+# /dashboard/leads
+# /dashboard/pipeline
+# /dashboard/tasks
+# /dashboard/calendar
+# /dashboard/marketing
+# /dashboard/communications
+# /dashboard/workflow
+# /dashboard/ai_assistant
+# /dashboard/settings
+```
+
+## V9 Mini-Brain Review-Gated Actions Upgrade - 2026-05-19
+
+- [x] Added `POST /api/intelligence/actions` for safe Mini-Brain approve/deny/dismiss behavior.
+- [x] Approve actions are mapped only to internal review-gated outcomes:
+  - `crm_tasks` task drafts for task, assignment, and appointment-prep actions.
+  - `crm_messages` draft messages for message suggestions.
+  - `crm_workflows` draft workflows for workflow suggestions.
+  - `crm_notifications` review notifications for risk/setup/billing/campaign review actions.
+- [x] Dismiss/deny decisions are recorded in `crm_audit_logs` without creating external actions.
+- [x] Approved Mini-Brain actions also write an audit log entry with source, insight ID, action type, confidence, and created record metadata.
+- [x] Updated `MiniBrainInsightPanel` with compact approve/dismiss buttons, inline loading states, and success/error states.
+- [x] Updated Mini-Brain persistence to check deterministic `metadata.idempotency_key` before inserting `marketing_ai_recommendations`, reducing duplicate persisted recommendations.
+- [x] Confirmed page integrations remain transient on load; durable writes happen only from explicit user action or explicit `persist=true`.
+- [x] Confirmed no external email, SMS, social post, payment, subscription, or destructive operation is performed by Mini-Brain actions.
+- [x] Verified `npm.cmd run build` passes after the action upgrade.
+- [x] Confirmed `.next/routes-manifest.json` exists after build and `.next/server/vendor-chunks/@supabase.js` is not generated.
+- [x] No Supabase schema changes were required in this pass; existing tables were used.
+- [ ] Live approve/dismiss API testing still requires configured Supabase env and an authenticated or explicitly scoped workspace context.
+
+### V9 Review-Gated Action Smoke Test
+
+```powershell
+npm.cmd run build
+npm.cmd run start -- -p 3000
+
+$base = "http://localhost:3000"
+
+# Transient run, no persistence.
+$result = Invoke-RestMethod -Method Post "$base/api/intelligence/run" `
+  -ContentType "application/json" `
+  -Body '{"persist":false}'
+
+# Approve the first Mini-Brain insight into an internal review-gated draft.
+$insight = $result.result.insights[0]
+Invoke-RestMethod -Method Post "$base/api/intelligence/actions" `
+  -ContentType "application/json" `
+  -Body (@{ decision = "approve"; insight = $insight } | ConvertTo-Json -Depth 12)
+
+# Dismiss an insight without creating an external action.
+Invoke-RestMethod -Method Post "$base/api/intelligence/actions" `
+  -ContentType "application/json" `
+  -Body (@{ decision = "dismiss"; insight = $insight } | ConvertTo-Json -Depth 12)
+```
+
+## V9 Mini-Brain Scorecards and Insight Details Upgrade - 2026-05-19
+
+- [x] Verified `npm.cmd run build` passes after the scorecard/detail-modal upgrade.
+- [x] Confirmed `.next/routes-manifest.json` exists after build and `.next/server/vendor-chunks/@supabase.js` is not generated.
+- [x] Confirmed no `DROP TABLE`, `TRUNCATE TABLE`, or destructive `DELETE FROM` statements were added to `supabase/user_crm_full_completion_schema.sql`.
+- [x] Added `MiniBrainScore` to `lib/intelligence/types.ts` and exposed scorecards on the `MiniBrainResult`.
+- [x] Added `lib/intelligence/scorecards.ts` for deterministic CRM scorecards:
+  - Business health
+  - Pipeline focus
+  - Marketing efficiency
+  - Setup readiness
+  - CRM hygiene
+- [x] Updated `lib/intelligence/miniBrain.ts` so every run returns structured scorecards alongside insights, recommendations, actions, confidence, and data-used metadata.
+- [x] Expanded `lib/crm/data.ts` context loading to include `crm_provider_connections` and provider readiness metrics for setup/safety intelligence.
+- [x] Updated `components/intelligence/MiniBrainInsightPanel.tsx` so every integrated CRM page shows compact deterministic scorecards.
+- [x] Added a shared Mini-Brain details modal with full reasoning, confidence, priority, source, related records, and review-gated next-step copy.
+- [x] Details modal confirms Mini-Brain actions create only internal drafts/review records and do not send email/SMS/social posts or perform billing actions.
+- [x] Page loads still use transient `/api/intelligence/summary`; no durable recommendation persistence happens unless an explicit action or `persist=true` request is made.
+- [ ] Live scorecard/insight behavior still needs browser verification against the seeded test workspace after `CRM_TEST_*` env secrets are configured.
+
+### V9 Scorecard Smoke Targets
+
+```powershell
+npm.cmd run build
+npm.cmd run start -- -p 3000
+
+$base = "http://localhost:3000"
+
+$summary = Invoke-RestMethod "$base/api/intelligence/summary"
+$summary.result.scores
+
+# Browser-check scorecards and the "Why this matters" modal on:
+# /dashboard/analytics
+# /dashboard/leads
+# /dashboard/pipeline
+# /dashboard/tasks
+# /dashboard/calendar
+# /dashboard/marketing
+# /dashboard/communications
+# /dashboard/workflow
+# /dashboard/settings
+```
+
+## V9 Mini-Brain Helper Result Types Upgrade - 2026-05-19
+
+- [x] Added shared Mini-Brain helper result contracts to `lib/intelligence/types.ts`.
+- [x] Added `MiniBrainActionCard` for ranked review-gated actions with urgency, impact, effort, confidence, reason, destination, and related record metadata.
+- [x] Added `MiniBrainTemplateDraft` for deterministic rule-based email/SMS draft templates with tone, personalization fields, and `reviewRequired=true`.
+- [x] Added helper result types for:
+  - `LeadIntelligenceCard`
+  - `DealHealthCard`
+  - `CampaignHealthCard`
+  - `ConversationSummary`
+  - `WorkflowSignalCard`
+  - `TaskPriorityCard`
+  - `AppointmentPrepCard`
+  - `BillingUsageForecast`
+  - `SetupReadinessScore`
+  - `StaffWorkloadSummary`
+  - `BusinessHealthSummary`
+  - `SafetyCheckResult`
+- [x] Added optional `helperResults` to `MiniBrainResult` so future page modals, record detail panels, and workflow signals can consume stable typed structures without changing the current insight API shape.
+- [x] Helper result contracts preserve review-gated semantics and do not allow automatic email, SMS, social, billing, payment, auth, or destructive actions.
+- [x] Verified `npm.cmd run build` passes after the helper type expansion.
+- [ ] Remaining helper-result work: populate these contracts from each domain module and wire them into per-record modals after live seeded-workspace tuning.
+
+## Task 20 Goal Run - HelperResults Population and Empty-Context Verification - 2026-05-19
+
+- [x] Read `docs/codex/CODEX_TASK_LEDGER.md` and `docs/codex/TASK20_MINIBRAIN_GOAL.md` before implementation.
+- [x] `docs/codex/SYNAPTIREACH_MASTER_V9.md` was requested by the goal but is not present in `docs/codex`; continued from the available repo docs, checklist, and current working tree.
+- [x] Updated `docs/codex/CODEX_TASK_LEDGER.md` after each checkpoint.
+- [x] Added `lib/intelligence/helperResults.ts` to populate Mini-Brain helperResults from real normalized CRM context.
+- [x] `runMiniBrain()` now returns populated helperResults for:
+  - lead scorecards
+  - deal health cards
+  - campaign health cards
+  - conversation summaries
+  - workflow signals
+  - task priority cards
+  - appointment prep cards
+  - billing/usage forecasts
+  - setup readiness
+  - staff workload summaries
+  - business health summaries
+  - safety check results
+  - ranked review-gated actions
+  - rule-based draft templates
+- [x] Updated `components/intelligence/MiniBrainInsightPanel.tsx` to render page-relevant domain helper cards from helperResults, using the existing page `types` filters.
+- [x] Helper cards open in the shared "Why this matters" modal with deterministic reasoning, confidence, priority, source, related records, and review-gated next step.
+- [x] Updated `buildMiniBrainContext()` to return a successful empty real-data context with setup/schema warnings when Supabase setup is unavailable, so Mini-Brain can still run without external AI providers or live database access.
+- [x] Verified `npm.cmd run build` passes after helperResults population and empty-context fallback.
+- [x] Local production API smoke test passed:
+  - `GET /api/intelligence/summary` returned 200.
+  - `POST /api/intelligence/run` with `{"persist":false}` returned 200.
+- [x] Empty/setup-warning context no longer crashes Mini-Brain APIs.
+- [x] Page loads still use transient summaries and do not persist durable recommendations repeatedly.
+- [x] No external email, SMS, social post, charge, subscription update, payment status update, or destructive data action is performed by Mini-Brain.
+- [x] Confirmed no destructive `DROP TABLE`, `TRUNCATE TABLE`, or destructive `DELETE FROM` was added to `supabase/user_crm_full_completion_schema.sql`.
+- [x] Build artifact check: `.next/routes-manifest.json` exists. `.next/server/vendor-chunks/@supabase.js` is currently generated and present, so the prior missing-file ENOENT condition is not reproduced.
+- [ ] Remaining Task 20 work: richer per-record metric modal wiring, live seeded test-workspace tuning, and authenticated approve/dismiss/action DB-write verification.
+
+### Task 20 Goal Verification Commands
+
+```powershell
+npm.cmd run build
+npm.cmd run start -- -p 3000
+
+$base = "http://localhost:3000"
+
+Invoke-RestMethod "$base/api/intelligence/summary"
+Invoke-RestMethod -Method Post "$base/api/intelligence/run" `
+  -ContentType "application/json" `
+  -Body '{"persist":false}'
+```
+
+## Task 20 Continuation - CRM-Wide Panel Completion - 2026-05-19
+
+- [x] Read `docs/codex/SYNAPTIREACH_MASTER_V9.md` and `docs/codex/CODEX_TASK_LEDGER.md` before continuing.
+- [x] Continued Task 20 only and preserved completed mini-brain/local-AI work.
+- [x] Updated `docs/codex/CODEX_TASK_LEDGER.md` after each checkpoint.
+- [x] Added the shared `MiniBrainInsightPanel` to `/dashboard`, giving the main dashboard the same helperResults scorecards, helper cards, modal, and review-gated action flow used by the other CRM pages.
+- [x] Added the shared `MiniBrainInsightPanel` to `/dashboard/ai_assistant`, so the AI Command Center also consumes helperResults and deterministic scorecards before external AI.
+- [x] Existing shared panel coverage remains in:
+  - `/dashboard/analytics`
+  - `/dashboard/leads`
+  - `/dashboard/pipeline`
+  - `/dashboard/tasks`
+  - `/dashboard/calendar`
+  - `/dashboard/marketing`
+  - `/dashboard/communications`
+  - `/dashboard/workflow`
+  - `/dashboard/settings`
+- [x] Updated the Mini-Brain detail modal with related-record open links and inline action feedback for approve/dismiss decisions.
+- [x] All shared panel page loads still call transient `/api/intelligence/summary`; no durable recommendations are persisted on page load.
+- [x] Safe actions remain review-gated and internal only: task drafts, workflow drafts, message drafts, notifications/review records, related-page links, approve/dismiss.
+- [x] Confirmed no auto-send email/SMS/social behavior, no auto-charge behavior, and no secret exposure was added.
+- [x] Verified `npm.cmd run build` passes after this continuation.
+- [x] Local production API smoke test passed:
+  - `GET /api/intelligence/summary` returned 200.
+  - `POST /api/intelligence/run` with `{"persist":false}` returned 200.
+- [x] Confirmed no destructive `DROP TABLE`, `TRUNCATE TABLE`, or destructive `DELETE FROM` was added to `supabase/user_crm_full_completion_schema.sql`.
+- [x] Build artifact check: `.next/routes-manifest.json` exists. `.next/server/vendor-chunks/@supabase.js` is generated and present, so the prior missing vendor-chunk ENOENT condition is not reproduced.
+- [ ] Task 20 remains partial, not fully complete, until live seeded-workspace tuning and authenticated approve/dismiss/action DB-write verification are completed.
+
+### Task 20 Continuation Test Commands
+
+```powershell
+npm.cmd run build
+npm.cmd run start -- -p 3000
+
+$base = "http://localhost:3000"
+
+Invoke-RestMethod "$base/api/intelligence/summary"
+Invoke-RestMethod -Method Post "$base/api/intelligence/run" `
+  -ContentType "application/json" `
+  -Body '{"persist":false}'
+```

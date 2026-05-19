@@ -15,6 +15,7 @@ import MarketingModal from "../shared/MarketingModal";
 import AIAssistantPanel from "../ai/AIAssistantPanel";
 
 import { estimateAICredits } from "@/lib/marketing/utils/credits";
+import { aiClient } from "@/src/ai/aiClient";
 
 interface Props {
   open: boolean;
@@ -111,24 +112,21 @@ export default function SMSCampaignModal({
       setAiLoading(true);
       setAiError("");
 
-      const response = await fetch(
-        "/api/marketing/ai/generate",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            prompt,
-            system:
+      const data = await aiClient.runTask("campaign_ideas", {
+        messages: [
+          {
+            role: "system",
+            content:
               "You are SynaptiReach's SMS marketing strategist. Generate one concise SMS-ready message under 160 characters when possible, with a clear CTA and no markdown.",
-          }),
-        }
-      );
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+      });
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
+      if (!data.text) {
         throw new Error(data?.error || "AI generation failed.");
       }
 

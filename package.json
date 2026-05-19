@@ -8,6 +8,8 @@
     "start": "next start"
   },
   "dependencies": {
+    "@mediapipe/tasks-genai": "^0.10.27",
+    "@mlc-ai/web-llm": "^0.2.83",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
     "@vercel/analytics": "^2.0.1",

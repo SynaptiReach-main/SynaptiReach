@@ -1,4 +1,5 @@
-import { generateAIJson } from "@/lib/ai/providers";
+import { aiClient } from "@/src/ai/aiClient";
+import { runMiniBrain } from "@/lib/intelligence/miniBrain";
 
 function getLeadScore(lead: any, communications: any[], activity: any[]) {
   let score = Number(lead.score || 0);
@@ -152,6 +153,11 @@ export function runDeterministicAgents(context: any) {
       },
   ].filter(Boolean);
 
+  const miniBrain = runMiniBrain(context);
+  const miniBrainRecommendations = miniBrain.recommendations.length
+    ? miniBrain.recommendations
+    : recommendations;
+
   return {
     success: true,
     summary: {
@@ -168,8 +174,10 @@ export function runDeterministicAgents(context: any) {
       overdue_tasks: overdueTasks.length,
       active_workflows: workflows.filter((workflow: any) => workflow.status === "active").length,
       upcoming_appointments: upcomingAppointments.length,
+      ...(miniBrain.summary || {}),
     },
-    recommendations,
+    insights: miniBrain.insights,
+    recommendations: miniBrainRecommendations,
     actions: [
       "review_hot_leads",
       "draft_followups",
@@ -178,9 +186,11 @@ export function runDeterministicAgents(context: any) {
       "review_pipeline",
       "review_tasks",
       "recommend_workflows",
+      ...miniBrain.actions,
     ],
-    confidence: leads.length || campaigns.length || deals.length || tasks.length ? 0.76 : 0.35,
+    confidence: miniBrain.confidence || (leads.length || campaigns.length || deals.length || tasks.length ? 0.76 : 0.35),
     data_used: {
+      ...miniBrain.data_used,
       leads: leads.length,
       campaigns: campaigns.length,
       communications: communications.length,
@@ -197,18 +207,23 @@ export function runDeterministicAgents(context: any) {
     stale_deals: staleDeals.slice(0, 10),
     overdue_tasks: overdueTasks.slice(0, 10),
     upcoming_appointments: upcomingAppointments.slice(0, 10),
+    provider: miniBrain.provider,
+    model: miniBrain.model,
+    fallback_used: miniBrain.fallback_used,
+    provider_errors: miniBrain.provider_errors,
+    provider_warnings: miniBrain.provider_warnings,
   };
 }
 
 export async function runExecutiveAgent(context: any) {
   const fallback = runDeterministicAgents(context);
 
-  const result = await generateAIJson(
-    [
+  const result = await aiClient.runTask("pipeline_analysis", {
+    messages: [
       {
         role: "system",
         content:
-          "You are SynaptiReach's CRM executive agent. Use only the supplied data. Do not invent metrics. Return concise structured JSON with summary, recommendations, actions, confidence, and data_used.",
+          "You are SynaptiReach's CRM executive agent. Use only the supplied data. Do not invent metrics. Return concise structured JSON with summary, recommendations, actions, confidence, and data_used. Return valid JSON only.",
       },
       {
         role: "user",
@@ -226,17 +241,27 @@ export async function runExecutiveAgent(context: any) {
         }),
       },
     ],
-    fallback,
-    { profile: "premium" }
-  );
+    metadata: {
+      profile: "premium",
+      deterministicText: JSON.stringify(fallback),
+    },
+  });
+
+  let parsed = fallback;
+  try {
+    parsed = JSON.parse(result.text);
+  } catch {
+    parsed = fallback;
+  }
 
   return {
     ...fallback,
-    ...result.data,
-    provider: result.meta.provider,
-    model: result.meta.model,
-    fallback_used: result.meta.fallback_used,
-    provider_errors: result.meta.provider_errors,
-    provider_warnings: result.meta.provider_warnings,
+    ...parsed,
+    provider: result.providerUsed,
+    model: result.providerUsed,
+    fallback_used: result.fallbackUsed,
+    provider_errors: result.error ? [{ provider: result.providerUsed, reason: result.error }] : [],
+    provider_warnings: [],
+    ai_result: result,
   };
 }

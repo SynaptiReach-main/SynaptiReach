@@ -7,13 +7,33 @@ import {
 import { createClient }
 from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-);
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    return null;
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey);
+}
 
 export async function GET() {
   try {
+    const supabase = getSupabaseAdmin();
+
+    if (!supabase) {
+      return NextResponse.json(
+        {
+          success: false,
+          setup_required: true,
+          error:
+            "Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.",
+        },
+        { status: 503 }
+      );
+    }
+
     const retries =
       await getRetryCampaigns();
 

@@ -21,6 +21,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 
 function formatDate(value?: string) {
   if (!value) return "";
@@ -341,6 +342,12 @@ export default function WorkflowPage() {
           {lastRunMessage}
         </div>
       )}
+
+      <MiniBrainInsightPanel
+        title="Workflow Intelligence"
+        subtitle="Automation opportunities, failed-run risk, pending approvals, and safe workflow draft suggestions."
+        types={["workflow_intelligence", "task_intelligence", "communication_intelligence"]}
+      />
 
       <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         {[

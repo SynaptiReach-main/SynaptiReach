@@ -1,11 +1,8 @@
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { createMarketingSupabaseAdmin } from "@/lib/marketing/supabaseAdmin";
 
 export async function createCampaign(payload: any) {
+  const supabase = createMarketingSupabaseAdmin();
+
   const {
     data,
     error,
@@ -23,6 +20,8 @@ export async function createCampaign(payload: any) {
 }
 
 export async function createCampaignStep(payload: any) {
+  const supabase = createMarketingSupabaseAdmin();
+
   const {
     data,
     error,
@@ -40,6 +39,8 @@ export async function createCampaignStep(payload: any) {
 }
 
 export async function getCampaigns(workspaceId: string) {
+  const supabase = createMarketingSupabaseAdmin();
+
   const {
     data,
     error,
@@ -65,6 +66,8 @@ export async function updateCampaignStatus(
   campaignId: string,
   status: string
 ) {
+  const supabase = createMarketingSupabaseAdmin();
+
   const {
     data,
     error,

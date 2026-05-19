@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Bot, CheckCircle2, Clock, Loader2, Plus, Save, Search, Trash2, UserPlus, X } from "lucide-react";
+import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 
 const emptyTask = {
   id: "",
@@ -330,6 +331,12 @@ export default function TasksPage() {
 
       {error && <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>}
       {success && <div className="mb-6 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4 text-sm text-cyan-100">{success}</div>}
+
+      <MiniBrainInsightPanel
+        title="Task Intelligence"
+        subtitle="Today’s focus, overdue impact, staffing, and safe follow-up task suggestions."
+        types={["task_intelligence", "staff_team", "next_best_action"]}
+      />
 
       <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {[["Open", metrics.open, Clock], ["Completed", metrics.completed, CheckCircle2], ["High Priority", metrics.high, AlertTriangle], ["Overdue", metrics.overdue, AlertTriangle]].map(([label, value, Icon]: any) => (

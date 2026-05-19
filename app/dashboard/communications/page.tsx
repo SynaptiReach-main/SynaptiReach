@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Bot, Eye, Loader2, Mail, MessageSquare, Phone, Search, Send, Share2, X } from "lucide-react";
+import { aiClient } from "@/src/ai/aiClient";
+import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 
 const channels = ["all", "email", "sms", "social", "call", "note", "internal"];
 const statuses = ["all", "draft", "scheduled", "sent", "failed", "received"];
@@ -64,26 +66,29 @@ export default function CommunicationsPage() {
     try {
       setAiLoading(true);
       setError("");
-      const response = await fetch("/api/marketing/ai/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: `Draft a ${form.channel} message for ${form.recipient || "a CRM lead"}. Goal: ${form.content || "follow up and move the relationship forward"}.`,
-          system:
-            "You are SynaptiReach's communication drafting agent. Draft concise CRM outreach. Return only the message content.",
-        }),
+      const data = await aiClient.runTask("draft_followup", {
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are SynaptiReach's communication drafting agent. Draft concise CRM outreach. Return only the message content.",
+          },
+          {
+            role: "user",
+            content: `Draft a ${form.channel} message for ${form.recipient || "a CRM lead"}. Goal: ${form.content || "follow up and move the relationship forward"}.`,
+          },
+        ],
       });
-      const data = await response.json();
 
-      if (!response.ok || !data.success) {
+      if (!data.text) {
         throw new Error(data?.error || "AI draft failed.");
       }
 
       setForm((current) => ({ ...current, content: data.text || "" }));
       setAiMeta({
-        provider: data.provider,
-        model: data.model,
-        fallback_used: data.fallback_used,
+        provider: data.providerUsed,
+        model: data.providerUsed,
+        fallback_used: data.fallbackUsed,
       });
     } catch (error) {
       setError(error instanceof Error ? error.message : "AI draft failed.");
@@ -101,26 +106,29 @@ export default function CommunicationsPage() {
         .slice(-4)
         .map((message: any) => `${message.direction || "unknown"} ${message.channel}: ${message.content || message.subject || ""}`)
         .join("\n");
-      const response = await fetch("/api/marketing/ai/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: `Draft a ${reply.channel} response for ${selectedConversation.name}. Recent conversation:\n${recent}\nGoal: move the relationship forward without claiming anything not in the CRM.`,
-          system:
-            "You are SynaptiReach's communication drafting agent. Draft concise review-ready CRM outreach. Return only the message content.",
-        }),
+      const data = await aiClient.runTask("draft_followup", {
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are SynaptiReach's communication drafting agent. Draft concise review-ready CRM outreach. Return only the message content.",
+          },
+          {
+            role: "user",
+            content: `Draft a ${reply.channel} response for ${selectedConversation.name}. Recent conversation:\n${recent}\nGoal: move the relationship forward without claiming anything not in the CRM.`,
+          },
+        ],
       });
-      const data = await response.json();
 
-      if (!response.ok || !data.success) {
+      if (!data.text) {
         throw new Error(data?.error || "AI reply draft failed.");
       }
 
       setReply((current) => ({ ...current, content: data.text || "" }));
       setReplyAiMeta({
-        provider: data.provider,
-        model: data.model,
-        fallback_used: data.fallback_used,
+        provider: data.providerUsed,
+        model: data.providerUsed,
+        fallback_used: data.fallbackUsed,
       });
     } catch (error) {
       setError(error instanceof Error ? error.message : "AI reply draft failed.");
@@ -302,6 +310,12 @@ export default function CommunicationsPage() {
           {error}
         </div>
       )}
+
+      <MiniBrainInsightPanel
+        title="Communication Intelligence"
+        subtitle="Response urgency, buying signals, appointment intent, safe templates, and readiness checks."
+        types={["communication_intelligence", "safety_compliance"]}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         {[

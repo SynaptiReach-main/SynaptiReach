@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Bot, Brain, Loader2, Send, Sparkles, Zap } from "lucide-react";
+import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 
 const prompts = [
   "What should I do next?",
@@ -15,11 +16,22 @@ const prompts = [
 
 function recommendationHref(action?: string) {
   if (action === "review_pipeline") return "/dashboard/pipeline";
+  if (action === "review_record") return "/dashboard";
   if (action === "review_tasks") return "/dashboard/tasks";
+  if (action === "create_task") return "/dashboard/tasks";
   if (action === "create_workflow_suggestion") return "/dashboard/workflow";
+  if (action === "create_workflow") return "/dashboard/workflow";
   if (action === "create_variant") return "/dashboard/marketing";
+  if (action === "review_campaign") return "/dashboard/marketing";
   if (action === "draft_follow_up") return "/dashboard/communications";
+  if (action === "draft_message") return "/dashboard/communications";
   if (action === "review_lead") return "/dashboard/leads";
+  if (action === "schedule_appointment") return "/dashboard/calendar";
+  if (action === "review_billing") return "/dashboard/settings";
+  if (action === "fix_setup") return "/dashboard/settings";
+  if (action === "assign_staff") return "/dashboard/tasks";
+  if (action === "flag_risk") return "/dashboard";
+  if (action === "open_modal") return "/dashboard";
   return "/dashboard";
 }
 
@@ -132,6 +144,12 @@ export default function AIAssistantPage() {
 
       {error && <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>}
 
+      <MiniBrainInsightPanel
+        title="AI Command Center Mini-Brain"
+        subtitle="Structured helper cards, scorecards, draft-safe actions, and deterministic recommendations before external AI is used."
+        limit={8}
+      />
+
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
           <div className="flex items-center justify-between mb-5">
@@ -232,6 +250,14 @@ export default function AIAssistantPage() {
                     Provider fallback notes: {agentData.provider_errors.map((item: any) => `${item.provider}: ${item.reason}`).join("; ")}
                   </div>
                 )}
+                {(agentData?.insights || []).length > 0 && (
+                  <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                    <div className="text-sm font-bold text-white">Mini-brain insights</div>
+                    <div className="mt-1 text-xs text-gray-400">
+                      {(agentData.insights || []).length} deterministic insight{(agentData.insights || []).length === 1 ? "" : "s"} generated before external AI.
+                    </div>
+                  </div>
+                )}
                 <button
                   onClick={runExecutiveReview}
                   disabled={agentLoading}
@@ -258,6 +284,43 @@ export default function AIAssistantPage() {
                   <div className="text-sm text-gray-400 mt-1">{item.description}</div>
                   <a href={recommendationHref(item.action)} className="mt-3 inline-flex rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100">
                     Review action
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <Brain className="text-cyan-300" size={20} />
+              <h2 className="text-xl font-black">Built-in Intelligence Detail</h2>
+            </div>
+            <div className="space-y-3">
+              {(agentData?.insights || []).length === 0 && (
+                <div className="text-sm text-gray-500">No mini-brain insights available for the current CRM data.</div>
+              )}
+              {(agentData?.insights || []).slice(0, 8).map((item: any) => (
+                <div key={item.id || item.title} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2 py-1 text-xs font-bold text-cyan-100">
+                      {item.source || "mini_brain"}
+                    </span>
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-xs text-gray-400">
+                      {item.priority || "medium"} / {Math.round(Number(item.confidence || 0) * 100)}%
+                    </span>
+                  </div>
+                  <div className="mt-3 font-bold text-white">{item.title}</div>
+                  <div className="mt-1 text-sm text-gray-400">{item.summary}</div>
+                  {(item.reasoning || []).length > 0 && (
+                    <ul className="mt-3 space-y-1 text-xs text-gray-500">
+                      {(item.reasoning || []).slice(0, 3).map((reason: string, index: number) => (
+                        <li key={index}>{reason}</li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="mt-3 text-xs text-cyan-100">{item.recommendedAction}</div>
+                  <a href={recommendationHref(item.actionType)} className="mt-3 inline-flex rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100">
+                    Review gated action
                   </a>
                 </div>
               ))}
