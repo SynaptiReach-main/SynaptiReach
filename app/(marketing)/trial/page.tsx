@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { COMMITMENT_DISCOUNTS, TRIAL_PLANS } from "@/lib/billing/plans";
+import Footer from "@/components/sections/Footer";
 
 export default function TrialPage() {
   const [mode, setMode] = useState<"managed" | "byok">("managed");
@@ -93,6 +94,8 @@ export default function TrialPage() {
         <p><strong className="text-white">Are overages allowed?</strong> No. Trial caps are hard caps.</p>
         <p><strong className="text-white">What happens at the end?</strong> Upgrade is required to continue after limits or after 14 days.</p>
       </section>
+
+      <Footer />
     </main>
   );
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Footer from "@/components/sections/Footer";
 
 const services = [
   { title: "Marketing Services", sections: [
@@ -100,6 +101,8 @@ export default function ServicesPage() {
           ))}
         </div>
       </section>
+
+      <Footer />
     </main>
   );
 }

@@ -55,6 +55,7 @@ export default function DashboardPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [importOpen, setImportOpen] = useState(false);
+  const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   async function loadDashboard() {
@@ -114,6 +115,36 @@ export default function DashboardPage() {
   const upcomingAppointments = (data?.appointments || [])
     .filter((appointment: any) => appointment.status === "scheduled")
     .slice(0, 5);
+  const metricCards = [
+    { key: "leads", label: "Leads", value: metrics.leads.total || 0, icon: Users, href: "/dashboard/leads", records: data?.leads || [] },
+    { key: "new_leads", label: "New Leads", value: metrics.leads.new || 0, icon: Plus, href: "/dashboard/leads", records: (data?.leads || []).filter((lead: any) => lead.status === "new") },
+    { key: "qualified_leads", label: "Qualified", value: metrics.leads.qualified || 0, icon: Target, href: "/dashboard/leads", records: (data?.leads || []).filter((lead: any) => lead.status === "qualified") },
+    { key: "converted_leads", label: "Converted Leads", value: metrics.leads.converted || 0, icon: CheckCircle2, href: "/dashboard/leads", records: (data?.leads || []).filter((lead: any) => lead.status === "converted") },
+    { key: "scheduled_campaigns", label: "Scheduled Campaigns", value: metrics.campaigns.scheduled || 0, icon: CalendarClock, href: "/dashboard/marketing", records: (data?.campaigns || []).filter((campaign: any) => campaign.status === "scheduled") },
+    { key: "active_campaigns", label: "Active Campaigns", value: metrics.campaigns.active || 0, icon: Megaphone, href: "/dashboard/marketing", records: (data?.campaigns || []).filter((campaign: any) => ["active", "processing"].includes(campaign.status)) },
+    { key: "cancelled_campaigns", label: "Cancelled Campaigns", value: metrics.campaigns.cancelled || 0, icon: XCircle, href: "/dashboard/marketing", records: (data?.campaigns || []).filter((campaign: any) => campaign.status === "cancelled") },
+    { key: "campaign_opens", label: "Campaign Opens", value: metrics.campaigns.opened || 0, icon: Mail, href: "/dashboard/marketing", records: data?.campaigns || [] },
+    { key: "campaign_clicks", label: "Campaign Clicks", value: metrics.campaigns.clicked || 0, icon: Activity, href: "/dashboard/marketing", records: data?.campaigns || [] },
+    { key: "communications", label: "Communications", value: metrics.communications.total || 0, icon: MessageSquare, href: "/dashboard/communications", records: data?.communications || [] },
+    { key: "pipeline_value", label: "Pipeline Value", value: formatMoney(metrics.deals?.open_value || 0), icon: DollarSign, href: "/dashboard/pipeline", records: data?.deals || [] },
+    { key: "open_deals", label: "Open Deals", value: metrics.deals?.open || 0, icon: Target, href: "/dashboard/pipeline", records: (data?.deals || []).filter((deal: any) => deal.status === "open") },
+    { key: "won_deals", label: "Won Deals", value: metrics.deals?.won || 0, icon: CheckCircle2, href: "/dashboard/pipeline", records: (data?.deals || []).filter((deal: any) => deal.stage === "won" || deal.status === "won") },
+    { key: "lost_deals", label: "Lost Deals", value: metrics.deals?.lost || 0, icon: XCircle, href: "/dashboard/pipeline", records: (data?.deals || []).filter((deal: any) => deal.stage === "lost" || deal.status === "lost") },
+    { key: "open_tasks", label: "Open Tasks", value: metrics.tasks?.open || 0, icon: ListTodo, href: "/dashboard/tasks", records: (data?.tasks || []).filter((task: any) => task.status === "open") },
+    { key: "overdue_tasks", label: "Overdue Tasks", value: metrics.tasks?.overdue || 0, icon: CalendarClock, href: "/dashboard/tasks", records: overdueTasks },
+    { key: "appointments", label: "Appointments", value: metrics.appointments?.upcoming || 0, icon: CalendarDays, href: "/dashboard/calendar", records: upcomingAppointments },
+    { key: "active_workflows", label: "Active Workflows", value: metrics.workflows?.active || 0, icon: Workflow, href: "/dashboard/workflow", records: (data?.workflows || []).filter((workflow: any) => workflow.status === "active") },
+    { key: "workflow_runs", label: "Workflow Runs", value: metrics.workflows?.runs || 0, icon: GitBranch, href: "/dashboard/workflow", records: data?.workflowRuns || [] },
+  ];
+  const selectedMetricConfig = metricCards.find((item) => item.key === selectedMetric);
+  const dealStages = ["new", "qualified", "proposal", "negotiation", "won", "lost"].map((stage) => {
+    const stageDeals = (data?.deals || []).filter((deal: any) => deal.stage === stage);
+    return {
+      stage,
+      count: stageDeals.length,
+      value: stageDeals.reduce((sum: number, deal: any) => sum + Number(deal.value || 0), 0),
+    };
+  });
 
   return (
     <main className="min-h-screen text-white">
@@ -122,6 +153,53 @@ export default function DashboardPage() {
         onClose={() => setImportOpen(false)}
         onImported={loadDashboard}
       />
+      {selectedMetricConfig && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-3xl border border-cyan-400/20 bg-slate-950 shadow-2xl shadow-cyan-500/20">
+            <div className="flex items-start justify-between gap-4 border-b border-cyan-400/10 p-5">
+              <div>
+                <div className="text-sm font-bold uppercase tracking-[0.18em] text-cyan-300">Metric Detail</div>
+                <h2 className="mt-1 text-2xl font-black">{selectedMetricConfig.label}</h2>
+                <p className="mt-1 text-sm text-cyan-50/55">
+                  {selectedMetricConfig.records.length} real record{selectedMetricConfig.records.length === 1 ? "" : "s"} behind this metric.
+                </p>
+              </div>
+              <button onClick={() => setSelectedMetric(null)} className="rounded-2xl border border-white/10 p-2 text-cyan-100 hover:bg-white/5">
+                <XCircle size={20} />
+              </button>
+            </div>
+            <div className="max-h-[62vh] overflow-y-auto p-5">
+              {selectedMetricConfig.records.length === 0 ? (
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center text-cyan-50/55">
+                  No real records currently match this metric.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {selectedMetricConfig.records.slice(0, 50).map((record: any, index: number) => (
+                    <div key={record.id || index} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                      <div className="font-bold text-white">
+                        {record.name || record.title || record.subject || record.email || record.action || record.type || "CRM record"}
+                      </div>
+                      <div className="mt-1 text-sm text-gray-500">
+                        {record.status || record.stage || record.channel || record.source || "No status"} {record.value ? `- ${formatMoney(record.value)}` : ""}
+                      </div>
+                      <div className="mt-2 text-xs text-gray-600">{formatDate(record.created_at || record.due_date || record.starts_at)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-3 border-t border-cyan-400/10 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <a href={selectedMetricConfig.href} className="rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-5 py-3 text-center font-black text-black">
+                Open related page
+              </a>
+              <button onClick={() => navigator.clipboard?.writeText(JSON.stringify(selectedMetricConfig.records, null, 2))} className="rounded-2xl border border-cyan-400/20 px-5 py-3 font-bold text-cyan-100">
+                Copy records JSON
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <section className="mb-8">
         <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-5">
           <div>
@@ -189,36 +267,16 @@ export default function DashboardPage() {
       )}
 
       <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-        {[
-          { label: "Leads", value: metrics.leads.total || 0, icon: Users },
-          { label: "New Leads", value: metrics.leads.new || 0, icon: Plus },
-          { label: "Qualified", value: metrics.leads.qualified || 0, icon: Target },
-          { label: "Converted Leads", value: metrics.leads.converted || 0, icon: CheckCircle2 },
-          { label: "Scheduled Campaigns", value: metrics.campaigns.scheduled || 0, icon: CalendarClock },
-          { label: "Active Campaigns", value: metrics.campaigns.active || 0, icon: Megaphone },
-          { label: "Cancelled Campaigns", value: metrics.campaigns.cancelled || 0, icon: XCircle },
-          { label: "Campaign Opens", value: metrics.campaigns.opened || 0, icon: Mail },
-          { label: "Campaign Clicks", value: metrics.campaigns.clicked || 0, icon: Activity },
-          { label: "Communications", value: metrics.communications.total || 0, icon: MessageSquare },
-          { label: "Pipeline Value", value: formatMoney(metrics.deals?.open_value || 0), icon: DollarSign },
-          { label: "Open Deals", value: metrics.deals?.open || 0, icon: Target },
-          { label: "Won Deals", value: metrics.deals?.won || 0, icon: CheckCircle2 },
-          { label: "Lost Deals", value: metrics.deals?.lost || 0, icon: XCircle },
-          { label: "Open Tasks", value: metrics.tasks?.open || 0, icon: ListTodo },
-          { label: "Overdue Tasks", value: metrics.tasks?.overdue || 0, icon: CalendarClock },
-          { label: "Appointments", value: metrics.appointments?.upcoming || 0, icon: CalendarDays },
-          { label: "Active Workflows", value: metrics.workflows?.active || 0, icon: Workflow },
-          { label: "Workflow Runs", value: metrics.workflows?.runs || 0, icon: GitBranch },
-        ].map((item) => {
+        {metricCards.map((item) => {
           const Icon = item.icon;
           return (
-            <div key={item.label} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+            <button key={item.label} onClick={() => setSelectedMetric(item.key)} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-left transition hover:-translate-y-1 hover:border-cyan-400/35 hover:bg-cyan-500/10 hover:shadow-lg hover:shadow-cyan-500/10">
               <div className="w-11 h-11 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 flex items-center justify-center mb-4">
                 <Icon className="text-cyan-300" size={20} />
               </div>
               <div className="text-3xl font-black">{item.value}</div>
               <div className="text-sm text-gray-500">{item.label}</div>
-            </div>
+            </button>
           );
         })}
       </section>
@@ -333,6 +391,27 @@ export default function DashboardPage() {
 
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
             <h2 className="text-2xl font-black mb-5">Pipeline Summary</h2>
+            <div className="mb-6 rounded-2xl border border-cyan-400/15 bg-cyan-500/[0.04] p-4">
+              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <div className="text-sm font-bold uppercase tracking-[0.18em] text-cyan-300">Deal Flow</div>
+                  <div className="text-sm text-gray-500">Open value, stage movement, stale deals, and next actions.</div>
+                </div>
+                <a href="/dashboard/pipeline" className="rounded-xl border border-cyan-400/20 px-4 py-2 text-sm font-bold text-cyan-100">Open Pipeline</a>
+              </div>
+              <div className="grid gap-3 md:grid-cols-6">
+                {dealStages.map((stage) => (
+                  <div key={stage.stage} className="rounded-2xl border border-white/10 bg-black/30 p-3">
+                    <div className="text-xs uppercase text-gray-500">{stage.stage}</div>
+                    <div className="mt-2 text-xl font-black text-white">{stage.count}</div>
+                    <div className="text-xs text-cyan-200">{formatMoney(stage.value)}</div>
+                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+                      <div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-green-400" style={{ width: `${Math.min(100, stage.count * 18)}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
               {["new", "contacted", "qualified", "nurture", "converted", "lost"].map((status) => (
                 <div key={status} className="rounded-2xl border border-white/10 bg-black/30 p-4">

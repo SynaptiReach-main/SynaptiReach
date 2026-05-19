@@ -1,32 +1,33 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createSupabaseAdmin, friendlySupabaseError } from "@/lib/crm/supabaseAdmin";
+import { applyWorkspaceScope, getWorkspaceContext } from "@/lib/auth/getWorkspaceContext";
 
-// Supabase client using service role key for writes
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabase = createSupabaseAdmin();
 
-export async function GET() {
-  const { data, error } = await supabase
-    .from("marketing_events")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(50);
+export async function GET(request: Request) {
+  try {
+    const context = await getWorkspaceContext(request);
+    const { data, error } = await applyWorkspaceScope(supabase
+      .from("marketing_events")
+      .select("*"), context)
+      .order("created_at", { ascending: false })
+      .limit(50);
 
-  if (error) {
+    if (error) throw error;
+    return NextResponse.json({ success: true, data });
+  } catch (error: any) {
+    const friendly = friendlySupabaseError(error);
     return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
+      { success: false, error: friendly.message, missingSchema: friendly.missingSchema },
+      { status: friendly.missingSchema ? 501 : 500 }
     );
   }
-
-  return NextResponse.json({ success: true, data });
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const context = await getWorkspaceContext(req);
     const { campaign_id, action, details, workspace_id, type, message, metadata } = body;
 
     if (!action) {
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
       .insert([
         {
           campaign_id,
-          workspace_id: workspace_id || null,
+          workspace_id: workspace_id || context.workspaceId || null,
           event_type: type || action,
           type: type || action,
           title: details || message || action,
@@ -60,9 +61,10 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, event: data });
   } catch (error: any) {
+    const friendly = friendlySupabaseError(error);
     return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
+      { success: false, error: friendly.message, missingSchema: friendly.missingSchema },
+      { status: friendly.missingSchema ? 501 : 500 }
     );
   }
 }

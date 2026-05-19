@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CalendarDays, CheckCircle2, Edit2, Loader2, Plus, X } from "lucide-react";
+import { Bell, CalendarDays, CheckCircle2, Edit2, Loader2, MessageSquare, Plus, Sparkles, X } from "lucide-react";
 
 const emptyAppointment = { id: "", title: "", starts_at: "", ends_at: "", location: "", notes: "", status: "scheduled", lead_id: "", deal_id: "" };
 
@@ -13,21 +13,28 @@ function formatDate(value?: string) {
 
 export default function CalendarPage() {
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [context, setContext] = useState<any>(null);
   const [form, setForm] = useState<any>(emptyAppointment);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [actionLoading, setActionLoading] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   async function loadData() {
     try {
       setLoading(true);
       setError("");
-      const response = await fetch("/api/crm/appointments");
+      const [response, dashboardResponse] = await Promise.all([
+        fetch("/api/crm/appointments"),
+        fetch("/api/crm/dashboard"),
+      ]);
       const json = await response.json();
+      const dashboardJson = await dashboardResponse.json().catch(() => ({}));
       if (!response.ok || !json.success) throw new Error(json?.error || "Failed to load appointments.");
       setAppointments(json.appointments || json.data || []);
+      if (dashboardJson?.success) setContext(dashboardJson.data);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to load appointments.");
     } finally {
@@ -50,6 +57,16 @@ export default function CalendarPage() {
       });
       const json = await response.json();
       if (!response.ok || !json.success) throw new Error(json?.error || "Failed to save appointment.");
+      await createNotification({
+        title: form.id ? "Appointment updated" : "Appointment created",
+        message: `${form.title} is ${form.status || "scheduled"}.`,
+        type: "appointment",
+        priority: "normal",
+        record_type: "appointment",
+        record_id: json.appointment?.id || form.id || null,
+        href: "/dashboard/calendar",
+      });
+      setSuccess(form.id ? "Appointment updated and notification logged." : "Appointment created and notification logged.");
       setOpen(false);
       setForm(emptyAppointment);
       await loadData();
@@ -67,6 +84,16 @@ export default function CalendarPage() {
       const response = await fetch(`/api/crm/appointments?id=${encodeURIComponent(id)}`, { method: "DELETE" });
       const json = await response.json();
       if (!response.ok || !json.success) throw new Error(json?.error || "Failed to cancel appointment.");
+      await createNotification({
+        title: "Appointment cancelled",
+        message: json.appointment?.title || "An appointment was cancelled.",
+        type: "appointment",
+        priority: "high",
+        record_type: "appointment",
+        record_id: id,
+        href: "/dashboard/calendar",
+      });
+      setSuccess("Appointment cancelled and notification logged.");
       await loadData();
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to cancel appointment.");
@@ -96,6 +123,16 @@ export default function CalendarPage() {
       });
       const json = await response.json();
       if (!response.ok || !json.success) throw new Error(json?.error || "Failed to update appointment.");
+      await createNotification({
+        title: `Appointment ${status}`,
+        message: appointment.title || "Appointment status updated.",
+        type: "appointment",
+        priority: status === "no_show" ? "high" : "normal",
+        record_type: "appointment",
+        record_id: appointment.id,
+        href: "/dashboard/calendar",
+      });
+      setSuccess(`Appointment marked ${status}.`);
       await loadData();
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to update appointment.");
@@ -104,7 +141,83 @@ export default function CalendarPage() {
     }
   }
 
+  async function createNotification(payload: any) {
+    await fetch("/api/crm/notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).catch(() => null);
+  }
+
+  function openAppointmentSuggestion(source: any) {
+    const lead = (context?.leads || []).find((item: any) => item.id === source.lead_id);
+    setForm({
+      ...emptyAppointment,
+      title: `Appointment with ${lead?.name || source.recipient || "lead"}`,
+      starts_at: "",
+      ends_at: "",
+      status: "scheduled",
+      lead_id: source.lead_id || "",
+      deal_id: source.deal_id || "",
+      notes: `Review appointment intent from ${source.channel || "communication"}: ${source.content || source.subject || ""}`,
+    });
+    setOpen(true);
+  }
+
+  async function notifyAppointmentSuggestion(source: any) {
+    try {
+      setActionLoading(`${source.id}:notify`);
+      setError("");
+      await createNotification({
+        title: "Appointment intent detected",
+        message: source.content || source.subject || "A lead may be ready to schedule an appointment.",
+        type: "appointment_intent",
+        priority: "high",
+        record_type: "communication",
+        record_id: source.id,
+        href: "/dashboard/calendar",
+      });
+      setSuccess("Appointment intent notification created. Review the draft before scheduling.");
+      openAppointmentSuggestion(source);
+    } finally {
+      setActionLoading("");
+    }
+  }
+
+  async function createReminderNotification(appointment: any) {
+    try {
+      setActionLoading(`${appointment.id}:reminder`);
+      setError("");
+      await createNotification({
+        title: "Upcoming appointment reminder",
+        message: `${appointment.title || "Appointment"} starts ${formatDate(appointment.starts_at)}.`,
+        type: "appointment",
+        priority: "high",
+        record_type: "appointment",
+        record_id: appointment.id,
+        href: "/dashboard/calendar",
+      });
+      setSuccess("Reminder notification created.");
+    } finally {
+      setActionLoading("");
+    }
+  }
+
   if (loading) return <main className="min-h-screen flex items-center justify-center text-white"><Loader2 className="animate-spin text-cyan-300" size={34} /></main>;
+
+  const now = Date.now();
+  const appointmentIntentSuggestions = (context?.communications || [])
+    .filter((item: any) => {
+      const text = `${item.subject || ""} ${item.content || ""}`.toLowerCase();
+      return (
+        (item.direction === "inbound" || item.status === "received") &&
+        /(appointment|meeting|book|schedule|available|confirmed|confirm|call|consult)/i.test(text)
+      );
+    })
+    .slice(0, 6);
+  const upcomingAppointments = appointments
+    .filter((item) => item.status === "scheduled" && item.starts_at && new Date(item.starts_at).getTime() >= now)
+    .slice(0, 6);
 
   return (
     <main className="min-h-screen text-white">
@@ -118,6 +231,7 @@ export default function CalendarPage() {
       </section>
 
       {error && <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>}
+      {success && <div className="mb-6 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4 text-sm text-cyan-100">{success}</div>}
 
       <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {[
@@ -132,6 +246,72 @@ export default function CalendarPage() {
             <div className="text-sm text-gray-500">{label}</div>
           </div>
         ))}
+      </section>
+
+      <section className="mb-6 grid gap-6 xl:grid-cols-2">
+        <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/[0.05] p-6">
+          <div className="mb-5 flex items-center gap-3">
+            <Sparkles className="text-cyan-300" size={22} />
+            <div>
+              <h2 className="text-2xl font-black">Appointment Workflow Suggestions</h2>
+              <p className="mt-1 text-sm text-gray-400">Detected from real inbound communications. Suggestions require manual review before scheduling.</p>
+            </div>
+          </div>
+          {appointmentIntentSuggestions.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-8 text-center text-gray-400">
+              No appointment intent found in recent communications.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {appointmentIntentSuggestions.map((item: any) => (
+                <div key={item.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <div className="font-bold text-white">{item.recipient || item.subject || "Lead communication"}</div>
+                    <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-xs font-bold text-cyan-100">{item.channel}</span>
+                  </div>
+                  <p className="line-clamp-2 text-sm text-gray-400">{item.content || item.subject || "Review this communication."}</p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button onClick={() => notifyAppointmentSuggestion(item)} disabled={Boolean(actionLoading)} className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 disabled:opacity-60">
+                      {actionLoading === `${item.id}:notify` ? "Creating..." : "Create Notification + Draft"}
+                    </button>
+                    <button onClick={() => openAppointmentSuggestion(item)} disabled={Boolean(actionLoading)} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-bold text-white disabled:opacity-60">Review Draft</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+          <div className="mb-5 flex items-center gap-3">
+            <Bell className="text-cyan-300" size={22} />
+            <div>
+              <h2 className="text-2xl font-black">Upcoming Appointment Notifications</h2>
+              <p className="mt-1 text-sm text-gray-400">Create internal reminders. External calendar sync is not enabled.</p>
+            </div>
+          </div>
+          {upcomingAppointments.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-8 text-center text-gray-400">
+              No upcoming scheduled appointments.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {upcomingAppointments.map((appointment: any) => (
+                <div key={appointment.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="font-bold text-white">{appointment.title}</div>
+                      <div className="text-sm text-gray-500">{formatDate(appointment.starts_at)}</div>
+                    </div>
+                    <button onClick={() => createReminderNotification(appointment)} disabled={Boolean(actionLoading)} className="rounded-xl border border-green-400/20 bg-green-500/10 px-3 py-2 text-xs font-bold text-green-100 disabled:opacity-60">
+                      {actionLoading === `${appointment.id}:reminder` ? "Creating..." : "Create Reminder"}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="grid gap-4">

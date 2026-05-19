@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { loadCRMContext } from "@/lib/crm/data";
 import { runDeterministicAgents } from "@/lib/agents/crmAgents";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const context = await loadCRMContext();
+    const context = await loadCRMContext(request);
     const agents = runDeterministicAgents(context);
 
     return NextResponse.json({

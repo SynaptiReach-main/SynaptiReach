@@ -2,6 +2,7 @@ export {};
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Footer from "@/components/sections/Footer";
 
 export default function Home() {
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
@@ -768,8 +769,10 @@ export default function Home() {
           </div>
         </section>
 
-        {/* FOOTER */}
-        <footer className="border-t border-white/10 pt-12 pb-8">
+        <Footer />
+
+        {/* Legacy inline footer retained hidden to avoid changing the surrounding homepage structure. */}
+        <footer className="hidden border-t border-white/10 pt-12 pb-8">
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-8 mb-10">
 
             <div className="col-span-2 sm:col-span-1 space-y-3">

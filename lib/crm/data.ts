@@ -1,4 +1,5 @@
 import { createSupabaseAdmin, friendlySupabaseError } from "@/lib/crm/supabaseAdmin";
+import { applyWorkspaceScope, getWorkspaceContext, type WorkspaceContext } from "@/lib/auth/getWorkspaceContext";
 
 async function safeQuery<T>(query: PromiseLike<{ data: T | null; error: any }>) {
   const { data, error } = await query;
@@ -20,8 +21,19 @@ async function safeQuery<T>(query: PromiseLike<{ data: T | null; error: any }>) 
   };
 }
 
-export async function loadCRMContext() {
+async function optionalWorkspaceContext(request?: Request): Promise<WorkspaceContext | null> {
+  if (!request) return null;
+  try {
+    const context = await getWorkspaceContext(request);
+    return context.isScoped ? context : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function loadCRMContext(request?: Request) {
   const supabase = createSupabaseAdmin();
+  const context = await optionalWorkspaceContext(request);
 
   const [
     leads,
@@ -37,18 +49,18 @@ export async function loadCRMContext() {
     appointments,
     agentRuns,
   ] = await Promise.all([
-    safeQuery(supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(200)),
-    safeQuery(supabase.from("marketing_campaigns").select("*").order("created_at", { ascending: false }).limit(100)),
-    safeQuery(supabase.from("marketing_events").select("*").order("created_at", { ascending: false }).limit(100)),
-    safeQuery(supabase.from("communications").select("*").order("created_at", { ascending: false }).limit(100)),
-    safeQuery(supabase.from("crm_settings").select("*").limit(1).maybeSingle()),
-    safeQuery(supabase.from("marketing_ai_recommendations").select("*").order("created_at", { ascending: false }).limit(50)),
-    safeQuery(supabase.from("crm_deals").select("*").eq("archived", false).order("created_at", { ascending: false }).limit(200)),
-    safeQuery(supabase.from("crm_tasks").select("*").neq("status", "archived").order("due_date", { ascending: true, nullsFirst: false }).limit(200)),
-    safeQuery(supabase.from("crm_workflows").select("*").neq("status", "archived").order("created_at", { ascending: false }).limit(100)),
-    safeQuery(supabase.from("crm_workflow_runs").select("*").order("started_at", { ascending: false }).limit(100)),
-    safeQuery(supabase.from("crm_appointments").select("*").order("starts_at", { ascending: true }).limit(100)),
-    safeQuery(supabase.from("crm_agent_runs").select("*").order("created_at", { ascending: false }).limit(100)),
+    safeQuery(applyScope(supabase.from("leads").select("*"), context).order("created_at", { ascending: false }).limit(200)),
+    safeQuery(applyScope(supabase.from("marketing_campaigns").select("*"), context).order("created_at", { ascending: false }).limit(100)),
+    safeQuery(applyScope(supabase.from("marketing_events").select("*"), context).order("created_at", { ascending: false }).limit(100)),
+    safeQuery(applyScope(supabase.from("communications").select("*"), context).order("created_at", { ascending: false }).limit(100)),
+    safeQuery(applyScope(supabase.from("crm_settings").select("*"), context).limit(1).maybeSingle()),
+    safeQuery(applyScope(supabase.from("marketing_ai_recommendations").select("*"), context).order("created_at", { ascending: false }).limit(50)),
+    safeQuery(applyScope(supabase.from("crm_deals").select("*"), context).eq("archived", false).order("created_at", { ascending: false }).limit(200)),
+    safeQuery(applyScope(supabase.from("crm_tasks").select("*"), context).neq("status", "archived").order("due_date", { ascending: true, nullsFirst: false }).limit(200)),
+    safeQuery(applyScope(supabase.from("crm_workflows").select("*"), context).neq("status", "archived").order("created_at", { ascending: false }).limit(100)),
+    safeQuery(applyScope(supabase.from("crm_workflow_runs").select("*"), context).order("started_at", { ascending: false }).limit(100)),
+    safeQuery(applyScope(supabase.from("crm_appointments").select("*"), context).order("starts_at", { ascending: true }).limit(100)),
+    safeQuery(applyScope(supabase.from("crm_agent_runs").select("*"), context).order("created_at", { ascending: false }).limit(100)),
   ]);
 
   const schemaWarnings = [
@@ -192,5 +204,13 @@ export async function loadCRMContext() {
     recommendations: (recommendations.data || []) as any[],
     metrics,
     schemaWarnings: Array.from(new Set(schemaWarnings)),
+    workspaceWarnings: context?.warnings || [],
   };
+}
+
+function applyScope<TQuery extends { eq: (column: string, value: string) => TQuery }>(
+  query: TQuery,
+  context: WorkspaceContext | null
+) {
+  return context ? applyWorkspaceScope(query, context) : query;
 }

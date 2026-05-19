@@ -7,6 +7,7 @@ import {
   MANAGED_PLANS,
   SELF_SERVICE_BYOK_PLANS,
 } from "@/lib/billing/plans";
+import Footer from "@/components/sections/Footer";
 
 const card =
   "rounded-3xl border border-cyan-400/15 bg-slate-950/70 p-6 backdrop-blur";
@@ -120,6 +121,8 @@ export default function PricingPage() {
           <p><strong className="text-white">What happens after limits or trial end?</strong> Upgrade is required to continue after caps or after 14 days.</p>
         </div>
       </section>
+
+      <Footer />
     </main>
   );
 }

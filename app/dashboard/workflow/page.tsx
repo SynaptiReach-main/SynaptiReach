@@ -3,16 +3,22 @@
 import { useEffect, useState } from "react";
 import {
   Activity,
+  AlertTriangle,
   Bot,
+  CalendarClock,
   CheckCircle2,
+  Clock,
+  Eye,
   GitBranch,
   Loader2,
   Megaphone,
   MessageSquare,
   PlayCircle,
+  ShieldCheck,
   Sparkles,
   Users,
   Workflow,
+  X,
   Zap,
 } from "lucide-react";
 
@@ -22,6 +28,128 @@ function formatDate(value?: string) {
   return Number.isNaN(date.getTime()) ? "" : date.toLocaleString();
 }
 
+const workflowTemplates = [
+  {
+    name: "New lead follow-up workflow",
+    summary: "Creates a review task and draft follow-up when a new lead enters the CRM.",
+    triggerType: "lead_created",
+    condition: "Lead status is new and no owner follow-up exists.",
+    action: "Create review task and draft first-touch message.",
+    actions: ["create_review_task", "draft_email_follow_up", "notify_owner"],
+  },
+  {
+    name: "Missed follow-up reminder",
+    summary: "Flags leads and deals that have gone quiet after the expected follow-up window.",
+    triggerType: "follow_up_overdue",
+    condition: "Open task is overdue or lead has no recent communication.",
+    action: "Create overdue follow-up task for review.",
+    actions: ["create_high_priority_task", "notify_owner"],
+  },
+  {
+    name: "Opened-not-clicked campaign follow-up",
+    summary: "Recommends a lighter follow-up for leads who opened a campaign but did not click.",
+    triggerType: "campaign_open_without_click",
+    condition: "Campaign has opens and zero clicks or matching lead did not click.",
+    action: "Draft follow-up campaign or task for review.",
+    actions: ["create_campaign_recommendation", "draft_follow_up"],
+  },
+  {
+    name: "High-intent lead alert",
+    summary: "Surfaces conversion or request-info events so the owner can act quickly.",
+    triggerType: "high_intent_event",
+    condition: "Lead has conversion, click, request-info, or qualified status signal.",
+    action: "Create alert notification and next-step task.",
+    actions: ["create_notification", "create_priority_task"],
+  },
+  {
+    name: "Appointment confirmation workflow",
+    summary: "Creates a reviewable appointment suggestion when communication indicates a confirmed meeting.",
+    triggerType: "appointment_intent_detected",
+    condition: "Message text indicates a confirmed or requested appointment.",
+    action: "Create appointment draft and notify owner.",
+    actions: ["create_appointment_draft", "notify_owner"],
+  },
+  {
+    name: "Appointment reminder workflow",
+    summary: "Reminds the team to review upcoming internal appointments before they happen.",
+    triggerType: "appointment_upcoming",
+    condition: "Appointment starts within the configured reminder window.",
+    action: "Create internal reminder notification.",
+    actions: ["create_notification", "create_review_task"],
+  },
+  {
+    name: "No-show follow-up workflow",
+    summary: "Creates a review task after no-show appointments so leads do not disappear.",
+    triggerType: "appointment_no_show",
+    condition: "Appointment status is no-show or missed.",
+    action: "Draft no-show follow-up for review.",
+    actions: ["create_review_task", "draft_sms_follow_up"],
+  },
+  {
+    name: "Stale deal recovery workflow",
+    summary: "Flags open deals that have not moved recently and recommends the next action.",
+    triggerType: "deal_stale",
+    condition: "Open deal has no recent update or is past expected close date.",
+    action: "Create deal recovery task and AI recommendation.",
+    actions: ["create_deal_task", "create_ai_recommendation"],
+  },
+  {
+    name: "Re-engagement campaign workflow",
+    summary: "Suggests a campaign draft for cold or inactive leads.",
+    triggerType: "lead_inactive_segment",
+    condition: "Lead is cold, nurture, or inactive and has not engaged recently.",
+    action: "Create reviewable re-engagement campaign recommendation.",
+    actions: ["create_campaign_draft", "create_ai_recommendation"],
+  },
+  {
+    name: "Review request workflow",
+    summary: "Creates a post-conversion review request task for customers marked converted.",
+    triggerType: "lead_converted",
+    condition: "Lead status changed to converted.",
+    action: "Create review request task for manual approval.",
+    actions: ["create_review_task", "draft_email_follow_up"],
+  },
+  {
+    name: "Lead scoring workflow",
+    summary: "Runs safe scoring recommendations from recent lead and campaign activity.",
+    triggerType: "lead_score_review",
+    condition: "Lead has new interaction or stale score.",
+    action: "Create score recommendation without overwriting high-value data.",
+    actions: ["run_lead_scoring_agent", "create_ai_recommendation"],
+  },
+  {
+    name: "Pipeline stage change notification workflow",
+    summary: "Notifies the owner when a deal stage changes or a high-value deal needs attention.",
+    triggerType: "deal_stage_changed",
+    condition: "Deal stage changes or high-value open deal becomes stale.",
+    action: "Create internal notification and follow-up task.",
+    actions: ["create_notification", "create_deal_task"],
+  },
+  {
+    name: "Trial ending and cap warning workflow",
+    summary: "Surfaces trial and usage-cap risks before the user hits a hard limit.",
+    triggerType: "trial_or_usage_warning",
+    condition: "Trial is ending soon or usage reaches warning threshold.",
+    action: "Create notification and billing review task.",
+    actions: ["create_notification", "create_review_task"],
+  },
+  {
+    name: "New communication response workflow",
+    summary: "Creates a review task when a lead replies and needs a response.",
+    triggerType: "new_inbound_communication",
+    condition: "Inbound communication is received or conversation is unread.",
+    action: "Create response task and optional AI draft for review.",
+    actions: ["create_response_task", "draft_email_follow_up"],
+  },
+];
+
+function renderAction(action: any) {
+  if (typeof action === "string") return action.replace(/_/g, " ");
+  if (action?.label) return action.label;
+  if (action?.type) return String(action.type).replace(/_/g, " ");
+  return "Review action";
+}
+
 export default function WorkflowPage() {
   const [data, setData] = useState<any>(null);
   const [agents, setAgents] = useState<any>(null);
@@ -29,6 +157,8 @@ export default function WorkflowPage() {
   const [running, setRunning] = useState(false);
   const [creating, setCreating] = useState(false);
   const [workflowAction, setWorkflowAction] = useState("");
+  const [selectedWorkflow, setSelectedWorkflow] = useState<any>(null);
+  const [lastRunMessage, setLastRunMessage] = useState("");
   const [error, setError] = useState("");
 
   async function loadData(runAgents = false) {
@@ -54,7 +184,14 @@ export default function WorkflowPage() {
       }
 
       setData(dashboardData.data);
-      if (agentData.success) setAgents(agentData);
+      if (agentData.success) {
+        setAgents(agentData);
+        if (runAgents) {
+          setLastRunMessage(
+            `Agent review completed with ${agentData.recommendations?.length || 0} reviewable recommendation${agentData.recommendations?.length === 1 ? "" : "s"}.`
+          );
+        }
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to load workflow data.");
     } finally {
@@ -67,7 +204,7 @@ export default function WorkflowPage() {
     loadData();
   }, []);
 
-  async function createReviewWorkflow() {
+  async function createReviewWorkflow(template = workflowTemplates[0]) {
     try {
       setCreating(true);
       setError("");
@@ -75,17 +212,23 @@ export default function WorkflowPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: "Review-only lead follow-up workflow",
+          name: template.name,
           status: "draft",
-          triggerType: "lead_no_recent_communication",
-          condition: "Lead has no recent outbound communication",
-          action: "Create a task or draft follow-up for review",
-          actions: ["create_review_task", "draft_follow_up"],
-          metadata: { source: "workflow_page" },
+          triggerType: template.triggerType,
+          condition: template.condition,
+          action: template.action,
+          actions: template.actions,
+          metadata: {
+            source: "workflow_page",
+            summary: template.summary,
+            review_gated: true,
+            external_sends: "manual_approval_required",
+          },
         }),
       });
       const json = await response.json();
       if (!response.ok || !json.success) throw new Error(json?.error || "Failed to create workflow.");
+      setLastRunMessage(`Draft workflow created: ${json.workflow?.name || template.name}. Review it before activating.`);
       await loadData();
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to create workflow.");
@@ -105,6 +248,7 @@ export default function WorkflowPage() {
       });
       const json = await response.json();
       if (!response.ok || !json.success) throw new Error(json?.error || "Failed to update workflow.");
+      setLastRunMessage(`Workflow ${status === "active" ? "activated" : status === "paused" ? "paused" : "updated"}: ${workflow.name}.`);
       await loadData();
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to update workflow.");
@@ -124,6 +268,7 @@ export default function WorkflowPage() {
       });
       const json = await response.json();
       if (!response.ok || !json.success) throw new Error(json?.error || "Failed to log workflow run.");
+      setLastRunMessage(`Safe manual test logged for ${workflow.name}. No external messages were sent.`);
       await loadData();
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to log workflow run.");
@@ -146,6 +291,11 @@ export default function WorkflowPage() {
   const followups = agents?.followups || [];
   const topCampaigns = agents?.top_campaigns || [];
   const workflows = data?.workflows || [];
+  const workflowRuns = data?.workflow_runs || data?.workflowRuns || [];
+  const activeWorkflows = workflows.filter((workflow: any) => workflow.status === "active").length;
+  const pausedWorkflows = workflows.filter((workflow: any) => workflow.status === "paused").length;
+  const draftWorkflows = workflows.filter((workflow: any) => workflow.status === "draft").length;
+  const failedRuns = workflows.reduce((sum: number, workflow: any) => sum + Number(workflow.failure_count || 0), 0);
 
   return (
     <main className="min-h-screen text-white">
@@ -175,7 +325,7 @@ export default function WorkflowPage() {
             Run Agent Review
           </button>
           <button
-            onClick={createReviewWorkflow}
+            onClick={() => createReviewWorkflow(workflowTemplates[0])}
             disabled={creating}
             className="rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-5 py-3 font-black text-black flex items-center gap-2"
           >
@@ -186,14 +336,21 @@ export default function WorkflowPage() {
       </section>
 
       {error && <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>}
+      {lastRunMessage && (
+        <div className="mb-6 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4 text-sm text-cyan-100">
+          {lastRunMessage}
+        </div>
+      )}
 
       <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         {[
           ["Leads", metrics.leads.total || 0, Users],
           ["Follow-ups Due", agents?.summary?.followups_due || 0, MessageSquare],
           ["Scheduled Campaigns", metrics.campaigns.scheduled || 0, Megaphone],
-          ["Active Workflows", metrics.workflows?.active || 0, Workflow],
-          ["Workflow Runs", metrics.workflows?.runs || 0, PlayCircle],
+          ["Active Workflows", metrics.workflows?.active || activeWorkflows, Workflow],
+          ["Draft / Paused", `${draftWorkflows}/${pausedWorkflows}`, Clock],
+          ["Failed Runs", failedRuns, AlertTriangle],
+          ["Workflow Runs", metrics.workflows?.runs || workflowRuns.length || 0, PlayCircle],
           ["Agent Confidence", `${Math.round((agents?.confidence || 0) * 100)}%`, Bot],
         ].map(([label, value, Icon]: any) => (
           <div key={label} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
@@ -247,16 +404,37 @@ export default function WorkflowPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 {workflows.map((workflow: any) => (
                   <div key={workflow.id} className="rounded-2xl border border-white/10 bg-black/30 p-5">
-                    <Zap className="mb-3 text-cyan-300" size={20} />
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h3 className="font-black">{workflow.name}</h3>
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <Zap className="text-cyan-300" size={20} />
                       <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-xs text-cyan-100">{workflow.status}</span>
                     </div>
-                    <p className="mt-2 text-sm text-gray-400">{workflow.trigger_type || "Manual review"} - {workflow.action || "Review before running."}</p>
-                    <div className="mt-3 text-xs text-gray-500">Last run: {formatDate(workflow.last_run_at)}</div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="font-black">{workflow.name}</h3>
+                    </div>
+                    <p className="mt-2 text-sm text-gray-400">{workflow.metadata?.summary || workflow.action || "Review before running."}</p>
+                    <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-gray-400">
+                      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                        <div className="text-gray-500">Trigger</div>
+                        <div className="mt-1 font-bold text-white">{workflow.trigger_type || "Manual review"}</div>
+                      </div>
+                      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                        <div className="text-gray-500">Runs</div>
+                        <div className="mt-1 font-bold text-white">{Number(workflow.success_count || 0) + Number(workflow.failure_count || 0)} total</div>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                      <span className="rounded-full border border-green-400/20 bg-green-500/10 px-3 py-1 text-green-100">{workflow.success_count || 0} success</span>
+                      <span className="rounded-full border border-red-400/20 bg-red-500/10 px-3 py-1 text-red-100">{workflow.failure_count || 0} failed</span>
+                    </div>
+                    <div className="mt-3 text-xs text-gray-500">Last run: {formatDate(workflow.last_run_at) || "Never"}</div>
                     <div className="mt-4 flex flex-wrap gap-2">
-                      <button disabled={workflowAction === `${workflow.id}:active`} onClick={() => updateWorkflowStatus(workflow, "active")} className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 disabled:opacity-60">Activate</button>
-                      <button disabled={workflowAction === `${workflow.id}:paused`} onClick={() => updateWorkflowStatus(workflow, "paused")} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-bold text-white disabled:opacity-60">Pause</button>
+                      <button onClick={() => setSelectedWorkflow(workflow)} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-bold text-white flex items-center gap-1">
+                        <Eye size={14} />
+                        Details
+                      </button>
+                      <button disabled={workflowAction === `${workflow.id}:${workflow.status === "active" ? "paused" : "active"}`} onClick={() => updateWorkflowStatus(workflow, workflow.status === "active" ? "paused" : "active")} className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 disabled:opacity-60">
+                        {workflow.status === "active" ? "Pause" : "Activate"}
+                      </button>
                       <button disabled={workflowAction === `${workflow.id}:run`} onClick={() => runWorkflowTest(workflow)} className="rounded-xl border border-green-400/20 bg-green-500/10 px-3 py-2 text-xs font-bold text-green-100 disabled:opacity-60">Log Test Run</button>
                     </div>
                   </div>
@@ -268,24 +446,57 @@ export default function WorkflowPage() {
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
             <div className="flex items-center gap-3 mb-5">
               <GitBranch className="text-cyan-300" size={22} />
-              <h2 className="text-2xl font-black">Reviewable Workflow Cards</h2>
+              <h2 className="text-2xl font-black">Review-Gated Workflow Templates</h2>
+            </div>
+            <div className="mb-5 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4 text-sm text-cyan-100">
+              These templates create draft workflows only. External email, SMS, and social actions stay manual-review gated.
             </div>
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
-                <Zap className="mb-3 text-cyan-300" size={20} />
-                <h3 className="font-black">Lead Follow-Up Workflow</h3>
-                <p className="mt-2 text-sm text-gray-400">{followups.length} real leads currently need follow-up according to agent review.</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
-                <CheckCircle2 className="mb-3 text-cyan-300" size={20} />
-                <h3 className="font-black">Campaign Optimization Workflow</h3>
-                <p className="mt-2 text-sm text-gray-400">{topCampaigns.length} campaigns have enough recent data for review or variant suggestions.</p>
-              </div>
+              {workflowTemplates.map((template) => (
+                <div key={template.name} className="rounded-2xl border border-white/10 bg-black/30 p-5">
+                  <ShieldCheck className="mb-3 text-cyan-300" size={20} />
+                  <h3 className="font-black">{template.name}</h3>
+                  <p className="mt-2 text-sm text-gray-400">{template.summary}</p>
+                  <div className="mt-4 space-y-2 text-xs text-gray-500">
+                    <div><span className="text-gray-300">Trigger:</span> {template.triggerType}</div>
+                    <div><span className="text-gray-300">Condition:</span> {template.condition}</div>
+                    <div><span className="text-gray-300">Action:</span> {template.action}</div>
+                  </div>
+                  <button
+                    disabled={creating}
+                    onClick={() => createReviewWorkflow(template)}
+                    className="mt-4 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 disabled:opacity-60"
+                  >
+                    Create Draft
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
         <div className="space-y-6">
+          <div className="rounded-3xl border border-green-400/20 bg-green-500/[0.05] p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <CalendarClock className="text-green-300" size={20} />
+              <h2 className="text-xl font-black">Live Workflow Signals</h2>
+            </div>
+            <div className="space-y-3 text-sm text-gray-300">
+              <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/30 p-4">
+                <span>Leads needing follow-up</span>
+                <span className="font-black text-white">{followups.length}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/30 p-4">
+                <span>Campaigns ready for review</span>
+                <span className="font-black text-white">{topCampaigns.length}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/30 p-4">
+                <span>Review recommendations</span>
+                <span className="font-black text-white">{recommendations.length}</span>
+              </div>
+            </div>
+          </div>
+
           <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/[0.05] p-6">
             <div className="flex items-center gap-3 mb-5">
               <Activity className="text-cyan-300" size={20} />
@@ -312,6 +523,69 @@ export default function WorkflowPage() {
           </div>
         </div>
       </section>
+
+      {selectedWorkflow && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm md:items-center">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-cyan-400/20 bg-[#050505] p-6 shadow-2xl shadow-cyan-500/10">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <div className="mb-2 inline-flex rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-cyan-200">
+                  Review-gated workflow
+                </div>
+                <h3 className="text-2xl font-black">{selectedWorkflow.name}</h3>
+                <p className="mt-2 text-sm text-gray-400">{selectedWorkflow.metadata?.summary || selectedWorkflow.action || "Review before running."}</p>
+              </div>
+              <button onClick={() => setSelectedWorkflow(null)} className="rounded-full border border-white/10 bg-white/[0.03] p-2 text-gray-300 hover:text-white">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-gray-500">Trigger</div>
+                <div className="mt-2 font-bold text-white">{selectedWorkflow.trigger_type || "Manual review"}</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="text-xs uppercase tracking-[0.18em] text-gray-500">Status</div>
+                <div className="mt-2 font-bold text-white">{selectedWorkflow.status}</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 md:col-span-2">
+                <div className="text-xs uppercase tracking-[0.18em] text-gray-500">Conditions</div>
+                <div className="mt-2 text-sm text-gray-300">{selectedWorkflow.condition || "No saved condition."}</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 md:col-span-2">
+                <div className="text-xs uppercase tracking-[0.18em] text-gray-500">Actions</div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(Array.isArray(selectedWorkflow.actions) && selectedWorkflow.actions.length > 0 ? selectedWorkflow.actions : [selectedWorkflow.action || "Review action"]).map((action: any, index: number) => (
+                    <span key={`${renderAction(action)}-${index}`} className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-xs font-bold text-cyan-100">
+                      {renderAction(action)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-3">
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                <div className="text-2xl font-black">{selectedWorkflow.success_count || 0}</div>
+                <div className="text-xs text-gray-500">Successful review tests</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                <div className="text-2xl font-black">{selectedWorkflow.failure_count || 0}</div>
+                <div className="text-xs text-gray-500">Failed runs</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                <div className="text-sm font-bold">{formatDate(selectedWorkflow.last_run_at) || "Never"}</div>
+                <div className="text-xs text-gray-500">Last run</div>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-green-400/20 bg-green-500/10 p-4 text-sm text-green-100">
+              Manual test runs only write an internal workflow-run log. They do not send email, SMS, or social messages.
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

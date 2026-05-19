@@ -1,16 +1,19 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdmin, friendlySupabaseError } from "@/lib/crm/supabaseAdmin";
+import { applyWorkspaceScope, getWorkspaceContext } from "@/lib/auth/getWorkspaceContext";
 
 export async function GET(request: Request) {
   try {
     const supabase = createSupabaseAdmin();
+    const context = await getWorkspaceContext(request);
     const { searchParams } = new URL(request.url);
     const channel = searchParams.get("channel");
     const status = searchParams.get("status");
 
-    let query = supabase
+    let query = applyWorkspaceScope(supabase
       .from("communications")
       .select("*")
+      , context)
       .order("created_at", { ascending: false })
       .limit(200);
 
@@ -34,6 +37,7 @@ export async function GET(request: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const context = await getWorkspaceContext(req);
 
     if (!body.channel || !body.content) {
       return NextResponse.json(
@@ -46,7 +50,7 @@ export async function POST(req: Request) {
     const { data, error } = await supabase
       .from("communications")
       .insert({
-        workspace_id: body.workspace_id || body.workspaceId || null,
+        workspace_id: body.workspace_id || body.workspaceId || context.workspaceId || null,
         lead_id: body.lead_id || body.leadId || null,
         campaign_id: body.campaign_id || body.campaignId || null,
         channel: body.channel,

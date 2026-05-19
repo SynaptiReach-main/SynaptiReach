@@ -6,6 +6,7 @@ import {
   BarChart3,
   Bot,
   CheckCircle2,
+  CalendarDays,
   Loader2,
   Megaphone,
   MessageSquare,
@@ -72,6 +73,7 @@ export default function AnalyticsPage() {
   const [range, setRange] = useState<RangeKey>("30d");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
 
   async function loadData() {
     try {
@@ -103,6 +105,7 @@ export default function AnalyticsPage() {
     const workflows = (data?.workflows || []).filter((row: any) => inRange(row, "created_at", range));
     const workflowRuns = (data?.workflowRuns || []).filter((row: any) => inRange(row, "started_at", range));
     const agentRuns = (data?.agentRuns || []).filter((row: any) => inRange(row, "created_at", range));
+    const appointments = (data?.appointments || []).filter((row: any) => inRange(row, "starts_at", range));
     const activity = (data?.activity || []).filter((row: any) => inRange(row, "created_at", range));
 
     const campaignDelivered = campaigns.reduce((sum: number, item: any) => sum + Number(item.delivered_count || 0), 0);
@@ -120,6 +123,7 @@ export default function AnalyticsPage() {
       workflows,
       workflowRuns,
       agentRuns,
+      appointments,
       activity,
       campaignDelivered,
       campaignOpened,
@@ -135,6 +139,7 @@ export default function AnalyticsPage() {
         workflows.length ||
         workflowRuns.length ||
         agentRuns.length ||
+        appointments.length ||
         activity.length,
     };
   }, [data, range]);
@@ -150,9 +155,201 @@ export default function AnalyticsPage() {
     value: analytics.communications.filter((item: any) => item.channel === channel).length,
   }));
   const maxCommunication = Math.max(...communicationChannels.map((item) => item.value), 1);
+  const completedTasks = analytics.tasks.filter((task: any) => task.status === "completed").length;
+  const overdueTasks = analytics.tasks.filter((task: any) => {
+    if (task.status === "completed" || !task.due_date) return false;
+    return new Date(task.due_date).getTime() < Date.now();
+  });
+  const completedAppointments = analytics.appointments.filter((appointment: any) =>
+    ["completed", "showed"].includes(appointment.status)
+  ).length;
+  const noShowAppointments = analytics.appointments.filter((appointment: any) =>
+    ["no_show", "no-show"].includes(appointment.status)
+  );
+  const metricCards = [
+    {
+      key: "total_leads",
+      label: "Total Leads",
+      value: formatNumber(analytics.leads.length),
+      icon: Users,
+      records: analytics.leads,
+      context: `${percent(analytics.leads.filter((lead: any) => lead.status === "converted").length, analytics.leads.length)}% converted in ${rangeLabels[range]}.`,
+      action: "Review lead segments",
+      href: "/dashboard/leads",
+    },
+    {
+      key: "conversion_rate",
+      label: "Conversion Rate",
+      value: `${percent(analytics.leads.filter((lead: any) => lead.status === "converted").length, analytics.leads.length)}%`,
+      icon: TrendingUp,
+      records: analytics.leads.filter((lead: any) => ["converted", "qualified", "lost"].includes(lead.status)),
+      context: "Calculated from real lead statuses in the selected date range.",
+      action: "Open leads pipeline",
+      href: "/dashboard/leads",
+    },
+    {
+      key: "campaign_performance",
+      label: "Campaign Performance",
+      value: formatNumber(analytics.campaigns.length),
+      icon: Megaphone,
+      records: analytics.campaigns,
+      context: `${formatNumber(analytics.campaignDelivered)} delivered, ${formatNumber(analytics.campaignOpened)} opened, ${formatNumber(analytics.campaignClicked)} clicked, ${formatNumber(analytics.campaignConverted)} converted.`,
+      action: "Review campaigns",
+      href: "/dashboard/marketing",
+    },
+    {
+      key: "communications",
+      label: "Communication Volume",
+      value: formatNumber(analytics.communications.length),
+      icon: MessageSquare,
+      records: analytics.communications,
+      context: "Includes real email, SMS, social, note, and internal communication records in range.",
+      action: "Open communications",
+      href: "/dashboard/communications",
+    },
+    {
+      key: "pipeline_value",
+      label: "Pipeline Value",
+      value: formatCurrency(analytics.pipelineValue),
+      icon: TrendingUp,
+      records: analytics.deals,
+      context: `${formatNumber(analytics.deals.filter((deal: any) => deal.status === "open").length)} open deals, ${formatNumber(analytics.deals.filter((deal: any) => deal.status === "won" || deal.stage === "won").length)} won, ${formatNumber(analytics.deals.filter((deal: any) => deal.status === "lost" || deal.stage === "lost").length)} lost.`,
+      action: "Open pipeline",
+      href: "/dashboard/pipeline",
+    },
+    {
+      key: "workflow_health",
+      label: "Workflow Health",
+      value: formatNumber(analytics.workflowRuns.length),
+      icon: Workflow,
+      records: analytics.workflowRuns,
+      context: `${formatNumber(analytics.workflowRuns.filter((run: any) => run.status === "failed").length)} failed workflow runs in range.`,
+      action: "Review workflows",
+      href: "/dashboard/workflow",
+    },
+    {
+      key: "task_health",
+      label: "Task Completion",
+      value: `${percent(completedTasks, analytics.tasks.length)}%`,
+      icon: CheckCircle2,
+      records: analytics.tasks,
+      context: `${formatNumber(overdueTasks.length)} overdue tasks and ${formatNumber(completedTasks)} completed tasks in range.`,
+      action: "Open tasks",
+      href: "/dashboard/tasks",
+    },
+    {
+      key: "appointments",
+      label: "Appointments",
+      value: formatNumber(analytics.appointments.length),
+      icon: CalendarDays,
+      records: analytics.appointments,
+      context: `${formatNumber(completedAppointments)} completed and ${formatNumber(noShowAppointments.length)} no-show appointments in range.`,
+      action: "Open calendar",
+      href: "/dashboard/calendar",
+    },
+    {
+      key: "ai_agents",
+      label: "AI Agent Activity",
+      value: formatNumber(analytics.agentRuns.length),
+      icon: Bot,
+      records: analytics.agentRuns,
+      context: `${formatNumber(analytics.agentRuns.filter((run: any) => run.status === "failed").length)} failed agent runs in range. Provider metadata is shown when available.`,
+      action: "Open AI Assistant",
+      href: "/dashboard/ai_assistant",
+    },
+    {
+      key: "activity",
+      label: "Activity Events",
+      value: formatNumber(analytics.activity.length),
+      icon: Activity,
+      records: analytics.activity,
+      context: "Real campaign and CRM activity records in the selected range.",
+      action: "Review dashboard",
+      href: "/dashboard",
+    },
+  ];
+  const selectedMetricCard = metricCards.find((item) => item.key === selectedMetric);
 
   return (
     <main className="min-h-screen text-white">
+      {selectedMetricCard && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-3xl border border-cyan-400/20 bg-slate-950 shadow-2xl shadow-cyan-500/20">
+            <div className="flex items-start justify-between gap-4 border-b border-cyan-400/10 p-5">
+              <div>
+                <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">
+                  Analytics Detail - {rangeLabels[range]}
+                </div>
+                <h2 className="mt-1 text-2xl font-black">{selectedMetricCard.label}</h2>
+                <p className="mt-2 text-sm leading-relaxed text-cyan-50/60">
+                  {selectedMetricCard.context}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedMetric(null)}
+                className="rounded-2xl border border-white/10 px-3 py-2 text-sm font-bold text-cyan-100 hover:bg-white/5"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="grid max-h-[62vh] gap-4 overflow-y-auto p-5 lg:grid-cols-[0.8fr_1.2fr]">
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                  <div className="text-sm text-gray-500">Current value</div>
+                  <div className="mt-2 text-3xl font-black text-white">{selectedMetricCard.value}</div>
+                </div>
+                <div className="rounded-2xl border border-cyan-400/15 bg-cyan-500/[0.05] p-4">
+                  <div className="text-sm font-bold text-cyan-100">Recommended action</div>
+                  <p className="mt-2 text-sm text-cyan-50/60">{selectedMetricCard.action}</p>
+                  <a
+                    href={selectedMetricCard.href}
+                    className="mt-4 inline-flex rounded-xl bg-gradient-to-r from-cyan-400 to-green-400 px-4 py-2 text-sm font-black text-black"
+                  >
+                    Open related page
+                  </a>
+                </div>
+                <button
+                  onClick={() => navigator.clipboard?.writeText(JSON.stringify(selectedMetricCard.records, null, 2))}
+                  className="w-full rounded-2xl border border-cyan-400/20 px-4 py-3 text-sm font-bold text-cyan-100 hover:bg-cyan-500/10"
+                >
+                  Copy records JSON
+                </button>
+              </div>
+
+              <div>
+                <h3 className="mb-3 text-sm font-black uppercase tracking-[0.18em] text-cyan-200">
+                  Related Records
+                </h3>
+                {selectedMetricCard.records.length === 0 ? (
+                  <div className="rounded-2xl border border-white/10 bg-black/30 p-8 text-center text-sm text-gray-400">
+                    No real records are available for this metric in the selected range.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {selectedMetricCard.records.slice(0, 60).map((record: any, index: number) => (
+                      <div key={record.id || index} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                        <div className="font-bold text-white">
+                          {record.name || record.title || record.subject || record.email || record.action || record.type || record.agent || "CRM record"}
+                        </div>
+                        <div className="mt-1 text-sm text-gray-500">
+                          {record.status || record.stage || record.channel || record.provider || record.source || "No status"}
+                          {record.value ? ` - ${formatCurrency(Number(record.value || 0))}` : ""}
+                        </div>
+                        <div className="mt-2 text-xs text-gray-600">
+                          {record.created_at || record.started_at || record.starts_at
+                            ? new Date(record.created_at || record.started_at || record.starts_at).toLocaleString()
+                            : "No timestamp"}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <section className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-cyan-500/20 bg-cyan-500/10">
@@ -217,19 +414,14 @@ export default function AnalyticsPage() {
       ) : (
         <div className="space-y-6">
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {[
-              { label: "Leads Created", value: formatNumber(analytics.leads.length), icon: Users },
-              { label: "Pipeline Value", value: formatCurrency(analytics.pipelineValue), icon: TrendingUp },
-              { label: "Campaigns", value: formatNumber(analytics.campaigns.length), icon: Megaphone },
-              { label: "AI Agent Runs", value: formatNumber(analytics.agentRuns.length), icon: Bot },
-              { label: "Communications", value: formatNumber(analytics.communications.length), icon: MessageSquare },
-              { label: "Workflow Runs", value: formatNumber(analytics.workflowRuns.length), icon: Workflow },
-              { label: "Open Tasks", value: formatNumber(analytics.tasks.filter((task: any) => task.status === "open").length), icon: CheckCircle2 },
-              { label: "Activity Events", value: formatNumber(analytics.activity.length), icon: Activity },
-            ].map((item) => {
+            {metricCards.map((item) => {
               const Icon = item.icon;
               return (
-                <div key={item.label} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+                <button
+                  key={item.label}
+                  onClick={() => setSelectedMetric(item.key)}
+                  className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-left transition hover:-translate-y-1 hover:border-cyan-400/35 hover:bg-cyan-500/10 hover:shadow-lg hover:shadow-cyan-500/10"
+                >
                   <div className="mb-4 flex items-center justify-between">
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-400/15 bg-cyan-500/10">
                       <Icon className="text-cyan-300" size={20} />
@@ -237,7 +429,7 @@ export default function AnalyticsPage() {
                   </div>
                   <div className="text-2xl font-black">{item.value}</div>
                   <div className="mt-1 text-sm text-gray-500">{item.label}</div>
-                </div>
+                </button>
               );
             })}
           </section>

@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createSupabaseAdmin, friendlySupabaseError } from "@/lib/crm/supabaseAdmin";
+import { applyWorkspaceScope, getWorkspaceContext } from "@/lib/auth/getWorkspaceContext";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-);
+const supabase = createSupabaseAdmin();
 
 function normalizeScheduledAt(
   sendDate?: string,
@@ -42,28 +40,26 @@ function normalizeScheduledAt(
   return { scheduledAt: parsed.toISOString() };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const { data, error } = await supabase
+    const context = await getWorkspaceContext(request);
+    const { data, error } = await applyWorkspaceScope(supabase
       .from("marketing_campaigns")
       .select("*")
+      , context)
       .order("created_at", { ascending: false });
 
-    if (error) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 500 }
-      );
-    }
+    if (error) throw error;
 
     return NextResponse.json({
       success: true,
       campaigns: data || [],
     });
   } catch (error: any) {
+    const friendly = friendlySupabaseError(error);
     return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
+      { success: false, error: friendly.message, missingSchema: friendly.missingSchema },
+      { status: friendly.missingSchema ? 501 : 500 }
     );
   }
 }
@@ -71,6 +67,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const context = await getWorkspaceContext(req);
 
     const {
       type,
@@ -119,26 +116,23 @@ export async function POST(req: Request) {
         content,
         attachments: attachments || [],
         status: status || "scheduled",
+        workspace_id: body.workspace_id || body.workspaceId || context.workspaceId || null,
         created_at: new Date().toISOString(),
       })
       .select()
       .single();
 
-    if (error) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 500 }
-      );
-    }
+    if (error) throw error;
 
     return NextResponse.json({
       success: true,
       campaign: data,
     });
   } catch (error: any) {
+    const friendly = friendlySupabaseError(error);
     return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
+      { success: false, error: friendly.message, missingSchema: friendly.missingSchema },
+      { status: friendly.missingSchema ? 501 : 500 }
     );
   }
 }
@@ -146,6 +140,7 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   try {
     const body = await req.json();
+    const context = await getWorkspaceContext(req);
 
     const {
       id,
@@ -199,24 +194,21 @@ export async function PATCH(req: Request) {
       .from("marketing_campaigns")
       .update(updates)
       .eq("id", id)
+      .match(context.workspaceId ? { workspace_id: context.workspaceId } : {})
       .select()
       .single();
 
-    if (error) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 500 }
-      );
-    }
+    if (error) throw error;
 
     return NextResponse.json({
       success: true,
       campaign: data,
     });
   } catch (error: any) {
+    const friendly = friendlySupabaseError(error);
     return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
+      { success: false, error: friendly.message, missingSchema: friendly.missingSchema },
+      { status: friendly.missingSchema ? 501 : 500 }
     );
   }
 }
@@ -224,6 +216,7 @@ export async function PATCH(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
+    const context = await getWorkspaceContext(req);
     const id = searchParams.get("id");
 
     if (!id) {
@@ -237,24 +230,21 @@ export async function DELETE(req: Request) {
       .from("marketing_campaigns")
       .update({ status: "cancelled" })
       .eq("id", id)
+      .match(context.workspaceId ? { workspace_id: context.workspaceId } : {})
       .select()
       .single();
 
-    if (error) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 500 }
-      );
-    }
+    if (error) throw error;
 
     return NextResponse.json({
       success: true,
       campaign: data,
     });
   } catch (error: any) {
+    const friendly = friendlySupabaseError(error);
     return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
+      { success: false, error: friendly.message, missingSchema: friendly.missingSchema },
+      { status: friendly.missingSchema ? 501 : 500 }
     );
   }
 }

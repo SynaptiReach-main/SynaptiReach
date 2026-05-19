@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bot, Loader2, Mail, MessageSquare, Phone, Search, Send, Share2 } from "lucide-react";
+import { Bot, Eye, Loader2, Mail, MessageSquare, Phone, Search, Send, Share2, X } from "lucide-react";
 
 const channels = ["all", "email", "sms", "social", "call", "note", "internal"];
 const statuses = ["all", "draft", "scheduled", "sent", "failed", "received"];
@@ -16,6 +16,11 @@ export default function CommunicationsPage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [error, setError] = useState("");
   const [aiMeta, setAiMeta] = useState<any>(null);
+  const [leads, setLeads] = useState<any[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<any>(null);
+  const [reply, setReply] = useState({ channel: "email", subject: "", content: "" });
+  const [replyAiMeta, setReplyAiMeta] = useState<any>(null);
+  const [replyAiLoading, setReplyAiLoading] = useState(false);
   const [form, setForm] = useState({
     channel: "email",
     direction: "outbound",
@@ -31,16 +36,19 @@ export default function CommunicationsPage() {
     try {
       setLoading(true);
       setError("");
-      const response = await fetch(
-        `/api/crm/communications?channel=${channel}&status=${status}`
-      );
+      const [response, dashboardResponse] = await Promise.all([
+        fetch(`/api/crm/communications?channel=${channel}&status=${status}`),
+        fetch("/api/crm/dashboard"),
+      ]);
       const data = await response.json();
+      const dashboardData = await dashboardResponse.json().catch(() => ({}));
 
       if (!response.ok || !data.success) {
         throw new Error(data?.error || "Failed to load communications.");
       }
 
       setCommunications(data.communications || data.data || []);
+      if (dashboardData?.success) setLeads(dashboardData.data?.leads || []);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to load communications.");
     } finally {
@@ -84,6 +92,43 @@ export default function CommunicationsPage() {
     }
   }
 
+  async function draftReplyWithAI() {
+    if (!selectedConversation) return;
+    try {
+      setReplyAiLoading(true);
+      setError("");
+      const recent = selectedConversation.messages
+        .slice(-4)
+        .map((message: any) => `${message.direction || "unknown"} ${message.channel}: ${message.content || message.subject || ""}`)
+        .join("\n");
+      const response = await fetch("/api/marketing/ai/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: `Draft a ${reply.channel} response for ${selectedConversation.name}. Recent conversation:\n${recent}\nGoal: move the relationship forward without claiming anything not in the CRM.`,
+          system:
+            "You are SynaptiReach's communication drafting agent. Draft concise review-ready CRM outreach. Return only the message content.",
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data?.error || "AI reply draft failed.");
+      }
+
+      setReply((current) => ({ ...current, content: data.text || "" }));
+      setReplyAiMeta({
+        provider: data.provider,
+        model: data.model,
+        fallback_used: data.fallback_used,
+      });
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "AI reply draft failed.");
+    } finally {
+      setReplyAiLoading(false);
+    }
+  }
+
   async function saveCommunication() {
     try {
       setSubmitting(true);
@@ -124,6 +169,54 @@ export default function CommunicationsPage() {
     }
   }
 
+  async function saveConversationReply(status: "draft" | "scheduled" = "draft") {
+    if (!selectedConversation) return;
+    try {
+      setSubmitting(true);
+      setError("");
+      if (!reply.content.trim()) {
+        setError("Enter a reply before saving.");
+        return;
+      }
+
+      const response = await fetch("/api/crm/communications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          channel: reply.channel,
+          direction: "outbound",
+          recipient: selectedConversation.recipient || "",
+          subject: reply.subject || selectedConversation.subject || "",
+          content: reply.content,
+          status,
+          lead_id: selectedConversation.lead_id || "",
+          campaign_id: selectedConversation.campaign_id || "",
+          metadata: {
+            conversation_key: selectedConversation.key,
+            review_gated: true,
+            source: "communications_conversation_drawer",
+          },
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data?.error || "Failed to save reply.");
+      }
+
+      setReply({ channel: "email", subject: "", content: "" });
+      setReplyAiMeta(null);
+      await loadData();
+      setSelectedConversation(null);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to save reply.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const leadById = new Map(leads.map((lead) => [lead.id, lead]));
+
   const stats = {
     total: communications.length,
     email: communications.filter((item) => item.channel === "email").length,
@@ -143,6 +236,48 @@ export default function CommunicationsPage() {
       .filter(Boolean)
       .some((value) => String(value).toLowerCase().includes(q));
   });
+
+  const conversations = Array.from(
+    visibleCommunications.reduce((map, item) => {
+      const recipientKey = item.recipient ? String(item.recipient).toLowerCase() : "";
+      const key = item.lead_id ? `lead:${item.lead_id}` : recipientKey ? `recipient:${recipientKey}` : `communication:${item.id}`;
+      const lead = item.lead_id ? leadById.get(item.lead_id) : null;
+      const current = map.get(key) || {
+        key,
+        lead_id: item.lead_id || null,
+        campaign_id: item.campaign_id || null,
+        name: lead?.name || item.recipient || item.subject || "Unlinked contact",
+        recipient: item.recipient || lead?.email || lead?.phone || "",
+        subject: item.subject || "",
+        channel: item.channel || "email",
+        status: item.status || "draft",
+        unread: 0,
+        latest_at: item.created_at,
+        latest_preview: item.content || item.subject || "",
+        messages: [],
+      };
+      current.messages.push(item);
+      current.unread += item.direction === "inbound" || item.status === "received" ? 1 : 0;
+      const currentTime = current.latest_at ? new Date(current.latest_at).getTime() : 0;
+      const itemTime = item.created_at ? new Date(item.created_at).getTime() : 0;
+      if (itemTime >= currentTime) {
+        current.latest_at = item.created_at;
+        current.latest_preview = item.content || item.subject || "";
+        current.channel = item.channel || current.channel;
+        current.status = item.status || current.status;
+        current.campaign_id = item.campaign_id || current.campaign_id;
+      }
+      map.set(key, current);
+      return map;
+    }, new Map<string, any>()).values()
+  )
+    .map((conversation: any) => ({
+      ...conversation,
+      messages: conversation.messages.sort(
+        (a: any, b: any) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
+      ),
+    }))
+    .sort((a: any, b: any) => new Date(b.latest_at || 0).getTime() - new Date(a.latest_at || 0).getTime());
 
   return (
     <main className="min-h-screen text-white">
@@ -283,6 +418,135 @@ export default function CommunicationsPage() {
           </div>
         </div>
       </section>
+
+      <section className="mt-6 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+        <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-2xl font-black">Conversation Chains</h2>
+            <p className="mt-1 text-sm text-gray-400">
+              Grouped from real CRM communication records by lead or recipient. Replies are saved as review-gated drafts.
+            </p>
+          </div>
+          <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-xs font-bold text-cyan-100">
+            {conversations.length} chain{conversations.length === 1 ? "" : "s"}
+          </span>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center p-10"><Loader2 className="animate-spin text-cyan-300" /></div>
+        ) : conversations.length === 0 ? (
+          <div className="rounded-2xl border border-white/10 bg-black/30 p-8 text-center text-gray-400">
+            No conversation chains match the current filters. Save or import real communications to build timelines.
+          </div>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-2">
+            {conversations.map((conversation: any) => (
+              <button
+                key={conversation.key}
+                onClick={() => {
+                  setSelectedConversation(conversation);
+                  setReply({
+                    channel: ["email", "sms"].includes(conversation.channel) ? conversation.channel : "email",
+                    subject: conversation.subject || "",
+                    content: "",
+                  });
+                  setReplyAiMeta(null);
+                }}
+                className="rounded-2xl border border-white/10 bg-black/30 p-4 text-left transition hover:border-cyan-400/30 hover:bg-cyan-500/[0.04]"
+              >
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+                  <div className="font-black text-white">{conversation.name}</div>
+                  <div className="text-xs text-gray-500">{conversation.latest_at ? new Date(conversation.latest_at).toLocaleString() : ""}</div>
+                </div>
+                <div className="mb-3 text-sm text-gray-400 line-clamp-2">{conversation.latest_preview || "No preview available."}</div>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 font-bold text-cyan-100">{conversation.channel}</span>
+                  <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-gray-300">{conversation.status}</span>
+                  <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-gray-300">{conversation.messages.length} messages</span>
+                  {conversation.unread > 0 && <span className="rounded-full border border-green-400/20 bg-green-500/10 px-3 py-1 font-bold text-green-100">{conversation.unread} unread</span>}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {selectedConversation && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm md:items-center">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-cyan-400/20 bg-[#050505] p-6 shadow-2xl shadow-cyan-500/10">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-cyan-200">
+                  <Eye size={14} />
+                  Conversation
+                </div>
+                <h3 className="text-2xl font-black">{selectedConversation.name}</h3>
+                <p className="mt-2 text-sm text-gray-400">
+                  {selectedConversation.recipient || "No recipient"} {selectedConversation.lead_id ? "- linked lead" : "- unlinked contact"}
+                </p>
+              </div>
+              <button onClick={() => setSelectedConversation(null)} className="rounded-full border border-white/10 bg-white/[0.03] p-2 text-gray-300 hover:text-white">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+              <div className="space-y-3">
+                {selectedConversation.messages.map((message: any) => (
+                  <div
+                    key={message.id}
+                    className={`rounded-2xl border p-4 ${
+                      message.direction === "inbound" || message.status === "received"
+                        ? "border-cyan-400/20 bg-cyan-500/10"
+                        : "border-white/10 bg-white/[0.03]"
+                    }`}
+                  >
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-sm font-bold text-white">{message.subject || `${message.channel} message`}</div>
+                      <div className="text-xs text-gray-500">{message.created_at ? new Date(message.created_at).toLocaleString() : ""}</div>
+                    </div>
+                    <div className="mb-2 flex flex-wrap gap-2 text-xs">
+                      <span className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-gray-300">{message.channel}</span>
+                      <span className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-gray-300">{message.direction || "outbound"}</span>
+                      <span className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-gray-300">{message.status || "draft"}</span>
+                    </div>
+                    <div className="whitespace-pre-wrap text-sm text-gray-300">{message.content || ""}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/[0.05] p-5">
+                <h4 className="mb-4 text-lg font-black">Draft Response</h4>
+                <div className="space-y-3">
+                  <select value={reply.channel} onChange={(event) => setReply({ ...reply, channel: event.target.value })} className="w-full rounded-2xl border border-white/10 bg-black/30 p-3 text-white">
+                    <option>email</option>
+                    <option>sms</option>
+                  </select>
+                  <input value={reply.subject} onChange={(event) => setReply({ ...reply, subject: event.target.value })} placeholder="Subject" className="w-full rounded-2xl border border-white/10 bg-black/30 p-3 text-white" />
+                  <textarea value={reply.content} onChange={(event) => setReply({ ...reply, content: event.target.value })} placeholder="Review-gated response draft" className="min-h-[180px] w-full rounded-2xl border border-white/10 bg-black/30 p-3 text-white" />
+                  {replyAiMeta && (
+                    <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-xs text-cyan-100">
+                      Drafted by {replyAiMeta.provider || "AI"} {replyAiMeta.model ? `- ${replyAiMeta.model}` : ""}{replyAiMeta.fallback_used ? " using fallback" : ""}
+                    </div>
+                  )}
+                  <button onClick={draftReplyWithAI} disabled={replyAiLoading || submitting} className="w-full rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3 font-bold text-cyan-100 disabled:cursor-not-allowed disabled:opacity-60">
+                    {replyAiLoading ? "Drafting..." : "Draft Reply with AI"}
+                  </button>
+                  <button onClick={() => saveConversationReply("draft")} disabled={submitting || !reply.content.trim()} className="w-full rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 p-3 font-black text-black disabled:cursor-not-allowed disabled:opacity-60">
+                    Save Review Draft
+                  </button>
+                  <button onClick={() => saveConversationReply("scheduled")} disabled={submitting || !reply.content.trim()} className="w-full rounded-2xl border border-white/10 bg-white/[0.03] p-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-60">
+                    Queue for Review
+                  </button>
+                  <p className="text-xs text-gray-500">
+                    External sending remains review-gated. These actions save real communication records and do not contact the lead automatically.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdmin, friendlySupabaseError } from "@/lib/crm/supabaseAdmin";
+import { applyWorkspaceScope, getWorkspaceContext } from "@/lib/auth/getWorkspaceContext";
 
 const VALID_STATUSES = new Set([
   "new",
@@ -30,14 +31,15 @@ function normalizeLead(body: any) {
 export async function GET(request: Request) {
   try {
     const supabase = createSupabaseAdmin();
+    const context = await getWorkspaceContext(request);
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const search = searchParams.get("search")?.toLowerCase();
 
-    let query = supabase
+    let query = applyWorkspaceScope(supabase
       .from("leads")
       .select("*")
-      .eq("archived", false)
+      .eq("archived", false), context)
       .order("created_at", { ascending: false });
 
     if (status && status !== "all") {
@@ -69,6 +71,7 @@ export async function GET(request: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const context = await getWorkspaceContext(req);
 
     if (!body.name && !body.email && !body.phone) {
       return NextResponse.json(
@@ -87,7 +90,7 @@ export async function POST(req: Request) {
     const supabase = createSupabaseAdmin();
     const { data, error } = await supabase
       .from("leads")
-      .insert(normalizeLead(body))
+      .insert({ ...normalizeLead(body), workspace_id: body.workspace_id || body.workspaceId || context.workspaceId || null })
       .select()
       .single();
 
@@ -106,6 +109,7 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   try {
     const body = await req.json();
+    const context = await getWorkspaceContext(req);
 
     if (!body.id) {
       return NextResponse.json(
@@ -129,6 +133,7 @@ export async function PATCH(req: Request) {
       .from("leads")
       .update(updates)
       .eq("id", body.id)
+      .match(context.workspaceId ? { workspace_id: context.workspaceId } : {})
       .select()
       .single();
 
@@ -147,6 +152,7 @@ export async function PATCH(req: Request) {
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+    const context = await getWorkspaceContext(request);
     const id = searchParams.get("id");
 
     if (!id) {
@@ -161,6 +167,7 @@ export async function DELETE(request: Request) {
       .from("leads")
       .update({ archived: true })
       .eq("id", id)
+      .match(context.workspaceId ? { workspace_id: context.workspaceId } : {})
       .select()
       .single();
 

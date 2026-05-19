@@ -59,6 +59,9 @@ function scoreLabel(score: number) {
 export default function LeadsPage() {
   const [leads, setLeads] = useState<any[]>([]);
   const [communications, setCommunications] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [deals, setDeals] = useState<any[]>([]);
+  const [campaignInteractions, setCampaignInteractions] = useState<any[]>([]);
   const [activity, setActivity] = useState<any[]>([]);
   const [agentData, setAgentData] = useState<any>(null);
   const [selected, setSelected] = useState<any | null>(null);
@@ -92,6 +95,14 @@ export default function LeadsPage() {
       const leadsData = await leadsRes.json();
       const commsData = await commsRes.json();
       const agentsData = await agentsRes.json();
+      const [tasksRes, dealsRes, dashboardRes] = await Promise.all([
+        fetch("/api/crm/tasks"),
+        fetch("/api/crm/deals"),
+        fetch("/api/crm/dashboard"),
+      ]);
+      const tasksData = await tasksRes.json();
+      const dealsData = await dealsRes.json();
+      const dashboardData = await dashboardRes.json();
 
       if (!leadsRes.ok || !leadsData.success) {
         throw new Error(leadsData?.error || "Failed to load leads.");
@@ -99,6 +110,14 @@ export default function LeadsPage() {
 
       setLeads(leadsData.leads || leadsData.data || []);
       setCommunications(commsData.communications || commsData.data || []);
+      setTasks(tasksData.tasks || tasksData.data || []);
+      setDeals(dealsData.deals || dealsData.data || []);
+      setCampaignInteractions(
+        [
+          ...(dashboardData?.data?.activity || []),
+          ...(dashboardData?.data?.campaigns || []),
+        ]
+      );
       if (agentsData.success) setAgentData(agentsData);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to load leads.");
@@ -273,6 +292,20 @@ export default function LeadsPage() {
   const leadComms = selected
     ? communications.filter((item) => item.lead_id === selected.id)
     : [];
+  const leadTasks = selected ? tasks.filter((item) => item.lead_id === selected.id) : [];
+  const leadDeals = selected ? deals.filter((item) => item.lead_id === selected.id) : [];
+  const leadCampaignInteractions = selected
+    ? campaignInteractions.filter((item) => {
+        const metadata = item.metadata || {};
+        return (
+          item.lead_id === selected.id ||
+          metadata.lead_id === selected.id ||
+          metadata.email === selected.email ||
+          metadata.lead_email === selected.email ||
+          (selected.email && String(item.message || item.details || "").includes(selected.email))
+        );
+      })
+    : [];
   const agentLead = selected
     ? (agentData?.scored_leads || []).find((lead: any) => lead.id === selected.id)
     : null;
@@ -339,6 +372,78 @@ export default function LeadsPage() {
       await updateStatus(lead, "qualified");
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to create deal.");
+    } finally {
+      setActionLoading("");
+    }
+  }
+
+  async function draftMessage(lead: any) {
+    try {
+      setActionLoading("draft");
+      setError("");
+      const response = await fetch("/api/crm/communications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lead_id: lead.id,
+          channel: lead.phone ? "sms" : "email",
+          recipient: lead.email || lead.phone || null,
+          subject: lead.email ? `Follow-up for ${lead.name || "your request"}` : null,
+          content: agentLead
+            ? `Hi ${lead.name || "there"}, following up because ${agentLead.temperature} engagement was detected.`
+            : `Hi ${lead.name || "there"}, following up from SynaptiReach.`,
+          status: "draft",
+          metadata: { source: "lead_detail_panel", review_required: true },
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data?.error || "Failed to create draft.");
+      await fetch("/api/crm/leads/activity", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lead_id: lead.id,
+          type: "communication",
+          title: "Draft message created",
+          details: "Review-gated draft communication was created from the lead profile.",
+          metadata: { communication_id: data.communication?.id },
+        }),
+      });
+      await loadData();
+      await loadLeadActivity(lead.id);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to create draft.");
+    } finally {
+      setActionLoading("");
+    }
+  }
+
+  async function runAINextStepReview(lead: any) {
+    try {
+      setActionLoading("ai-review");
+      setError("");
+      const response = await fetch("/api/crm/agents/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agent: "lead_scoring", lead_id: lead.id }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data?.error || "Failed to run AI review.");
+      setAgentData(data);
+      await fetch("/api/crm/leads/activity", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lead_id: lead.id,
+          type: "ai_review",
+          title: "AI next-step review",
+          details: data.summary?.text || data.summary || "AI agent review completed for this lead.",
+          metadata: { provider: data.provider, model: data.model, fallback_used: data.fallback_used },
+        }),
+      });
+      await loadLeadActivity(lead.id);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to run AI review.");
     } finally {
       setActionLoading("");
     }
@@ -513,6 +618,13 @@ export default function LeadsPage() {
                     ? `${agentLead.temperature} lead. Recommended score ${agentLead.recommended_score}. ${agentLead.temperature === "hot" ? "Prioritize direct follow-up." : agentLead.temperature === "warm" ? "Send a value-focused nurture message." : "Add to a low-pressure nurture segment."}`
                     : "Run CRM agents or add more activity to generate a stronger recommendation."}
                 </p>
+                <button
+                  onClick={() => runAINextStepReview(selected)}
+                  disabled={actionLoading === "ai-review"}
+                  className="mt-3 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 disabled:opacity-60"
+                >
+                  {actionLoading === "ai-review" ? "Reviewing..." : "Run AI next-step review"}
+                </button>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -532,6 +644,10 @@ export default function LeadsPage() {
                   {actionLoading === "deal" ? <Loader2 className="animate-spin" size={16} /> : <BriefcaseBusiness size={16} />}
                   Convert To Deal
                 </button>
+                <button disabled={actionLoading === "draft"} onClick={() => draftMessage(selected)} className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3 font-bold text-cyan-100 flex items-center justify-center gap-2 disabled:opacity-60 md:col-span-2">
+                  {actionLoading === "draft" ? <Loader2 className="animate-spin" size={16} /> : <Mail size={16} />}
+                  Draft Review-Gated Message
+                </button>
               </div>
 
               <div>
@@ -543,7 +659,51 @@ export default function LeadsPage() {
               </div>
 
               <div>
-                <div className="font-bold text-white mb-3">Activity History</div>
+                <div className="font-bold text-white mb-3">Tasks / Follow-Ups</div>
+                <div className="space-y-2">
+                  {leadTasks.length === 0 ? (
+                    <div className="text-sm text-gray-500">No linked tasks yet.</div>
+                  ) : leadTasks.map((task) => (
+                    <div key={task.id} className="rounded-2xl border border-white/10 bg-black/30 p-3">
+                      <div className="text-sm font-bold text-white">{task.title}</div>
+                      <div className="text-sm text-gray-400">{task.priority || "medium"} - {task.status}</div>
+                      <div className="text-xs text-gray-600 mt-1">{formatDate(task.due_date)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="font-bold text-white mb-3">Linked Deals</div>
+                <div className="space-y-2">
+                  {leadDeals.length === 0 ? (
+                    <div className="text-sm text-gray-500">No linked deals yet.</div>
+                  ) : leadDeals.map((deal) => (
+                    <div key={deal.id} className="rounded-2xl border border-white/10 bg-black/30 p-3">
+                      <div className="text-sm font-bold text-white">{deal.title}</div>
+                      <div className="text-sm text-gray-400">{deal.stage || "new"} - ${Number(deal.value || 0).toLocaleString()}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="font-bold text-white mb-3">Campaign Interactions</div>
+                <div className="space-y-2">
+                  {leadCampaignInteractions.length === 0 ? (
+                    <div className="text-sm text-gray-500">No campaign interactions found for this lead.</div>
+                  ) : leadCampaignInteractions.slice(0, 6).map((item, index) => (
+                    <div key={item.id || index} className="rounded-2xl border border-white/10 bg-black/30 p-3">
+                      <div className="text-sm font-bold text-white">{item.subject || item.action || item.type || "Campaign interaction"}</div>
+                      <div className="text-sm text-gray-400">{item.details || item.message || item.status || "No details recorded."}</div>
+                      <div className="text-xs text-gray-600 mt-1">{formatDate(item.created_at || item.send_date)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="font-bold text-white mb-3">Activity & Communication History</div>
                 <div className="space-y-2">
                   {activity.length === 0 && leadComms.length === 0 ? <div className="text-sm text-gray-500">No activity yet.</div> : null}
                   {activity.map((item) => (

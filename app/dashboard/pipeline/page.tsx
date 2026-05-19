@@ -57,10 +57,31 @@ export default function PipelinePage() {
 
   const totals = useMemo(() => ({
     value: filtered.reduce((sum, deal) => sum + Number(deal.value || 0), 0),
+    weighted: filtered.reduce((sum, deal) => sum + Number(deal.value || 0) * (Number(deal.probability || 0) / 100), 0),
     open: filtered.filter((deal) => deal.status === "open").length,
     won: filtered.filter((deal) => deal.stage === "won" || deal.status === "won").length,
+    lost: filtered.filter((deal) => deal.stage === "lost" || deal.status === "lost").length,
     stale: filtered.filter((deal) => isStaleDeal(deal)).length,
   }), [filtered]);
+  const stageSummary = useMemo(() => {
+    const rows = stages.map((stage) => {
+      const stageDeals = filtered.filter((deal) => deal.stage === stage);
+      const value = stageDeals.reduce((sum, deal) => sum + Number(deal.value || 0), 0);
+      const weighted = stageDeals.reduce(
+        (sum, deal) => sum + Number(deal.value || 0) * (Number(deal.probability || 0) / 100),
+        0
+      );
+      return {
+        stage,
+        count: stageDeals.length,
+        value,
+        weighted,
+        stale: stageDeals.filter((deal) => isStaleDeal(deal)).length,
+      };
+    });
+    const maxValue = Math.max(...rows.map((row) => row.value), 1);
+    return rows.map((row) => ({ ...row, width: Math.max(6, Math.round((row.value / maxValue) * 100)) }));
+  }, [filtered]);
 
   function statusForStage(stage: string) {
     if (stage === "won") return "won";
@@ -191,13 +212,72 @@ export default function PipelinePage() {
       {error && <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>}
 
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {[["Pipeline Value", money(totals.value), DollarSign], ["Open Deals", totals.open, BriefcaseBusiness], ["Won Deals", totals.won, Save], ["Stale Deals", totals.stale, Archive]].map(([label, value, Icon]: any) => (
+        {[["Pipeline Value", money(totals.value), DollarSign], ["Weighted Value", money(totals.weighted), DollarSign], ["Open Deals", totals.open, BriefcaseBusiness], ["Won Deals", totals.won, Save], ["Lost Deals", totals.lost, X], ["Stale Deals", totals.stale, Archive]].map(([label, value, Icon]: any) => (
           <div key={label} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
             <Icon className="mb-4 text-cyan-300" size={20} />
             <div className="text-3xl font-black">{value}</div>
             <div className="text-sm text-gray-500">{label}</div>
           </div>
         ))}
+      </section>
+
+      <section className="mb-6 overflow-hidden rounded-3xl border border-cyan-400/15 bg-cyan-500/[0.04] p-5 shadow-2xl shadow-cyan-500/5">
+        <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h2 className="text-2xl font-black">Pipeline Flow</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Stage value, probability-weighted value, stale deal pressure, and win/loss movement from real deals.
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center text-xs sm:text-sm">
+            <div className="rounded-2xl border border-white/10 bg-black/30 px-3 py-2">
+              <div className="font-black text-cyan-200">{money(totals.weighted)}</div>
+              <div className="text-gray-500">Weighted</div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-black/30 px-3 py-2">
+              <div className="font-black text-green-200">{totals.won}</div>
+              <div className="text-gray-500">Won</div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-black/30 px-3 py-2">
+              <div className="font-black text-red-200">{totals.lost}</div>
+              <div className="text-gray-500">Lost</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-6">
+          {stageSummary.map((stage, index) => (
+            <div key={stage.stage} className="relative rounded-3xl border border-white/10 bg-black/35 p-4">
+              {index < stageSummary.length - 1 && (
+                <div className="pointer-events-none absolute -right-2 top-1/2 hidden h-px w-4 bg-gradient-to-r from-cyan-400 to-green-400 lg:block" />
+              )}
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="text-sm font-black capitalize text-white">{stage.stage}</div>
+                <div className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2 py-1 text-xs text-cyan-100">
+                  {stage.count}
+                </div>
+              </div>
+              <div className="text-2xl font-black text-cyan-100">{money(stage.value)}</div>
+              <div className="mt-1 text-xs text-gray-500">Weighted {money(stage.weighted)}</div>
+              <div className="mt-4 h-3 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-green-400"
+                  style={{ width: `${stage.width}%` }}
+                />
+              </div>
+              <div className="mt-3 flex items-center justify-between text-xs">
+                <span className="text-gray-500">Stale</span>
+                <span className={stage.stale ? "font-black text-yellow-200" : "text-gray-500"}>{stage.stale}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {filtered.length === 0 && (
+          <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-5 text-center text-sm text-gray-500">
+            No real deals match the current filters, so the pipeline graphic is empty.
+          </div>
+        )}
       </section>
 
       <div className="mb-6 rounded-3xl border border-white/10 bg-white/[0.03] p-4 flex flex-col md:flex-row md:items-center gap-3">

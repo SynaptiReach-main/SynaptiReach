@@ -16,7 +16,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const context = await loadCRMContext();
+    const context = await loadCRMContext(req);
     const agentSnapshot = runDeterministicAgents(context);
 
     const profile =

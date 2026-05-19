@@ -4,9 +4,9 @@ import { loadCRMContext } from "@/lib/crm/data";
 import { runExecutiveAgent } from "@/lib/agents/crmAgents";
 import { providerErrorResponse } from "@/lib/ai/providers";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const context = await loadCRMContext();
+    const context = await loadCRMContext(request);
     const agentResult = await runExecutiveAgent(context);
 
     return NextResponse.json({

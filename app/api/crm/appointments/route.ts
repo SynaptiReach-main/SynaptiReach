@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdmin, friendlySupabaseError } from "@/lib/crm/supabaseAdmin";
+import { getWorkspaceContext } from "@/lib/auth/getWorkspaceContext";
 
 const VALID_STATUSES = new Set(["scheduled", "completed", "cancelled", "no_show"]);
 
@@ -18,12 +19,14 @@ function normalizeAppointment(body: any) {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = createSupabaseAdmin();
+    const context = await getWorkspaceContext(request);
     const { data, error } = await supabase
       .from("crm_appointments")
       .select("*")
+      .match(context.workspaceId ? { workspace_id: context.workspaceId } : {})
       .order("starts_at", { ascending: true })
       .limit(200);
 
@@ -41,7 +44,9 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const context = await getWorkspaceContext(req);
     const appointment = normalizeAppointment(body);
+    appointment.workspace_id = appointment.workspace_id || context.workspaceId || null;
     if (!appointment.title || !appointment.starts_at) {
       return NextResponse.json({ success: false, error: "Appointment title and start time are required." }, { status: 400 });
     }
@@ -65,6 +70,7 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   try {
     const body = await req.json();
+    const context = await getWorkspaceContext(req);
     if (!body.id) return NextResponse.json({ success: false, error: "Missing appointment id." }, { status: 400 });
 
     const updates = normalizeAppointment(body);
@@ -74,7 +80,13 @@ export async function PATCH(req: Request) {
     }
 
     const supabase = createSupabaseAdmin();
-    const { data, error } = await supabase.from("crm_appointments").update(updates).eq("id", body.id).select().single();
+    const { data, error } = await supabase
+      .from("crm_appointments")
+      .update(updates)
+      .eq("id", body.id)
+      .match(context.workspaceId ? { workspace_id: context.workspaceId } : {})
+      .select()
+      .single();
     if (error) throw error;
     return NextResponse.json({ success: true, appointment: data });
   } catch (error: any) {
@@ -89,10 +101,17 @@ export async function PATCH(req: Request) {
 export async function DELETE(request: Request) {
   try {
     const id = new URL(request.url).searchParams.get("id");
+    const context = await getWorkspaceContext(request);
     if (!id) return NextResponse.json({ success: false, error: "Missing appointment id." }, { status: 400 });
 
     const supabase = createSupabaseAdmin();
-    const { data, error } = await supabase.from("crm_appointments").update({ status: "cancelled" }).eq("id", id).select().single();
+    const { data, error } = await supabase
+      .from("crm_appointments")
+      .update({ status: "cancelled" })
+      .eq("id", id)
+      .match(context.workspaceId ? { workspace_id: context.workspaceId } : {})
+      .select()
+      .single();
     if (error) throw error;
     return NextResponse.json({ success: true, appointment: data });
   } catch (error: any) {

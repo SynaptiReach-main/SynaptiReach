@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, Database, Loader2, Settings, Sparkles, XCircle, Zap } from "lucide-react";
-import { COMMITMENT_DISCOUNTS, MANAGED_PLANS, TRIAL_PLANS } from "@/lib/billing/plans";
+import { CheckCircle2, CreditCard, Database, KeyRound, Loader2, Settings, Sparkles, UserPlus, XCircle, Zap } from "lucide-react";
+import { COMMITMENT_DISCOUNTS, CREDIT_PACKS, MANAGED_PLANS, SELF_SERVICE_BYOK_PLANS, TRIAL_PLANS } from "@/lib/billing/plans";
 
 const defaultForm = {
   business_name: "",
@@ -20,13 +20,33 @@ const defaultForm = {
   automation_level: "review_required",
 };
 
+const defaultStaffForm = {
+  id: "",
+  name: "",
+  email: "",
+  phone: "",
+  title: "",
+  status: "invited",
+  permissions: ["dashboard:view", "leads:view", "tasks:view"],
+};
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<any>(null);
   const [form, setForm] = useState(defaultForm);
   const [integrations, setIntegrations] = useState<Record<string, any>>({});
   const [aiProviders, setAiProviders] = useState<any>(null);
+  const [providerConnections, setProviderConnections] = useState<any[]>([]);
+  const [billing, setBilling] = useState<any>(null);
+  const [usage, setUsage] = useState<Record<string, number>>({});
+  const [creditPackPurchases, setCreditPackPurchases] = useState<any[]>([]);
+  const [staffMembers, setStaffMembers] = useState<any[]>([]);
+  const [staffPermissions, setStaffPermissions] = useState<string[]>([]);
+  const [staffForm, setStaffForm] = useState<any>(defaultStaffForm);
+  const [providerKeys, setProviderKeys] = useState({ gemini: "", openrouter: "", openai: "", openrouter_model: "" });
+  const [integrationKeys, setIntegrationKeys] = useState({ resend: "", twilioAccountSid: "", twilioAuthToken: "", ayrshare: "" });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingSection, setSavingSection] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -34,8 +54,12 @@ export default function SettingsPage() {
     try {
       setLoading(true);
       setError("");
-      const response = await fetch("/api/crm/settings");
+      const [response, staffResponse] = await Promise.all([
+        fetch("/api/crm/settings"),
+        fetch("/api/crm/staff"),
+      ]);
       const data = await response.json();
+      const staffData = await staffResponse.json().catch(() => ({}));
 
       if (!response.ok || !data.success) {
         throw new Error(data?.error || "Failed to load settings.");
@@ -44,6 +68,14 @@ export default function SettingsPage() {
       setSettings(data.settings);
       setIntegrations(data.integrations || {});
       setAiProviders(data.aiProviders || null);
+      setProviderConnections(data.providerConnections || []);
+      setBilling(data.billing || null);
+      setUsage(data.usage || {});
+      setCreditPackPurchases(data.creditPackPurchases || []);
+      if (staffData?.success) {
+        setStaffMembers(staffData.staff || staffData.data || []);
+        setStaffPermissions(staffData.permissions || []);
+      }
       setForm({ ...defaultForm, ...(data.settings || {}) });
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to load settings.");
@@ -57,6 +89,10 @@ export default function SettingsPage() {
   }, []);
 
   async function saveSettings() {
+    return saveSettingsPatch(form, "Settings saved.");
+  }
+
+  async function saveSettingsPatch(values: any, message: string) {
     try {
       setSaving(true);
       setError("");
@@ -64,7 +100,7 @@ export default function SettingsPage() {
       const response = await fetch("/api/crm/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: settings?.id, ...form }),
+        body: JSON.stringify({ id: settings?.id, ...values }),
       });
       const data = await response.json();
 
@@ -73,7 +109,7 @@ export default function SettingsPage() {
       }
 
       setSettings(data.settings);
-      setSuccess("Settings saved.");
+      setSuccess(message);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to save settings.");
     } finally {
@@ -84,6 +120,171 @@ export default function SettingsPage() {
   function updateField(key: string, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
   }
+
+  async function saveProviderKeys(type: "ai" | "integration") {
+    try {
+      setSavingSection(type);
+      setError("");
+      setSuccess("");
+      const aiConnections = [
+        providerKeys.gemini && { provider: "gemini", provider_type: "ai", secret: providerKeys.gemini },
+        providerKeys.openrouter && {
+          provider: "openrouter",
+          provider_type: "ai",
+          secret: providerKeys.openrouter,
+          model: providerKeys.openrouter_model || aiProviders?.openrouter_model || "openrouter/free",
+        },
+        providerKeys.openai && { provider: "openai", provider_type: "ai", secret: providerKeys.openai },
+      ].filter(Boolean);
+      const integrationConnections = [
+        integrationKeys.resend && { provider: "resend", provider_type: "integration", secret: integrationKeys.resend },
+        integrationKeys.twilioAccountSid && {
+          provider: "twilio_account_sid",
+          provider_type: "integration",
+          secret: integrationKeys.twilioAccountSid,
+        },
+        integrationKeys.twilioAuthToken && {
+          provider: "twilio_auth_token",
+          provider_type: "integration",
+          secret: integrationKeys.twilioAuthToken,
+        },
+        integrationKeys.ayrshare && { provider: "ayrshare", provider_type: "integration", secret: integrationKeys.ayrshare },
+      ].filter(Boolean);
+
+      const connections = type === "ai" ? aiConnections : integrationConnections;
+      if (connections.length === 0) {
+        setError("Enter at least one key before saving.");
+        return;
+      }
+
+      const response = await fetch("/api/crm/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ section: "provider_connections", connections }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data?.error || "Failed to save keys.");
+      setProviderKeys({ gemini: "", openrouter: "", openai: "", openrouter_model: "" });
+      setIntegrationKeys({ resend: "", twilioAccountSid: "", twilioAuthToken: "", ayrshare: "" });
+      setSuccess(type === "ai" ? "AI provider keys saved server-side." : "Integration keys saved server-side.");
+      await loadSettings();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to save keys.");
+    } finally {
+      setSavingSection("");
+    }
+  }
+
+  async function createCreditPackIntent(pack: string) {
+    try {
+      setSavingSection(pack);
+      setError("");
+      setSuccess("");
+      const priceMatch = pack.match(/\$(\d+)/);
+      const response = await fetch("/api/crm/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          section: "credit_pack_intent",
+          pack,
+          price_cents: priceMatch ? Number(priceMatch[1]) * 100 : null,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data?.error || "Failed to create checkout intent.");
+      if (data.checkoutUrl) {
+        setSuccess("Stripe Checkout session created. Redirecting to Stripe for review and payment.");
+        window.location.assign(data.checkoutUrl);
+        return;
+      }
+      setSuccess(data.setupRequired
+        ? "Credit pack checkout intent recorded. Add Stripe env vars to enable live checkout."
+        : "Credit pack checkout intent recorded for review.");
+      await loadSettings();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to create checkout intent.");
+    } finally {
+      setSavingSection("");
+    }
+  }
+
+  async function openBillingPortal() {
+    try {
+      setSavingSection("billing_portal");
+      setError("");
+      setSuccess("");
+      const response = await fetch("/api/billing/portal", { method: "POST" });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data?.error || "Billing Portal is not available yet.");
+      }
+      if (data.url) {
+        window.location.assign(data.url);
+        return;
+      }
+      setSuccess("Billing Portal setup is required before payment methods can be managed.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to open Billing Portal.");
+    } finally {
+      setSavingSection("");
+    }
+  }
+
+  async function saveStaffMember() {
+    try {
+      setSavingSection("staff");
+      setError("");
+      setSuccess("");
+      if (!staffForm.name && !staffForm.email) {
+        setError("Enter a staff name or email before saving.");
+        return;
+      }
+      const response = await fetch("/api/crm/staff", {
+        method: staffForm.id ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(staffForm),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data?.error || "Failed to save staff member.");
+      setStaffForm(defaultStaffForm);
+      setSuccess(staffForm.id ? "Staff member updated." : "Staff member invited.");
+      await loadSettings();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to save staff member.");
+    } finally {
+      setSavingSection("");
+    }
+  }
+
+  function editStaff(member: any) {
+    setStaffForm({
+      id: member.id,
+      name: member.name || "",
+      email: member.email || "",
+      phone: member.phone || "",
+      title: member.title || "",
+      status: member.status || "invited",
+      permissions: member.permissions || [],
+    });
+  }
+
+  function toggleStaffPermission(permission: string) {
+    setStaffForm((current: any) => ({
+      ...current,
+      permissions: current.permissions.includes(permission)
+        ? current.permissions.filter((item: string) => item !== permission)
+        : [...current.permissions, permission],
+    }));
+  }
+
+  const connectionByProvider = providerConnections.reduce((map: Record<string, any>, connection) => {
+    map[connection.provider] = connection;
+    return map;
+  }, {});
+  const selectedPlanName = billing?.plan_tier || billing?.metadata?.selected_plan || "Growth Trial";
+  const selectedPlan = [...TRIAL_PLANS, ...MANAGED_PLANS, ...SELF_SERVICE_BYOK_PLANS].find((plan) => plan.name === selectedPlanName);
+  const stripeStatus = integrations.stripe || {};
+  const stripeReady = Boolean(stripeStatus.checkoutEnabled || stripeStatus.configured);
 
   return (
     <main className="min-h-screen text-white">
@@ -113,7 +314,21 @@ export default function SettingsPage() {
           <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div className="xl:col-span-2 space-y-6">
               <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-                <h2 className="text-2xl font-black mb-5">Business Profile</h2>
+                <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <h2 className="text-2xl font-black">Business Profile</h2>
+                  <button onClick={() => saveSettingsPatch({
+                    business_name: form.business_name,
+                    industry: form.industry,
+                    website: form.website,
+                    contact_email: form.contact_email,
+                    phone: form.phone,
+                    default_sender_name: form.default_sender_name,
+                    default_sender_email: form.default_sender_email,
+                    timezone: form.timezone,
+                  }, "Business profile saved.")} disabled={saving} className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm font-bold text-cyan-100 disabled:opacity-60">
+                    {saving ? "Saving..." : "Save Profile"}
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {[
                     ["business_name", "Business Name"],
@@ -137,9 +352,20 @@ export default function SettingsPage() {
               </div>
 
               <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/[0.05] p-6">
-                <div className="flex items-center gap-3 mb-5">
-                  <Sparkles className="text-cyan-300" size={22} />
-                  <h2 className="text-2xl font-black">AI Settings</h2>
+                <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="text-cyan-300" size={22} />
+                    <h2 className="text-2xl font-black">AI Settings</h2>
+                  </div>
+                  <button onClick={() => saveSettingsPatch({
+                    brand_voice: form.brand_voice,
+                    tone: form.tone,
+                    cta_style: form.cta_style,
+                    audience_description: form.audience_description,
+                    automation_level: form.automation_level,
+                  }, "AI settings saved.")} disabled={saving} className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm font-bold text-cyan-100 disabled:opacity-60">
+                    {saving ? "Saving..." : "Save AI Settings"}
+                  </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <input value={form.brand_voice || ""} onChange={(event) => updateField("brand_voice", event.target.value)} placeholder="Brand Voice" className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
@@ -158,6 +384,41 @@ export default function SettingsPage() {
                 {saving ? <Loader2 className="animate-spin" size={18} /> : <Zap size={18} />}
                 Save Settings
               </button>
+
+              <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/[0.05] p-6">
+                <div className="mb-5 flex items-center gap-3">
+                  <KeyRound className="text-cyan-300" size={22} />
+                  <h2 className="text-2xl font-black">Connect Your AI Keys</h2>
+                </div>
+                <p className="mb-4 text-sm text-gray-400">
+                  SynaptiReach keys are never shown. Your BYOK keys are encrypted server-side and displayed only as configured/missing after save.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input type="password" value={providerKeys.gemini} onChange={(event) => setProviderKeys({ ...providerKeys, gemini: event.target.value })} placeholder="Gemini API key" className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
+                  <input type="password" value={providerKeys.openrouter} onChange={(event) => setProviderKeys({ ...providerKeys, openrouter: event.target.value })} placeholder="OpenRouter API key" className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
+                  <input value={providerKeys.openrouter_model} onChange={(event) => setProviderKeys({ ...providerKeys, openrouter_model: event.target.value })} placeholder="OpenRouter model (default openrouter/free)" className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
+                  <input type="password" value={providerKeys.openai} onChange={(event) => setProviderKeys({ ...providerKeys, openai: event.target.value })} placeholder="OpenAI key (optional premium)" className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
+                </div>
+                <button onClick={() => saveProviderKeys("ai")} disabled={savingSection === "ai"} className="mt-4 rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-5 py-3 font-black text-black disabled:opacity-60">
+                  {savingSection === "ai" ? "Saving..." : "Save AI Provider Keys"}
+                </button>
+              </div>
+
+              <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+                <div className="mb-5 flex items-center gap-3">
+                  <Database className="text-cyan-300" size={22} />
+                  <h2 className="text-2xl font-black">Connect Sending Integrations</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input type="password" value={integrationKeys.resend} onChange={(event) => setIntegrationKeys({ ...integrationKeys, resend: event.target.value })} placeholder="Resend API key" className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
+                  <input type="password" value={integrationKeys.twilioAccountSid} onChange={(event) => setIntegrationKeys({ ...integrationKeys, twilioAccountSid: event.target.value })} placeholder="Twilio Account SID" className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
+                  <input type="password" value={integrationKeys.twilioAuthToken} onChange={(event) => setIntegrationKeys({ ...integrationKeys, twilioAuthToken: event.target.value })} placeholder="Twilio Auth Token" className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
+                  <input type="password" value={integrationKeys.ayrshare} onChange={(event) => setIntegrationKeys({ ...integrationKeys, ayrshare: event.target.value })} placeholder="Ayrshare API key" className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
+                </div>
+                <button onClick={() => saveProviderKeys("integration")} disabled={savingSection === "integration"} className="mt-4 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-5 py-3 font-bold text-cyan-100 disabled:opacity-60">
+                  {savingSection === "integration" ? "Saving..." : "Save Integration Keys"}
+                </button>
+              </div>
             </div>
 
             <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 h-fit">
@@ -171,6 +432,7 @@ export default function SettingsPage() {
                   Resend: integrations.resend,
                   Twilio: integrations.twilio,
                   Ayrshare: integrations.ayrshare,
+                  Stripe: stripeReady,
                   "Vercel Cron": integrations.vercelCron,
                 }).map(([label, configured]) => (
                   <div key={label} className="rounded-2xl border border-white/10 bg-black/30 p-4 flex items-center justify-between">
@@ -224,6 +486,9 @@ export default function SettingsPage() {
                       <div className="text-xs text-gray-500 mt-2">
                         {priority > 0 ? `Priority ${priority}` : "Not in active priority"}
                       </div>
+                      {connectionByProvider[key]?.key_label && (
+                        <div className="text-xs text-gray-500 mt-1">BYOK saved: {connectionByProvider[key].key_label}</div>
+                      )}
                       {key === "openrouter" && (
                         <div className="text-xs text-gray-500 mt-1">
                           Model {aiProviders?.openrouter_model || integrations.openrouter?.model || "openrouter/free"}
@@ -258,31 +523,52 @@ export default function SettingsPage() {
               <div className="mb-5 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4 text-sm text-cyan-100">
                 14-day free trial. No managed SMS during trial unless the user connects their own Twilio/BYOK provider. Trial caps are hard caps, no overages. Commit before your trial ends and save up to 30%.
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {TRIAL_PLANS.map((plan) => (
-                  <div key={plan.name} className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                    <div className="font-black text-white">{plan.name}</div>
-                    <div className="mt-3 space-y-2 text-sm text-gray-400">
-                      <div>AI actions: <span className="text-white">{plan.aiActions}</span></div>
-                      <div>Emails: <span className="text-white">{plan.emails}</span></div>
-                      <div>SMS: <span className="text-white">{plan.sms}</span></div>
-                      <div>Contacts: <span className="text-white">{plan.contacts}</span></div>
-                      <div>AI agents: <span className="text-white">{plan.agents}</span></div>
-                    </div>
+              <div className="mb-5 grid grid-cols-1 md:grid-cols-4 gap-4">
+                {[
+                  ["Plan", selectedPlanName],
+                  ["Status", billing?.status || "trial/setup required"],
+                  ["Billing Mode", billing?.billing_mode || "not selected"],
+                  ["Trial Ends", billing?.trial_ends_at ? new Date(billing.trial_ends_at).toLocaleString() : "not set"],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                    <div className="text-xs uppercase tracking-[0.18em] text-gray-500">{label}</div>
+                    <div className="mt-2 font-black text-white">{value}</div>
                   </div>
                 ))}
               </div>
-              <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {MANAGED_PLANS.map((plan) => (
-                  <div key={plan.name} className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="font-black text-white">{plan.name}</div>
-                      {plan.popular && <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2 py-1 text-xs text-cyan-100">popular</span>}
-                    </div>
-                    <div className="mt-1 text-cyan-300 font-black">{plan.price}</div>
-                    <div className="mt-3 text-sm text-gray-400">{plan.aiActions} AI actions, {plan.emails} emails, {plan.sms} SMS, {plan.contacts} contacts, {plan.agents} agents.</div>
+              <div className="mb-5 grid grid-cols-1 md:grid-cols-4 gap-4">
+                {[
+                  ["AI", usage.ai || usage.ai_actions || 0, selectedPlan?.aiActions || "select plan"],
+                  ["Email", usage.email || usage.emails || 0, selectedPlan?.emails || "select plan"],
+                  ["SMS", usage.sms || 0, selectedPlan?.sms || "select plan"],
+                  ["Contacts", usage.contacts || 0, selectedPlan?.contacts || "select plan"],
+                ].map(([label, used, cap]) => (
+                  <div key={label} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                    <div className="text-sm text-gray-400">{label}</div>
+                    <div className="mt-2 text-xl font-black">{used} used</div>
+                    <div className="text-xs text-gray-500">out of {cap}</div>
                   </div>
                 ))}
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.18em] text-gray-500">Selected tier</div>
+                    <div className="mt-2 text-xl font-black text-white">{selectedPlan?.name || selectedPlanName}</div>
+                  </div>
+                  {selectedPlan && "price" in selectedPlan && <div className="text-xl font-black text-cyan-300">{selectedPlan.price}</div>}
+                </div>
+                {selectedPlan ? (
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-5 gap-3 text-sm text-gray-400">
+                    <div>AI: <span className="text-white">{selectedPlan.aiActions}</span></div>
+                    <div>Email: <span className="text-white">{selectedPlan.emails}</span></div>
+                    <div>SMS: <span className="text-white">{selectedPlan.sms}</span></div>
+                    <div>Contacts: <span className="text-white">{selectedPlan.contacts}</span></div>
+                    <div>Agents: <span className="text-white">{selectedPlan.agents}</span></div>
+                  </div>
+                ) : (
+                  <div className="mt-4 text-sm text-gray-400">No selected plan record found yet. Complete onboarding or billing setup to store the selected tier.</div>
+                )}
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 {COMMITMENT_DISCOUNTS.map((item) => (
@@ -290,6 +576,135 @@ export default function SettingsPage() {
                     {item.duration}: {item.discount} off
                   </span>
                 ))}
+              </div>
+              <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
+                  <div className="mb-3 flex items-center gap-2">
+                    <CreditCard className="text-cyan-300" size={18} />
+                    <h3 className="font-black">Payment Method</h3>
+                  </div>
+                  <p className="text-sm text-gray-400">
+                    {stripeReady
+                      ? "Stripe Checkout is configured for credit-pack payment review. Saved payment-method management still requires a dedicated billing portal route."
+                      : "Stripe/payment integration is not connected yet. Add Stripe env vars before collecting or updating payment methods."}
+                  </p>
+                  <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-gray-400">
+                    Status: {stripeReady ? `Stripe ${stripeStatus.mode || "configured"}` : "setup required"}
+                    {stripeStatus.webhookConfigured ? " · Webhook configured" : " · Webhook missing"}
+                  </div>
+                  <button
+                    onClick={openBillingPortal}
+                    disabled={!stripeReady || savingSection === "billing_portal"}
+                    className="mt-4 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm font-bold text-cyan-100 disabled:border-white/10 disabled:bg-white/[0.03] disabled:text-gray-500"
+                  >
+                    {savingSection === "billing_portal"
+                      ? "Opening..."
+                      : stripeReady
+                        ? "Open Billing Portal"
+                        : "Connect billing provider required"}
+                  </button>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
+                  <h3 className="font-black">Usage Cost Rules</h3>
+                  <p className="mt-2 text-sm text-gray-400">
+                    Users are responsible for all usage costs for credits. Once caps are reached, purchase the corresponding credit pack to go past the cap. BYOK provider usage is billed by the user&apos;s providers; SynaptiReach platform charges remain separate.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-6">
+                <h3 className="mb-3 text-xl font-black">Credit Packs</h3>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {CREDIT_PACKS.map((pack) => (
+                    <div key={pack} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                      <div className="font-bold text-white">{pack}</div>
+                      <button onClick={() => createCreditPackIntent(pack)} disabled={Boolean(savingSection)} className="mt-3 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 disabled:opacity-60">
+                        {savingSection === pack ? "Creating..." : stripeReady ? "Start Stripe Checkout" : "Create Checkout Intent"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {creditPackPurchases.length > 0 && (
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-gray-400">
+                    {creditPackPurchases.length} credit pack intent{creditPackPurchases.length === 1 ? "" : "s"} recorded for review.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 h-fit xl:col-span-3">
+              <div className="mb-5 flex items-center gap-3">
+                <UserPlus className="text-cyan-300" size={22} />
+                <h2 className="text-xl font-black">Staff & Permissions</h2>
+              </div>
+              <p className="mb-5 text-sm text-gray-400">
+                Staff records and granted permissions are stored server-side. The UI exposes allowed actions, and API routes can enforce these permissions through the shared workspace access helpers.
+              </p>
+              <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
+                <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/[0.05] p-5">
+                  <h3 className="mb-4 font-black">{staffForm.id ? "Edit Staff Member" : "Add Staff Member"}</h3>
+                  <div className="grid gap-3">
+                    <input value={staffForm.name} onChange={(event) => setStaffForm({ ...staffForm, name: event.target.value })} placeholder="Name" className="rounded-2xl border border-white/10 bg-black/30 p-3 text-white" />
+                    <input value={staffForm.email} onChange={(event) => setStaffForm({ ...staffForm, email: event.target.value })} placeholder="Email" className="rounded-2xl border border-white/10 bg-black/30 p-3 text-white" />
+                    <input value={staffForm.phone} onChange={(event) => setStaffForm({ ...staffForm, phone: event.target.value })} placeholder="Phone" className="rounded-2xl border border-white/10 bg-black/30 p-3 text-white" />
+                    <input value={staffForm.title} onChange={(event) => setStaffForm({ ...staffForm, title: event.target.value })} placeholder="Title" className="rounded-2xl border border-white/10 bg-black/30 p-3 text-white" />
+                    <select value={staffForm.status} onChange={(event) => setStaffForm({ ...staffForm, status: event.target.value })} className="rounded-2xl border border-white/10 bg-black/30 p-3 text-white">
+                      <option value="invited">invited</option>
+                      <option value="active">active</option>
+                      <option value="paused">paused</option>
+                      <option value="archived">archived</option>
+                    </select>
+                  </div>
+                  <div className="mt-4 max-h-52 overflow-y-auto rounded-2xl border border-white/10 bg-black/30 p-3">
+                    <div className="mb-2 text-xs uppercase tracking-[0.18em] text-gray-500">Permissions</div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {staffPermissions.map((permission) => (
+                        <label key={permission} className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-gray-300">
+                          <input
+                            type="checkbox"
+                            checked={staffForm.permissions.includes(permission)}
+                            onChange={() => toggleStaffPermission(permission)}
+                          />
+                          {permission}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button onClick={saveStaffMember} disabled={savingSection === "staff"} className="rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-4 py-3 text-sm font-black text-black disabled:opacity-60">
+                      {savingSection === "staff" ? "Saving..." : "Save Staff"}
+                    </button>
+                    {staffForm.id && (
+                      <button onClick={() => setStaffForm(defaultStaffForm)} className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-bold text-white">Cancel Edit</button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {staffMembers.length === 0 ? (
+                    <div className="rounded-2xl border border-white/10 bg-black/30 p-8 text-center text-gray-400">
+                      No staff records yet. Add staff when you are ready to delegate CRM access.
+                    </div>
+                  ) : staffMembers.map((member) => (
+                    <div key={member.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <div className="font-black text-white">{member.name || member.email}</div>
+                          <div className="text-sm text-gray-500">{member.title || member.email || "Staff member"}</div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-xs text-cyan-100">{member.status}</span>
+                          <button onClick={() => editStaff(member)} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-bold text-white">Edit</button>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {(member.permissions || []).slice(0, 10).map((permission: string) => (
+                          <span key={permission} className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-gray-300">{permission}</span>
+                        ))}
+                        {(member.permissions || []).length > 10 && <span className="text-xs text-gray-500">+{member.permissions.length - 10} more</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </section>

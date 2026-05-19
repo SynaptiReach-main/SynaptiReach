@@ -25,7 +25,7 @@ export function friendlySupabaseError(error: any) {
     return {
       missingSchema: true,
       message:
-        "Required CRM schema is missing. Apply the CRM migration under supabase/migrations.",
+        "Required CRM schema is missing. Run supabase/user_crm_full_completion_schema.sql in the Supabase SQL Editor, then retry.",
     };
   }
 

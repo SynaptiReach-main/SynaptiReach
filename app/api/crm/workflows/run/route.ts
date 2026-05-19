@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdmin, friendlySupabaseError } from "@/lib/crm/supabaseAdmin";
+import { getWorkspaceContext } from "@/lib/auth/getWorkspaceContext";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const workflowId = body.workflow_id || body.workflowId;
+    const context = await getWorkspaceContext(req);
 
     if (!workflowId) {
       return NextResponse.json({ success: false, error: "Missing workflow id." }, { status: 400 });
@@ -16,6 +18,7 @@ export async function POST(req: Request) {
       .from("crm_workflows")
       .select("*")
       .eq("id", workflowId)
+      .match(context.workspaceId ? { workspace_id: context.workspaceId } : {})
       .single();
 
     if (workflowError) throw workflowError;

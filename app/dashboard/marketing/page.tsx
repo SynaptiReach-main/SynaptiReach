@@ -101,6 +101,12 @@ export default function MarketingPage() {
     campaignSearch,
     setCampaignSearch,
   ] = useState("");
+  const [campaignTypeFilter, setCampaignTypeFilter] = useState("all");
+  const [campaignDateFilter, setCampaignDateFilter] = useState("all");
+  const [scheduledSearch, setScheduledSearch] = useState("");
+  const [showAllCampaigns, setShowAllCampaigns] = useState(false);
+  const [showAllScheduled, setShowAllScheduled] = useState(false);
+  const [selectedCampaign, setSelectedCampaign] = useState<any | null>(null);
 
   const scheduledCampaigns =
     campaigns.filter(
@@ -112,6 +118,16 @@ export default function MarketingPage() {
     const matchesStatus =
       campaignFilter === "all" ||
       campaign.status === campaignFilter;
+    const matchesType =
+      campaignTypeFilter === "all" ||
+      campaign.type === campaignTypeFilter ||
+      campaign.channel === campaignTypeFilter;
+    const matchesDate =
+      campaignDateFilter === "all" ||
+      (campaignDateFilter === "scheduled" && Boolean(campaign.send_date || campaign.send_time)) ||
+      (campaignDateFilter === "last30" &&
+        campaign.created_at &&
+        Date.now() - new Date(campaign.created_at).getTime() <= 30 * 86400000);
     const search = campaignSearch.toLowerCase();
     const matchesSearch =
       !search ||
@@ -127,8 +143,21 @@ export default function MarketingPage() {
           String(value).toLowerCase().includes(search)
         );
 
-    return matchesStatus && matchesSearch;
+    return matchesStatus && matchesType && matchesDate && matchesSearch;
   });
+  const visibleCampaigns = showAllCampaigns ? filteredCampaigns : filteredCampaigns.slice(0, 5);
+  const filteredScheduledCampaigns = scheduledCampaigns.filter((campaign) => {
+    const search = scheduledSearch.toLowerCase();
+    return (
+      !search ||
+      [campaign.subject, campaign.name, campaign.type, campaign.audience]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(search))
+    );
+  });
+  const visibleScheduledCampaigns = showAllScheduled
+    ? filteredScheduledCampaigns
+    : filteredScheduledCampaigns.slice(0, 5);
 
   const campaignTotals = {
     delivered: campaigns.reduce((sum, campaign) => sum + Number(campaign.delivered_count || 0), 0),
@@ -397,10 +426,10 @@ export default function MarketingPage() {
     }
   }
 
-  async function acceptRecommendation(item: any) {
+  async function acceptRecommendation(item: any, action: "accept" | "deny" = "accept") {
     try {
       const key = item.id || item.title || item.content;
-      setRecommendationLoading(key);
+      setRecommendationLoading(`${action}-${key}`);
       setActionError("");
 
       const response = await fetch(
@@ -412,6 +441,7 @@ export default function MarketingPage() {
           },
           body: JSON.stringify({
             id: item.id,
+            action: action === "deny" ? "deny" : "accept",
             title: item.title || item.content,
             description: item.description || item.details || item.content,
             type: item.recommendation_type || item.type,
@@ -475,7 +505,9 @@ export default function MarketingPage() {
       );
 
       setRecommendations(
-        recommendationsData.data || []
+        (recommendationsData.data || []).filter(
+          (item: any) => !item.dismissed && !item.accepted
+        )
       );
     } catch (error) {
       setActionError(
@@ -510,6 +542,50 @@ export default function MarketingPage() {
 
   return (
     <main className="min-h-screen text-white">
+      {selectedCampaign && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-3xl border border-cyan-400/20 bg-slate-950 shadow-2xl shadow-cyan-500/20">
+            <div className="flex items-start justify-between gap-4 border-b border-cyan-400/10 p-5">
+              <div>
+                <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Campaign Detail</div>
+                <h2 className="mt-1 text-2xl font-black">
+                  {selectedCampaign.subject || selectedCampaign.name || `${selectedCampaign.type || "Marketing"} Campaign`}
+                </h2>
+                <p className="mt-1 text-sm text-cyan-50/55">
+                  {[selectedCampaign.type, selectedCampaign.audience, selectedCampaign.status].filter(Boolean).join(" - ")}
+                </p>
+              </div>
+              <button onClick={() => setSelectedCampaign(null)} className="rounded-2xl border border-white/10 px-3 py-2 text-sm font-bold text-cyan-100">
+                Close
+              </button>
+            </div>
+            <div className="max-h-[62vh] overflow-y-auto p-5">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                {[
+                  ["Delivered", selectedCampaign.delivered_count || 0],
+                  ["Opened", selectedCampaign.opened_count || 0],
+                  ["Clicked", selectedCampaign.clicked_count || 0],
+                  ["Converted", selectedCampaign.converted_count || 0],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                    <div className="text-2xl font-black">{value}</div>
+                    <div className="text-xs text-gray-500">{label}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+                <div className="mb-2 text-sm font-bold text-white">Content</div>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-400">
+                  {selectedCampaign.content || "No campaign content saved."}
+                </p>
+              </div>
+              <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-gray-400">
+                Scheduled: {formatDateTime(selectedCampaign.send_date || selectedCampaign.send_time)}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <EmailCampaignModal
         open={emailOpen}
@@ -707,6 +783,7 @@ export default function MarketingPage() {
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3">
+                {showAllCampaigns && (
                 <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
                   <Search className="text-gray-500" size={16} />
                   <input
@@ -716,6 +793,8 @@ export default function MarketingPage() {
                     className="bg-transparent outline-none text-sm text-white placeholder:text-gray-600"
                   />
                 </div>
+                )}
+                {showAllCampaigns && (
                 <select
                   value={campaignFilter}
                   onChange={(event) => setCampaignFilter(event.target.value)}
@@ -730,6 +809,36 @@ export default function MarketingPage() {
                   <option value="cancelled">Cancelled</option>
                   <option value="failed">Failed</option>
                 </select>
+                )}
+                {showAllCampaigns && (
+                <select
+                  value={campaignTypeFilter}
+                  onChange={(event) => setCampaignTypeFilter(event.target.value)}
+                  className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white"
+                >
+                  <option value="all">All types</option>
+                  <option value="email">Email</option>
+                  <option value="sms">SMS</option>
+                  <option value="social">Social</option>
+                </select>
+                )}
+                {showAllCampaigns && (
+                <select
+                  value={campaignDateFilter}
+                  onChange={(event) => setCampaignDateFilter(event.target.value)}
+                  className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white"
+                >
+                  <option value="all">All dates</option>
+                  <option value="scheduled">Has schedule</option>
+                  <option value="last30">Created last 30 days</option>
+                </select>
+                )}
+                <button
+                  onClick={() => setShowAllCampaigns((value) => !value)}
+                  className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm font-bold text-cyan-100"
+                >
+                  {showAllCampaigns ? "Show Recent 5" : "View All"}
+                </button>
               </div>
             </div>
 
@@ -739,7 +848,7 @@ export default function MarketingPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {filteredCampaigns.map((campaign) => (
+                {visibleCampaigns.map((campaign) => (
                   <div key={campaign.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
                     <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                       <div>
@@ -767,6 +876,12 @@ export default function MarketingPage() {
                     )}
                     <div className="mt-4 flex flex-wrap gap-2">
                       <button
+                        onClick={() => setSelectedCampaign(campaign)}
+                        className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-bold text-white"
+                      >
+                        View Details
+                      </button>
+                      <button
                         onClick={() => cloneCampaign(campaign)}
                         disabled={actionLoading === `clone-${campaign.id}`}
                         className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 disabled:cursor-not-allowed disabled:opacity-60 flex items-center gap-2"
@@ -778,9 +893,34 @@ export default function MarketingPage() {
                         )}
                         Duplicate
                       </button>
+                      {campaign.status === "scheduled" && (
+                        <>
+                          <button
+                            onClick={() => startEditingCampaign(campaign)}
+                            className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-bold text-white"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => cancelCampaign(campaign)}
+                            disabled={actionLoading === `cancel-${campaign.id}`}
+                            className="rounded-2xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-100 disabled:opacity-60"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
+                {!showAllCampaigns && filteredCampaigns.length > 5 && (
+                  <button
+                    onClick={() => setShowAllCampaigns(true)}
+                    className="w-full rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-sm font-bold text-cyan-100"
+                  >
+                    View {filteredCampaigns.length - 5} older campaigns
+                  </button>
+                )}
               </div>
             )}
 
@@ -898,14 +1038,28 @@ export default function MarketingPage() {
                     </div>
 
                     <button
-                      onClick={() => acceptRecommendation(item)}
-                      disabled={recommendationLoading === (item.id || item.title || item.content)}
+                      onClick={() => acceptRecommendation(item, "accept")}
+                      disabled={recommendationLoading === `accept-${item.id || item.title || item.content}`}
                       className="mt-4 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-100"
                     >
-                      {recommendationLoading === (item.id || item.title || item.content)
+                      {recommendationLoading === `accept-${item.id || item.title || item.content}`
                         ? "Accepting..."
                         : "Accept"}
                     </button>
+                    <button
+                      onClick={() => acceptRecommendation(item, "deny")}
+                      disabled={recommendationLoading === `deny-${item.id || item.title || item.content}`}
+                      className="ml-2 mt-4 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-bold text-gray-300"
+                    >
+                      {recommendationLoading === `deny-${item.id || item.title || item.content}`
+                        ? "Dismissing..."
+                        : "Deny"}
+                    </button>
+                    {(item.ai_provider || item.provider || item.model || item.fallback_used) && (
+                      <div className="mt-3 text-xs text-gray-500">
+                        {[item.ai_provider || item.provider, item.model, item.fallback_used ? "fallback used" : ""].filter(Boolean).join(" - ")}
+                      </div>
+                    )}
                   </div>
                 )
               )}
@@ -929,6 +1083,26 @@ export default function MarketingPage() {
 
             </div>
 
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+              {showAllScheduled && (
+                <div className="flex flex-1 items-center gap-2 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
+                  <Search className="text-gray-500" size={16} />
+                  <input
+                    value={scheduledSearch}
+                    onChange={(event) => setScheduledSearch(event.target.value)}
+                    placeholder="Search scheduled..."
+                    className="w-full bg-transparent text-sm text-white outline-none placeholder:text-gray-600"
+                  />
+                </div>
+              )}
+              <button
+                onClick={() => setShowAllScheduled((value) => !value)}
+                className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm font-bold text-cyan-100"
+              >
+                {showAllScheduled ? "Show Recent 5" : "View All"}
+              </button>
+            </div>
+
             <div className="space-y-4">
 
               {actionError && (
@@ -943,7 +1117,7 @@ export default function MarketingPage() {
                 </div>
               )}
 
-              {scheduledCampaigns
+              {visibleScheduledCampaigns
                 .map((campaign) => (
                   <div
                     key={campaign.id}
@@ -1093,6 +1267,22 @@ export default function MarketingPage() {
 
                         <div className="flex flex-wrap gap-2 mt-4">
                           <button
+                            onClick={() => setSelectedCampaign(campaign)}
+                            className="px-4 py-2 rounded-2xl border border-white/10 bg-white/[0.03] text-white font-bold flex items-center gap-2"
+                          >
+                            View
+                          </button>
+
+                          <button
+                            onClick={() => cloneCampaign(campaign)}
+                            disabled={actionLoading === `clone-${campaign.id}`}
+                            className="px-4 py-2 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 text-cyan-100 font-bold flex items-center gap-2"
+                          >
+                            <Copy size={15} />
+                            Duplicate
+                          </button>
+
+                          <button
                             onClick={() => startEditingCampaign(campaign)}
                             className="px-4 py-2 rounded-2xl border border-white/10 bg-white/[0.03] text-white font-bold flex items-center gap-2"
                           >
@@ -1121,6 +1311,14 @@ export default function MarketingPage() {
 
                   </div>
                 ))}
+                {!showAllScheduled && filteredScheduledCampaigns.length > 5 && (
+                  <button
+                    onClick={() => setShowAllScheduled(true)}
+                    className="w-full rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-sm font-bold text-cyan-100"
+                  >
+                    View {filteredScheduledCampaigns.length - 5} older scheduled campaigns
+                  </button>
+                )}
 
             </div>
 

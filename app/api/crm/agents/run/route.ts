@@ -7,7 +7,7 @@ import { providerErrorResponse } from "@/lib/ai/providers";
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
-    const context = await loadCRMContext();
+    const context = await loadCRMContext(req);
     const result =
       body.agent === "executive" || body.useOpenAI
         ? await runExecutiveAgent(context)

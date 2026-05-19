@@ -1,6 +1,7 @@
 export {};
 'use client'
 import { useState, useRef } from 'react'
+import Footer from '@/components/sections/Footer'
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false)
@@ -444,6 +445,7 @@ export default function ContactPage() {
 
         </div>
       </div>
+      <Footer />
     </>
   )
 }
