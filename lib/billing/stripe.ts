@@ -24,6 +24,20 @@ type PortalInput = {
   origin: string;
 };
 
+type SubscriptionCheckoutInput = {
+  priceId: string;
+  planSlug: string;
+  planName: string;
+  billingMode: string;
+  planTier: string;
+  origin: string;
+  customerId?: string | null;
+  billingAccountId?: string | null;
+  workspaceId?: string | null;
+  companyId?: string | null;
+  userId?: string | null;
+};
+
 const STRIPE_API_VERSION = "2026-04-22.dahlia";
 
 export function getStripeBillingStatus() {
@@ -159,6 +173,60 @@ export async function createBillingPortalSession(input: PortalInput) {
   return result.ok
     ? { success: true, url: result.body.url as string, setupRequired: false, error: null }
     : { success: false, url: null, setupRequired: Boolean(result.setupRequired), error: result.error };
+}
+
+export async function createSubscriptionCheckoutSession(input: SubscriptionCheckoutInput) {
+  if (!input.priceId) {
+    return {
+      success: false,
+      setupRequired: true,
+      error: "Stripe subscription price is not configured for this plan.",
+    };
+  }
+
+  const params = new URLSearchParams();
+  params.set("mode", "subscription");
+  params.set("success_url", `${input.origin}/dashboard/settings?subscription=success&session_id={CHECKOUT_SESSION_ID}`);
+  params.set("cancel_url", `${input.origin}/dashboard/settings?subscription=cancelled`);
+  params.set("line_items[0][price]", input.priceId);
+  params.set("line_items[0][quantity]", "1");
+  params.set("subscription_data[trial_period_days]", "14");
+  params.set("subscription_data[metadata][source]", "synaptireach_subscription_checkout");
+  params.set("subscription_data[metadata][plan_slug]", input.planSlug);
+  params.set("subscription_data[metadata][plan_name]", input.planName);
+  params.set("subscription_data[metadata][billing_mode]", input.billingMode);
+  params.set("subscription_data[metadata][plan_tier]", input.planTier);
+  if (input.billingAccountId) params.set("subscription_data[metadata][billing_account_id]", input.billingAccountId);
+  if (input.workspaceId) params.set("subscription_data[metadata][workspace_id]", input.workspaceId);
+  if (input.companyId) params.set("subscription_data[metadata][company_id]", input.companyId);
+  if (input.userId) params.set("subscription_data[metadata][user_id]", input.userId);
+  if (input.customerId) params.set("customer", input.customerId);
+  params.set("metadata[source]", "synaptireach_subscription_checkout");
+  params.set("metadata[plan_slug]", input.planSlug);
+  params.set("metadata[plan_name]", input.planName);
+  params.set("metadata[billing_mode]", input.billingMode);
+  params.set("metadata[plan_tier]", input.planTier);
+  if (input.billingAccountId) params.set("metadata[billing_account_id]", input.billingAccountId);
+  if (input.workspaceId) params.set("metadata[workspace_id]", input.workspaceId);
+  if (input.companyId) params.set("metadata[company_id]", input.companyId);
+  if (input.userId) params.set("metadata[user_id]", input.userId);
+
+  const result = await stripePost("checkout/sessions", params);
+  if (!result.ok) {
+    return {
+      success: false,
+      setupRequired: Boolean(result.setupRequired),
+      error: result.error,
+    };
+  }
+
+  return {
+    success: true,
+    setupRequired: false,
+    sessionId: result.body.id as string,
+    checkoutUrl: result.body.url as string,
+    customerId: typeof result.body.customer === "string" ? result.body.customer : null,
+  };
 }
 
 export function verifyStripeWebhookSignature(payload: string, signatureHeader: string | null) {

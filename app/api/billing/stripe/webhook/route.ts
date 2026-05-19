@@ -126,6 +126,7 @@ async function notifyBillingEvent(supabase: any, purchase: any, title: string, m
 }
 
 async function updateBillingAccountFromCustomerObject(supabase: any, object: any, event: any) {
+  const metadata = objectMetadata(object);
   const customerId =
     typeof object?.customer === "string" ? object.customer : object?.customer?.id || (object?.object === "customer" ? object.id : null);
   if (!customerId) return null;
@@ -142,6 +143,9 @@ async function updateBillingAccountFromCustomerObject(supabase: any, object: any
     updates.stripe_subscription_id = object.id;
     updates.status = object.status || "subscription_event";
     updates.trial_ends_at = object.trial_end ? new Date(object.trial_end * 1000).toISOString() : undefined;
+    if (object.trial_start) updates.trial_started_at = new Date(object.trial_start * 1000).toISOString();
+    if (metadata.plan_name) updates.plan_tier = metadata.plan_name;
+    if (metadata.billing_mode) updates.billing_mode = metadata.billing_mode;
   }
 
   const { data } = await supabase
@@ -151,6 +155,37 @@ async function updateBillingAccountFromCustomerObject(supabase: any, object: any
     .select()
     .limit(1);
 
+  return data?.[0] || null;
+}
+
+async function updateSubscriptionCheckout(supabase: any, object: any, event: any) {
+  const metadata = objectMetadata(object);
+  if (metadata.source !== "synaptireach_subscription_checkout") return null;
+  const billingAccountId = metadata.billing_account_id;
+  const subscriptionId = typeof object?.subscription === "string" ? object.subscription : object?.subscription?.id || null;
+  const customerId = typeof object?.customer === "string" ? object.customer : object?.customer?.id || null;
+  const updates = {
+    stripe_customer_id: customerId,
+    stripe_subscription_id: subscriptionId,
+    plan_tier: metadata.plan_name || null,
+    billing_mode: metadata.billing_mode || null,
+    status: object?.payment_status === "paid" || subscriptionId ? "trialing" : "checkout_completed",
+    metadata: {
+      source: "stripe_subscription_checkout_webhook",
+      stripe_event_id: event.id,
+      stripe_session_id: object.id,
+      plan_slug: metadata.plan_slug || null,
+      plan_name: metadata.plan_name || null,
+      billing_mode: metadata.billing_mode || null,
+      checkout_completed_at: new Date().toISOString(),
+      review_required: false,
+    },
+  };
+
+  const query = billingAccountId
+    ? supabase.from("crm_billing_accounts").update(updates).eq("id", billingAccountId)
+    : supabase.from("crm_billing_accounts").update(updates).eq("stripe_customer_id", customerId);
+  const { data } = await query.select().limit(1);
   return data?.[0] || null;
 }
 
@@ -208,11 +243,25 @@ export async function POST(request: Request) {
     let processedStatus = "processed";
 
     if (event.type === "checkout.session.completed") {
-      purchase = await findPurchase(supabase, object);
+      const subscriptionAccount = await updateSubscriptionCheckout(supabase, object, event);
+      purchase = subscriptionAccount ? null : await findPurchase(supabase, object);
       if (purchase) {
         const updated = await updatePurchaseFromStripe(supabase, purchase, "paid", object, event);
         await notifyBillingEvent(supabase, updated, "Credit pack payment completed", `${updated.pack_type} is paid and ready for credit fulfillment.`, "high");
         purchase = updated;
+      } else if (subscriptionAccount) {
+        await safeInsert(supabase, "crm_notifications", {
+          workspace_id: subscriptionAccount.workspace_id || metadata.workspace_id || null,
+          company_id: subscriptionAccount.company_id || metadata.company_id || null,
+          user_id: subscriptionAccount.user_id || metadata.user_id || null,
+          title: "Subscription trial started",
+          message: `${subscriptionAccount.plan_tier || "Selected plan"} is waiting on Stripe subscription lifecycle confirmation.`,
+          type: "billing",
+          priority: "normal",
+          status: "unread",
+          href: "/dashboard/settings#billing",
+          metadata: { source: "stripe_webhook", stripe_event_id: event.id },
+        });
       }
     } else if (event.type === "checkout.session.expired") {
       purchase = await findPurchase(supabase, object);

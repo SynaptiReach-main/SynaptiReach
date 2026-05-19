@@ -8,12 +8,13 @@ export default function CareersPage() {
       accent="Autonomous CRM"
       description="SynaptiReach is focused on practical AI automation for service businesses. Reach out if you want to help build thoughtful CRM systems."
       cards={[
-        { title: "Product Engineering", body: "Design real-data workflows, dashboards, and secure server-side AI features." },
-        { title: "Growth Operations", body: "Help service businesses turn CRM data into repeatable execution systems." },
-        { title: "Customer Success", body: "Support onboarding, workflows, campaign setup, and practical automation outcomes." },
+        { title: "Mission", body: "Build a safer autonomous CRM where operators can trust recommendations, review actions, and improve follow-up without losing control." },
+        { title: "Roles of Interest", body: "Product engineering, growth operations, customer success, implementation support, marketing systems, and secure AI workflow design." },
+        { title: "Contractors & Partners", body: "SynaptiReach may work with specialists in CRM setup, landing pages, funnel copy, local SEO, GMB, campaigns, and automation implementation." },
       ]}
       ctaLabel="Contact Us"
       ctaHref="/contact"
+      secondaryCtaLabel={null}
     />
   );
 }

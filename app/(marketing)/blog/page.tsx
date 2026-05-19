@@ -6,11 +6,14 @@ export default function BlogPage() {
       eyebrow="BLOG"
       title="Growth Systems"
       accent="Insights"
-      description="Guides and operating notes for CRM automation, lead follow-up, campaign strategy, and AI-assisted service business growth."
+      description="A static educational index for CRM, AI automation, lead generation, marketing, and operations. Publication dates will be added only when articles are actually published."
       cards={[
-        { title: "CRM Operations", body: "Frameworks for pipeline hygiene, task discipline, and follow-up systems." },
-        { title: "Campaign Strategy", body: "Ideas for email, SMS, social, and landing page campaigns that remain measurable." },
-        { title: "AI Workflows", body: "Ways to use AI safely for recommendations, summaries, drafts, and operational reviews." },
+        { title: "CRM", body: "Pipeline hygiene, task discipline, duplicate review, appointment follow-up, and how to keep real records actionable." },
+        { title: "AI Automation", body: "How to use built-in intelligence and external AI providers for scoring, summaries, drafts, and recommendations without unsafe auto-send behavior." },
+        { title: "Lead Generation", body: "Website, referral, paid, social, waitlist, event, and cold outreach lead sources and how to evaluate quality." },
+        { title: "Marketing", body: "Email, SMS, social, landing page, segmentation, open/click interpretation, and campaign follow-up concepts." },
+        { title: "Operations", body: "Staff workload, service requests, provider setup, billing caps, and workflow review processes." },
+        { title: "Coming Soon", body: "Long-form guides will appear here once static articles are ready. No fake publication dates are shown." },
       ]}
       ctaLabel="Explore the Demo"
       ctaHref="/demo/dashboard"

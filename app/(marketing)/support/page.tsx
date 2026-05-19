@@ -8,12 +8,16 @@ export default function SupportPage() {
       accent="SynaptiReach"
       description="Use support for trial questions, onboarding, CRM setup, billing, AI providers, integrations, and campaign workflow guidance."
       cards={[
-        { title: "Trial Help", body: "Understand 14-day trial caps, BYOK setup, managed plans, and upgrade options." },
-        { title: "CRM Setup", body: "Get guidance on leads, pipeline, tasks, appointments, campaigns, workflows, and settings." },
-        { title: "Integrations", body: "Review Supabase, Gemini, OpenRouter, Resend, Twilio, Ayrshare, and billing setup requirements." },
+        { title: "FAQs", body: "Get help with trial access, billing status, provider setup, CRM imports, campaign setup, and workspace settings." },
+        { title: "Setup Help", body: "Support can help review leads, pipeline stages, tasks, appointments, workflows, staff, and dashboard configuration." },
+        { title: "Billing Help", body: "Use support for Stripe Checkout, Billing Portal, sandbox test status, trial countdowns, caps, and credit-pack questions." },
+        { title: "Provider Keys Help", body: "Review setup-required states for Gemini, OpenRouter, optional OpenAI, Resend, Twilio, and Ayrshare without exposing secrets." },
+        { title: "Stripe Sandbox Note", body: "Stripe test mode should be used until subscription checkout, webhooks, and billing portal flows are verified." },
+        { title: "Troubleshooting", body: "Include the page, provider, error message, workspace state, and whether the issue happened during review, checkout, or send confirmation." },
       ]}
       ctaLabel="Contact Support"
       ctaHref="/contact"
+      secondaryCtaLabel={null}
     />
   );
 }

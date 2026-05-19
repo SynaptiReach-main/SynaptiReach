@@ -17,14 +17,14 @@ Codex must update this after every pass.
 | 2 | Supabase schema/features | Partial | schema ran successfully | feature live-write tests | |
 | 3 | Test user/simulated workspace | Complete | live bootstrap/seed/tick succeeded for `donovan.mike966@gmail.com`; workspace `cc2d162a-33e9-4d0b-8a8f-b9d35f68d4a8`; seed returned rich CRM counts; tick advanced to day 3; browser login/pages verified by user; build passes; controls verify `workspaces.is_test_workspace=true` | Continue monitoring with future browser smoke tests; no Task 3 blocker remains | 2026-05-19 |
 | 4 | Demo/nav/performance | Complete | demo overview removed, nav non-sticky, build passes | monitor | |
-| 5 | Trial subscriptions/autorenewal | Not Started |  |  | |
-| 6 | Tiers/caps/BYOK/managed | Not Started |  |  | |
-| 7 | Services/settings requests | Not Started |  |  | |
-| 8 | Public services consultation flow | Not Started |  |  | |
-| 9 | Contact form/admin handling | Not Started |  |  | |
-| 10 | Waitlist system | Not Started |  |  | |
-| 11 | Industry pages/footer dropdown | Not Started |  |  | |
-| 12 | Public info pages buildout | Not Started |  |  | |
+| 5 | Trial subscriptions/autorenewal | Partial | subscription Checkout intent route added; webhook subscription metadata update preserved; build passes | live Stripe price env/checkout/webhook verification; full restricted-state/trial notification automation | 2026-05-19 |
+| 6 | Tiers/caps/BYOK/managed | Partial | central plan metadata includes BYOK/managed tiers, caps, price env names, credit-pack behavior; settings UI shows selected plan/caps | live billing account plan updates and cap enforcement tests | 2026-05-19 |
+| 7 | Services/settings requests | Partial | service catalog and dashboard consultation request route/UI added; no payment is faked | live Supabase service-request write verification with valid env/session | 2026-05-19 |
+| 8 | Public services consultation flow | Complete | services page buttons now say Contact SynaptiReach and explain required 30-minute consultation while preserving pricing | monitor copy/UI | 2026-05-19 |
+| 9 | Contact form/admin handling | Partial | contact API/form/admin page added; route fails safely when Supabase env unavailable | live Supabase insert and Resend delivery verification | 2026-05-19 |
+| 10 | Waitlist system | Partial | global public waitlist widget/API/admin page added with first-5 cohort logic; hidden from demo/dashboard/admin paths | live Supabase insert/Resend confirmation/admin management actions | 2026-05-19 |
+| 11 | Industry pages/footer dropdown | Complete | dynamic industry pages added for required industries and compact footer solution list updated | monitor route coverage | 2026-05-19 |
+| 12 | Public info pages buildout | Partial | about/blog/careers/privacy/terms/security/support/analytics/ai-agents expanded; button cleanup applied for careers/privacy/support | deeper copy polish and visual review on mobile/desktop | 2026-05-19 |
 | 13 | Dashboard compaction/modals | Not Started |  |  | |
 | 14 | Metric popups across CRM | Not Started |  |  | |
 | 15 | Pipeline create deal help | Not Started |  |  | |
@@ -41,6 +41,62 @@ Codex must update this after every pass.
 ## Pass Log
 
 Add new entries below after each Codex pass.
+
+### 2026-05-19 - Tasks 5-12 Checkpoint 1
+
+Date: 2026-05-19
+Model: Codex
+Prompt/Goal: Move to Tasks 5-12 only after preserving completed work.
+Completed: Read `docs/codex/SYNAPTIREACH_MASTER_V9.md` and `docs/codex/CODEX_TASK_LEDGER.md`; confirmed Task 3 remains complete and Tasks 5-12 are the active scope for this pass. Initial inspection found existing Stripe billing/webhook/settings code, public pricing/trial/services/contact/info pages, and only a partial industry page set.
+Skipped: Tasks 13-24, except documentation references needed to preserve prior work.
+Partial: Tasks 5-12 implementation is now in progress; no code changes beyond this checkpoint entry yet.
+Blocked: None at this checkpoint.
+Files changed: `docs/codex/CODEX_TASK_LEDGER.md`
+Build result: Not run at this checkpoint.
+Tests run: Repo/document inspection and targeted file discovery only.
+Next recommended task: Inspect Stripe subscription support, public services/contact/waitlist implementation, footer solutions links, and the public info page content before making scoped Tasks 5-12 changes.
+
+### 2026-05-19 - Tasks 5-12 Checkpoint 2
+
+Date: 2026-05-19
+Model: Codex
+Prompt/Goal: Inspect existing Tasks 5-12 implementation before edits.
+Completed: Confirmed existing billing code supports credit-pack Checkout and webhook event storage, but does not yet expose a subscription Checkout flow. Confirmed `crm_billing_accounts`, `crm_service_requests`, `crm_service_orders`, `contact_submissions`, and `waitlist_signups` already exist in the idempotent schema. Confirmed public services/contact/info pages exist but are mostly static, public services still uses `Get Started`, contact form currently simulates success client-side, waitlist/admin contact handling is not implemented, and only five solution pages exist.
+Skipped: No destructive schema changes.
+Partial: Tasks 5-12 remain in implementation.
+Blocked: Live Stripe/Supabase/Resend verification will depend on configured local env after code changes.
+Files changed: `docs/codex/CODEX_TASK_LEDGER.md`
+Build result: Not run at this checkpoint.
+Tests run: Static inspection of billing, settings, public services/contact pages, footer, public info page, admin shell, and schema sections.
+Next recommended task: Add central plan/service constants plus safe server routes for subscription checkout, service requests, contact submissions, and waitlist signups.
+
+### 2026-05-19 - Tasks 5-12 Checkpoint 3
+
+Date: 2026-05-19
+Model: Codex
+Prompt/Goal: Implement primary Tasks 5-12 surfaces.
+Completed: Added richer central plan metadata, Stripe subscription Checkout intent route, service catalog constants, dashboard service consultation request route/UI, contact submission API, waitlist API/widget, admin contact/waitlist views, public services consultation language/buttons, dynamic industry solution pages, compact footer industry links, and expanded public info page content/button cleanup.
+Skipped: Direct service payment checkout; service requests remain consultation/review-first per task safety requirements.
+Partial: Build and route/API smoke tests still need to run; Stripe subscription checkout requires configured Stripe price env vars before live checkout URLs can be created.
+Blocked: Live Resend/Stripe/Supabase verification depends on local env and real service credentials.
+Files changed: `lib/billing/plans.ts`, `lib/billing/services.ts`, `lib/billing/stripe.ts`, `lib/notifications/resend.ts`, `lib/marketing/industries.ts`, `app/api/billing/subscription/checkout/route.ts`, `app/api/crm/services/request/route.ts`, `app/api/contact/route.ts`, `app/api/waitlist/route.ts`, `app/admin/dashboard/contact-submissions/page.tsx`, `app/admin/dashboard/waitlist/page.tsx`, marketing/public pages, footer, settings, and this ledger.
+Build result: Not run at this checkpoint.
+Tests run: Implementation/static review only.
+Next recommended task: Run `npm.cmd run build`, fix compile/runtime issues, then run targeted API/page smoke tests where local env allows.
+
+### 2026-05-19 - Tasks 5-12 Checkpoint 4
+
+Date: 2026-05-19
+Model: Codex
+Prompt/Goal: Build and smoke-test Tasks 5-12.
+Completed: `npm.cmd run build` passed. Hardened browser and admin Supabase helpers so invalid local Supabase URL values fail safely instead of crashing prerender/API routes. Page smoke tests returned 200 for pricing, trial, services, contact, public info pages, dynamic industry pages, and admin contact/waitlist pages.
+Skipped: Live Stripe/Resend/Supabase writes because this local environment returned setup-required for Supabase configuration.
+Partial: Tasks 5, 6, 7, 9, 10, and 12 remain partial until live Supabase/Stripe/Resend verification and deeper UI review are completed.
+Blocked: Live write/email/checkout tests require valid `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, and Stripe subscription price env vars.
+Files changed: Tasks 5-12 implementation files plus `lib/supabase/client.ts`, `lib/crm/supabaseAdmin.ts`, this ledger.
+Build result: Passed.
+Tests run: `npm.cmd run build`; local production page smoke tests for `/pricing`, `/trial`, `/services`, `/contact`, `/about`, `/blog`, `/careers`, `/privacy`, `/terms`, `/security`, `/support`, `/analytics`, `/ai-agents`, `/solutions/real-estate`, `/solutions/med-spa`, `/solutions/other-industry`, `/admin/dashboard/contact-submissions`, `/admin/dashboard/waitlist`; API smoke probes for `/api/contact`, `/api/waitlist`, `/api/billing/subscription/checkout`, `/api/crm/services/request` returned clean 503 setup-required responses with invalid local Supabase env.
+Next recommended task: With valid local env, live-test contact/waitlist/service writes, Resend notifications, Stripe subscription Checkout with price IDs, and webhook lifecycle updates.
 
 ### 2026-05-19 - Task 20 Goal Checkpoint 1
 

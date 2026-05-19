@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { INDUSTRY_SOLUTIONS } from "@/lib/marketing/industries";
 
 const footerSections = [
   {
@@ -15,13 +16,7 @@ const footerSections = [
   },
   {
     title: "Solutions",
-    links: [
-      { label: "Agencies", href: "/solutions/agencies" },
-      { label: "HVAC", href: "/solutions/hvac" },
-      { label: "Roofing", href: "/solutions/roofing" },
-      { label: "Healthcare", href: "/solutions/healthcare" },
-      { label: "Legal", href: "/solutions/legal" },
-    ],
+    links: INDUSTRY_SOLUTIONS.map((industry) => ({ label: industry.label, href: `/solutions/${industry.slug}` })),
   },
   {
     title: "Company",
@@ -92,7 +87,7 @@ export default function Footer() {
               <div className="mb-4 text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
                 {section.title}
               </div>
-              <div className="space-y-2.5">
+              <div className={`${section.title === "Solutions" ? "grid max-h-56 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-1" : "space-y-2.5"}`}>
                 {section.links.map((link) => (
                   <Link
                     key={link.href}

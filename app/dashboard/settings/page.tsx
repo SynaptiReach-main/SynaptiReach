@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { CheckCircle2, CreditCard, Database, KeyRound, Loader2, Settings, Sparkles, UserPlus, XCircle, Zap } from "lucide-react";
-import { COMMITMENT_DISCOUNTS, CREDIT_PACKS, MANAGED_PLANS, SELF_SERVICE_BYOK_PLANS, TRIAL_PLANS } from "@/lib/billing/plans";
+import { COMMITMENT_DISCOUNTS, CREDIT_PACKS, MANAGED_PLANS, SELF_SERVICE_BYOK_PLANS, SUBSCRIPTION_PLANS, TRIAL_PLANS } from "@/lib/billing/plans";
+import { SERVICE_CATALOG } from "@/lib/billing/services";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
 
@@ -236,6 +237,57 @@ export default function SettingsPage() {
     }
   }
 
+  async function startSubscriptionCheckout(planSlug: string) {
+    try {
+      setSavingSection(`subscription_${planSlug}`);
+      setError("");
+      setSuccess("");
+      const response = await fetch("/api/billing/subscription/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: planSlug }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data?.error || "Failed to create subscription checkout.");
+      }
+      if (data.checkoutUrl) {
+        setSuccess("Stripe subscription checkout created. Redirecting to Stripe for trial and payment review.");
+        window.location.assign(data.checkoutUrl);
+        return;
+      }
+      setSuccess(data.setupRequired
+        ? "Subscription intent recorded. Add Stripe subscription price env vars before live checkout."
+        : "Subscription intent recorded for review.");
+      await loadSettings();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to create subscription checkout.");
+    } finally {
+      setSavingSection("");
+    }
+  }
+
+  async function requestService(itemName: string) {
+    try {
+      setSavingSection(`service_${itemName}`);
+      setError("");
+      setSuccess("");
+      const response = await fetch("/api/crm/services/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemName }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data?.error || "Failed to request service consultation.");
+      setSuccess(`${itemName} consultation request saved. SynaptiReach will review before any purchase or checkout.`);
+      await loadSettings();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to request service consultation.");
+    } finally {
+      setSavingSection("");
+    }
+  }
+
   async function runSimulationAction(action: "seed" | "tick" | "reset" | "pause" | "resume") {
     try {
       setSavingSection(`simulation_${action}`);
@@ -322,13 +374,13 @@ export default function SettingsPage() {
     return map;
   }, {});
   const selectedPlanName = billing?.plan_tier || billing?.metadata?.selected_plan || "Growth Trial";
-  const selectedPlan = [...TRIAL_PLANS, ...MANAGED_PLANS, ...SELF_SERVICE_BYOK_PLANS].find((plan) => plan.name === selectedPlanName);
+  const selectedPlan = [...TRIAL_PLANS, ...SUBSCRIPTION_PLANS].find((plan) => plan.name === selectedPlanName);
   const stripeStatus = integrations.stripe || {};
   const stripeReady = Boolean(stripeStatus.checkoutEnabled || stripeStatus.configured);
 
   return (
     <main className="min-h-screen text-white">
-      <QueryRecordFocus keys={["settingsId"]} hashIds={["billing", "usage", "providers"]} />
+      <QueryRecordFocus keys={["settingsId"]} hashIds={["billing", "usage", "providers", "services"]} />
       <div className="mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-400/20 bg-cyan-400/10 text-cyan-300 text-xs mb-4">
           <Settings size={14} />
@@ -688,8 +740,37 @@ export default function SettingsPage() {
                 <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
                   <h3 className="font-black">Usage Cost Rules</h3>
                   <p className="mt-2 text-sm text-gray-400">
-                    Users are responsible for all usage costs for credits. Once caps are reached, purchase the corresponding credit pack to go past the cap. BYOK provider usage is billed by the user&apos;s providers; SynaptiReach platform charges remain separate.
+                    BYOK users pay their own provider usage separately. SynaptiReach-managed plans consume included credits and require credit packs or an upgrade after caps are reached.
                   </p>
+                </div>
+              </div>
+              <div className="mt-6 rounded-2xl border border-cyan-400/15 bg-cyan-500/[0.04] p-5">
+                <h3 className="text-xl font-black">Select a Paid Plan</h3>
+                <p className="mt-2 text-sm text-cyan-50/65">
+                  After the 14-day trial, your selected plan renews automatically unless canceled before the trial ends. Checkout is hosted by Stripe, and no subscription is marked active until Stripe confirms it.
+                </p>
+                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {SUBSCRIPTION_PLANS.map((plan) => (
+                    <div key={plan.slug} className={`rounded-2xl border p-4 ${selectedPlanName === plan.name ? "border-cyan-300/50 bg-cyan-400/10" : "border-white/10 bg-black/30"}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-black text-white">{plan.name}</div>
+                          <div className="text-xs text-gray-500">{plan.billingMode === "byok" ? "Bring your own provider keys" : "SynaptiReach-managed credits"}</div>
+                        </div>
+                        <div className="font-black text-cyan-200">{plan.price}</div>
+                      </div>
+                      <div className="mt-3 text-xs text-gray-400">
+                        {plan.overCapBehavior}
+                      </div>
+                      <button
+                        onClick={() => startSubscriptionCheckout(plan.slug)}
+                        disabled={Boolean(savingSection)}
+                        className="mt-4 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 disabled:opacity-60"
+                      >
+                        {savingSection === `subscription_${plan.slug}` ? "Creating..." : stripeReady ? "Start Stripe Trial Checkout" : "Record Subscription Intent"}
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
               <div className="mt-6">
@@ -709,6 +790,37 @@ export default function SettingsPage() {
                     {creditPackPurchases.length} credit pack intent{creditPackPurchases.length === 1 ? "" : "s"} recorded for review.
                   </div>
                 )}
+              </div>
+            </div>
+
+            <div id="services" className="rounded-3xl border border-cyan-400/15 bg-cyan-500/[0.04] p-6 h-fit xl:col-span-3">
+              <div className="mb-5 flex items-center gap-3">
+                <Sparkles className="text-cyan-300" size={22} />
+                <h2 className="text-xl font-black">Services, Bundles & Retainers</h2>
+              </div>
+              <p className="mb-5 text-sm text-cyan-50/65">
+                Request a 30-minute SynaptiReach consultation before purchasing implementation services. Requests are stored for review and do not trigger payment.
+              </p>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {SERVICE_CATALOG.map((item) => (
+                  <div key={`${item.serviceType}-${item.itemName}`} className={`rounded-2xl border p-4 ${item.popular ? "border-cyan-300/45 bg-cyan-400/10" : "border-white/10 bg-black/30"}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-black text-white">{item.itemName}</div>
+                        <div className="text-xs text-gray-500">{item.category}</div>
+                      </div>
+                      <div className="font-black text-cyan-200">{item.priceLabel}</div>
+                    </div>
+                    {item.popular && <div className="mt-2 text-xs font-black text-green-200">MOST POPULAR</div>}
+                    <button
+                      onClick={() => requestService(item.itemName)}
+                      disabled={Boolean(savingSection)}
+                      className="mt-4 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 disabled:opacity-60"
+                    >
+                      {savingSection === `service_${item.itemName}` ? "Requesting..." : "Request Consultation"}
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
 

@@ -54,7 +54,7 @@ export default function PricingPage() {
         </h1>
         <p className="mx-auto mt-5 max-w-3xl text-cyan-50/70">
           Choose BYOK to use your own provider keys, or Managed to use SynaptiReach keys with strict monthly caps.
-          Trials last 14 days and stop at hard limits.
+          Users are charged only after selecting a paid plan and entering payment details through Stripe Checkout.
         </p>
       </section>
 
@@ -118,7 +118,7 @@ export default function PricingPage() {
           <p><strong className="text-white">How long is the free trial?</strong> Every self-service trial lasts 14 days.</p>
           <p><strong className="text-white">Are there overages?</strong> No. Trial and managed plan caps are hard caps.</p>
           <p><strong className="text-white">Can I use SMS during trial?</strong> Managed SMS is not included during the free trial. Connect your own Twilio/BYOK provider for SMS testing.</p>
-          <p><strong className="text-white">What happens after limits or trial end?</strong> Upgrade is required to continue after caps or after 14 days.</p>
+          <p><strong className="text-white">What happens after limits or trial end?</strong> After the 14-day trial, your selected plan renews automatically unless canceled before the trial ends. Contact and waitlist submissions do not create charges.</p>
         </div>
       </section>
 

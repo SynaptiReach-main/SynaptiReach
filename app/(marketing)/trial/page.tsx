@@ -21,7 +21,7 @@ export default function TrialPage() {
           </span>
         </h1>
         <p className="mx-auto mt-5 max-w-3xl text-cyan-50/70">
-          Start a 14-day free trial with safe usage caps. No overages. Upgrade is required to continue after limits or after 14 days.
+          Start a 14-day free trial with safe usage caps. Users are charged only after selecting a paid plan and entering payment details through Stripe Checkout.
         </p>
       </section>
 
@@ -92,7 +92,7 @@ export default function TrialPage() {
         <p><strong className="text-white">How long is the free trial?</strong> The free trial lasts 14 days.</p>
         <p><strong className="text-white">Can I use managed SMS?</strong> No managed SMS is included during free trial unless you connect your own Twilio/BYOK provider.</p>
         <p><strong className="text-white">Are overages allowed?</strong> No. Trial caps are hard caps.</p>
-        <p><strong className="text-white">What happens at the end?</strong> Upgrade is required to continue after limits or after 14 days.</p>
+        <p><strong className="text-white">What happens at the end?</strong> After the 14-day trial, your selected plan renews automatically unless canceled before the trial ends. Waitlist and contact submissions are never charged.</p>
       </section>
 
       <Footer />

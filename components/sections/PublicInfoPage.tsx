@@ -12,6 +12,8 @@ type PublicInfoPageProps = {
   }>;
   ctaLabel?: string;
   ctaHref?: string;
+  secondaryCtaLabel?: string | null;
+  secondaryCtaHref?: string;
 };
 
 export default function PublicInfoPage({
@@ -22,6 +24,8 @@ export default function PublicInfoPage({
   cards,
   ctaLabel = "Start 14-Day Trial",
   ctaHref = "/trial",
+  secondaryCtaLabel = "Contact SynaptiReach",
+  secondaryCtaHref = "/contact",
 }: PublicInfoPageProps) {
   return (
     <main className="min-h-screen px-5 py-16 text-white">
@@ -48,12 +52,14 @@ export default function PublicInfoPage({
             >
               {ctaLabel}
             </Link>
-            <Link
-              href="/contact"
-              className="rounded-2xl border border-cyan-300/25 bg-cyan-400/5 px-6 py-3 font-bold text-cyan-100"
-            >
-              Contact SynaptiReach
-            </Link>
+            {secondaryCtaLabel && (
+              <Link
+                href={secondaryCtaHref}
+                className="rounded-2xl border border-cyan-300/25 bg-cyan-400/5 px-6 py-3 font-bold text-cyan-100"
+              >
+                {secondaryCtaLabel}
+              </Link>
+            )}
           </div>
         </div>
       </section>

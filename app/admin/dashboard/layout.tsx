@@ -19,6 +19,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Link href="/admin/dashboard/clients">Clients</Link>
           <Link href="/admin/dashboard/campaigns">Campaigns</Link>
           <Link href="/admin/dashboard/analytics">Analytics</Link>
+          <Link href="/admin/dashboard/contact-submissions">Contact Submissions</Link>
+          <Link href="/admin/dashboard/waitlist">Waitlist</Link>
           <Link href="/admin/dashboard/settings">Settings</Link>
         </nav>
       </aside>

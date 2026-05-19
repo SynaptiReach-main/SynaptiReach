@@ -894,3 +894,156 @@ Invoke-RestMethod -Method Post "$base/api/intelligence/run" `
 ### Task 3 Status
 
 Task 3 / Task 2A is marked complete for launch-readiness tracking. The dedicated simulated workspace exists, has rich seeded data, advances with ticks, uses normal CRM pages, and is protected by test-workspace guards. Continue to use this workspace for Task 20 tuning and later CRM/browser smoke tests.
+
+## Tasks 5-12 Implementation Checkpoint - 2026-05-19
+
+- [x] Continued from the current working tree and limited this pass to Tasks 5-12.
+- [x] `npm.cmd run build` passes after Tasks 5-12 changes.
+- [x] Added richer central plan metadata in `lib/billing/plans.ts`:
+  - BYOK and SynaptiReach-managed tiers.
+  - Monthly prices.
+  - Stripe price env var names.
+  - AI/email/SMS/contact/agent/workflow caps.
+  - Hard-cap behavior.
+  - Credit-pack eligibility.
+  - BYOK provider-cost responsibility.
+- [x] Added subscription Checkout intent route:
+  - `POST /api/billing/subscription/checkout`
+  - Uses Stripe Checkout `mode=subscription`.
+  - Uses a 14-day trial.
+  - Does not hardcode `payment_method_types`.
+  - Does not mark subscriptions active without webhook confirmation.
+  - Returns setup-required when Stripe price env vars or Supabase env are missing.
+- [x] Updated Stripe webhook handling to store subscription checkout metadata and subscription lifecycle references where Stripe confirms events.
+- [x] Added dashboard settings subscription plan selection and required disclosure:
+  - “After the 14-day trial, your selected plan renews automatically unless canceled before the trial ends.”
+- [x] Added `lib/billing/services.ts` service catalog for services, bundles, and retainers.
+- [x] Added dashboard service consultation request flow:
+  - `POST /api/crm/services/request`
+  - Stores `crm_service_requests`.
+  - Creates notifications/audit logs where Supabase is configured.
+  - Does not trigger payment or fake paid orders.
+- [x] Updated public `/services`:
+  - Buttons now say `Contact SynaptiReach`.
+  - Buttons route to `/contact?service=...`.
+  - Consultation language explains the required 30-minute video consultation.
+  - Pricing and Full Business System 30-day implementation support are preserved.
+- [x] Rebuilt `/contact` as a working form:
+  - Posts to `POST /api/contact`.
+  - Saves `contact_submissions` when Supabase is configured.
+  - Sends SynaptiReach notification email via Resend when configured.
+  - Includes honeypot spam field.
+  - Supports service, support, waitlist, trial, partner, and general inquiries.
+- [x] Added admin contact view:
+  - `/admin/dashboard/contact-submissions`
+- [x] Added public waitlist widget:
+  - Visible on public marketing pages.
+  - Hidden from demo, dashboard, and admin paths.
+  - Collects launch cohort fields.
+  - Saves to `waitlist_signups` when Supabase is configured.
+  - Deduplicates by email.
+  - Assigns first-5 founding cohort eligibility.
+  - Sends internal Resend email when configured.
+- [x] Added admin waitlist view:
+  - `/admin/dashboard/waitlist`
+- [x] Added dynamic industry pages:
+  - `/solutions/[industry]`
+  - Required industries are covered, including real estate, med spa, dental, home services, contractors, ecommerce, consultants, coaches, gyms/fitness, restaurants/local businesses, automotive, insurance, financial services, education/training, nonprofit, and other industry.
+- [x] Updated compact footer Solutions list to include all industries plus “Don’t See Your Industry?”.
+- [x] Expanded public info pages:
+  - `/about`
+  - `/blog`
+  - `/careers`
+  - `/privacy`
+  - `/terms`
+  - `/security`
+  - `/support`
+  - `/analytics`
+  - `/ai-agents`
+- [x] Button cleanup:
+  - `/support` uses only `Contact Support`.
+  - `/privacy` uses only `Contact SynaptiReach`.
+  - `/careers` uses only `Contact Us`.
+- [x] Hardened Supabase build/runtime helpers:
+  - `lib/supabase/client.ts` validates public Supabase URL before browser client construction.
+  - `lib/crm/supabaseAdmin.ts` validates Supabase URL before service-role client construction and returns setup-required instead of crashing.
+
+### Tasks 5-12 Smoke Tests
+
+```powershell
+npm.cmd run build
+
+$job = Start-Job -ScriptBlock { Set-Location 'C:\Users\nikna\SynaptiReach'; npm.cmd run start -- -p 3008 }
+Start-Sleep -Seconds 8
+$routes = @(
+  '/pricing','/trial','/services','/contact','/about','/blog','/careers',
+  '/privacy','/terms','/security','/support','/analytics','/ai-agents',
+  '/solutions/real-estate','/solutions/med-spa','/solutions/other-industry',
+  '/admin/dashboard/contact-submissions','/admin/dashboard/waitlist'
+)
+$routes | ForEach-Object {
+  Invoke-WebRequest -Uri "http://localhost:3008$_" -MaximumRedirection 5 -TimeoutSec 20 -UseBasicParsing
+}
+Stop-Job -Job $job
+Remove-Job -Job $job
+```
+
+Observed result: all listed pages returned 200.
+
+### Tasks 5-12 API Smoke Results
+
+With the current local env, valid payload API probes returned clean setup-required responses because Supabase env is unavailable/invalid:
+
+- `POST /api/contact` -> 503 setup-required.
+- `POST /api/waitlist` -> 503 setup-required.
+- `POST /api/billing/subscription/checkout` -> 503 setup-required.
+- `POST /api/crm/services/request` -> 503 setup-required.
+
+This is a safe failure mode. With valid env, rerun live-write tests:
+
+```powershell
+$base = "http://localhost:3000"
+
+Invoke-RestMethod -Method Post "$base/api/contact" `
+  -ContentType "application/json" `
+  -Body '{"name":"Smoke Test","email":"smoke@example.com","message":"Contact smoke test","source":"local_smoke"}'
+
+Invoke-RestMethod -Method Post "$base/api/waitlist" `
+  -ContentType "application/json" `
+  -Body '{"full_name":"Smoke Test","work_email":"waitlist-smoke@example.com","consent_to_contact":true,"source":"local_smoke"}'
+
+Invoke-RestMethod -Method Post "$base/api/billing/subscription/checkout" `
+  -ContentType "application/json" `
+  -Body '{"plan":"growth-managed"}'
+
+Invoke-RestMethod -Method Post "$base/api/crm/services/request" `
+  -ContentType "application/json" `
+  -Body '{"itemName":"Growth Engine"}'
+```
+
+Required live env for full verification:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `RESEND_API_KEY`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- Stripe subscription price env vars:
+  - `STRIPE_PRICE_BASIC_BYOK`
+  - `STRIPE_PRICE_GROWTH_BYOK`
+  - `STRIPE_PRICE_PREMIUM_BYOK`
+  - `STRIPE_PRICE_BASIC_MANAGED`
+  - `STRIPE_PRICE_GROWTH_MANAGED`
+  - `STRIPE_PRICE_PREMIUM_MANAGED`
+
+### Tasks 5-12 Status
+
+- Task 5: Partial. Subscription Checkout intent exists and build passes; live Stripe price/session/webhook/trial lifecycle verification remains.
+- Task 6: Partial. Tiers/caps are centrally modeled and visible in settings; full cap enforcement tests remain.
+- Task 7: Partial. Dashboard service request UI/API exists; live Supabase write verification remains.
+- Task 8: Complete for current scope.
+- Task 9: Partial. Contact form/API/admin exists; live Supabase insert and Resend delivery verification remain.
+- Task 10: Partial. Waitlist widget/API/admin exists; live Supabase insert, Resend notification, and invite/admin action flows remain.
+- Task 11: Complete for current scope.
+- Task 12: Partial. Public pages are expanded and button cleanup is applied; final mobile/desktop visual polish remains.
