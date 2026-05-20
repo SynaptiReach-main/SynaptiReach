@@ -25,6 +25,7 @@ import SMSCampaignModal from "@/components/marketing/modals/SMSCampaignModal";
 import SocialCampaignModal from "@/components/marketing/modals/SocialCampaignModal";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
+import SimpleMetricModal, { type SimpleMetricDetail } from "@/components/dashboard/SimpleMetricModal";
 
 export default function MarketingPage() {
   const [
@@ -108,6 +109,11 @@ export default function MarketingPage() {
   const [scheduledSearch, setScheduledSearch] = useState("");
   const [showAllCampaigns, setShowAllCampaigns] = useState(false);
   const [showAllScheduled, setShowAllScheduled] = useState(false);
+  const [showAllActivity, setShowAllActivity] = useState(false);
+  const [activitySearch, setActivitySearch] = useState("");
+  const [showAllRecommendations, setShowAllRecommendations] = useState(false);
+  const [recommendationSearch, setRecommendationSearch] = useState("");
+  const [selectedMetric, setSelectedMetric] = useState<SimpleMetricDetail | null>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<any | null>(null);
 
   const scheduledCampaigns =
@@ -160,6 +166,28 @@ export default function MarketingPage() {
   const visibleScheduledCampaigns = showAllScheduled
     ? filteredScheduledCampaigns
     : filteredScheduledCampaigns.slice(0, 5);
+  const filteredActivity = activity.filter((item) => {
+    const search = activitySearch.toLowerCase();
+    return (
+      !search ||
+      [item.title, item.action, item.type, item.description, item.details, item.message]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(search))
+    );
+  });
+  const visibleActivity = showAllActivity ? filteredActivity : filteredActivity.slice(0, 5);
+  const filteredRecommendations = recommendations.filter((item) => {
+    const search = recommendationSearch.toLowerCase();
+    return (
+      !search ||
+      [item.title, item.content, item.description, item.details, item.estimated_impact, item.type]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(search))
+    );
+  });
+  const visibleRecommendations = showAllRecommendations
+    ? filteredRecommendations
+    : filteredRecommendations.slice(0, 5);
 
   const campaignTotals = {
     delivered: campaigns.reduce((sum, campaign) => sum + Number(campaign.delivered_count || 0), 0),
@@ -545,6 +573,7 @@ export default function MarketingPage() {
   return (
     <main className="min-h-screen text-white">
       <QueryRecordFocus keys={["campaignId"]} />
+      <SimpleMetricModal metric={selectedMetric} onClose={() => setSelectedMetric(null)} />
       {selectedCampaign && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
           <div className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-3xl border border-cyan-400/20 bg-slate-950 shadow-2xl shadow-cyan-500/20">
@@ -735,11 +764,31 @@ export default function MarketingPage() {
             },
           ].map((item) => {
             const Icon = item.icon;
+            const records = campaigns.filter((campaign) => {
+              if (item.label === "Campaigns") return true;
+              if (item.label === "Active") return campaign.status === "active" || campaign.status === "processing";
+              if (item.label === "Scheduled") return campaign.status === "scheduled";
+              if (item.label === "Cancelled") return campaign.status === "cancelled";
+              if (item.label === "Opened") return Number(campaign.opened_count || 0) > 0;
+              if (item.label === "Clicked") return Number(campaign.clicked_count || 0) > 0;
+              if (item.label === "Converted") return Number(campaign.converted_count || 0) > 0;
+              if (item.label === "AI Insights") return false;
+              return false;
+            });
 
             return (
-              <div
+              <button
                 key={item.label}
-                className="rounded-3xl border border-white/10 bg-white/[0.03] p-5"
+                onClick={() => setSelectedMetric({
+                  title: item.label,
+                  value: item.value,
+                  records: item.label === "AI Insights" ? recommendations : records,
+                  description: item.label === "AI Insights"
+                    ? "Review-gated CRM Intelligence recommendations for marketing."
+                    : `${item.label} campaign records from current workspace data.`,
+                  href: item.label === "AI Insights" ? "/dashboard/ai_assistant" : "/dashboard/marketing",
+                })}
+                className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-left transition hover:-translate-y-0.5 hover:border-cyan-400/35 hover:bg-cyan-500/10"
               >
 
                 <div className="flex items-center justify-between mb-5">
@@ -768,7 +817,7 @@ export default function MarketingPage() {
                   {item.label}
                 </div>
 
-              </div>
+              </button>
             );
           })}
 
@@ -937,7 +986,7 @@ export default function MarketingPage() {
 
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
 
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
 
               <div>
 
@@ -951,22 +1000,37 @@ export default function MarketingPage() {
 
               </div>
 
-              <Activity
-                className="text-cyan-300"
-                size={20}
-              />
+              <div className="flex flex-col gap-3 sm:flex-row">
+                {showAllActivity && (
+                  <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
+                    <Search className="text-gray-500" size={16} />
+                    <input
+                      value={activitySearch}
+                      onChange={(event) => setActivitySearch(event.target.value)}
+                      placeholder="Search activity..."
+                      className="bg-transparent outline-none text-sm text-white placeholder:text-gray-600"
+                    />
+                  </div>
+                )}
+                <button
+                  onClick={() => setShowAllActivity((value) => !value)}
+                  className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm font-bold text-cyan-100"
+                >
+                  {showAllActivity ? "Show Recent 5" : "View All"}
+                </button>
+              </div>
 
             </div>
 
             <div className="space-y-4">
 
-              {activity.length === 0 && (
+              {filteredActivity.length === 0 && (
                 <div className="rounded-2xl border border-white/10 bg-black/30 p-5 text-sm text-gray-400">
-                  No marketing activity yet.
+                  {activitySearch ? "No marketing activity matches the current search." : "No marketing activity yet."}
                 </div>
               )}
 
-              {activity.map((item) => (
+              {visibleActivity.map((item) => (
                 <div
                   key={item.id}
                   className="rounded-2xl border border-white/10 bg-black/30 p-5"
@@ -992,6 +1056,14 @@ export default function MarketingPage() {
 
                 </div>
               ))}
+              {!showAllActivity && filteredActivity.length > 5 && (
+                <button
+                  onClick={() => setShowAllActivity(true)}
+                  className="w-full rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-sm font-bold text-cyan-100"
+                >
+                  View {filteredActivity.length - 5} older activity records
+                </button>
+              )}
 
             </div>
 
@@ -1013,26 +1085,46 @@ export default function MarketingPage() {
               <div>
 
                 <h2 className="text-xl font-black">
-                  AI Recommendations
+                  CRM Intelligence Recommendations
                 </h2>
 
                 <p className="text-sm text-gray-400">
-                  Autonomous growth intelligence
+                  Review-gated marketing next actions
                 </p>
 
               </div>
 
             </div>
 
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+              {showAllRecommendations && (
+                <div className="flex flex-1 items-center gap-2 rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
+                  <Search className="text-gray-500" size={16} />
+                  <input
+                    value={recommendationSearch}
+                    onChange={(event) => setRecommendationSearch(event.target.value)}
+                    placeholder="Search recommendations..."
+                    className="w-full bg-transparent text-sm text-white outline-none placeholder:text-gray-600"
+                  />
+                </div>
+              )}
+              <button
+                onClick={() => setShowAllRecommendations((value) => !value)}
+                className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm font-bold text-cyan-100"
+              >
+                {showAllRecommendations ? "Show Recent 5" : "View All"}
+              </button>
+            </div>
+
             <div className="space-y-4">
 
-              {recommendations.length === 0 && (
+              {filteredRecommendations.length === 0 && (
                 <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-gray-400">
-                  No AI recommendations yet.
+                  {recommendationSearch ? "No recommendations match the current search." : "No recommendations yet."}
                 </div>
               )}
 
-              {recommendations.map(
+              {visibleRecommendations.map(
                 (item) => (
                   <div
                     key={item.id || item.title || item.content}
@@ -1071,6 +1163,14 @@ export default function MarketingPage() {
                     )}
                   </div>
                 )
+              )}
+              {!showAllRecommendations && filteredRecommendations.length > 5 && (
+                <button
+                  onClick={() => setShowAllRecommendations(true)}
+                  className="w-full rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-sm font-bold text-cyan-100"
+                >
+                  View {filteredRecommendations.length - 5} more recommendations
+                </button>
               )}
 
             </div>

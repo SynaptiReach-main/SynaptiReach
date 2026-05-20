@@ -3,6 +3,7 @@ import { createSupabaseAdmin, friendlySupabaseError } from "@/lib/crm/supabaseAd
 import { sendSynaptiReachEmail } from "@/lib/notifications/resend";
 
 const FOUNDING_COHORT_SIZE = 5;
+const WAITLIST_STATUSES = new Set(["new", "reviewed", "invited", "onboarded", "declined"]);
 
 export async function POST(request: Request) {
   try {
@@ -34,16 +35,16 @@ export async function POST(request: Request) {
         phone: body.phone ? String(body.phone).slice(0, 80) : null,
         industry: body.industry || null,
         website: body.website_url || null,
-        business_size: body.business_size || null,
-        desired_plan: body.desired_plan || null,
-        billing_preference: body.billing_preference || null,
-        main_goal: body.main_goal || null,
+        business_size: body.business_size || body.team_size || null,
+        desired_plan: body.desired_plan || body.interested_tier || null,
+        billing_preference: body.billing_preference || body.byok_managed_interest || null,
+        main_goal: body.main_goal || body.needs || null,
         urgency: body.urgency || null,
         services_interested: Array.isArray(body.services_interested) ? body.services_interested : [],
         consent_to_contact: true,
         waitlist_position: position,
         founding_cohort_eligible: founding,
-        status: "pending",
+        status: WAITLIST_STATUSES.has(body.status) ? body.status : "new",
         metadata: {
           source: body.source || "public_waitlist_widget",
           launch_date: process.env.NEXT_PUBLIC_LAUNCH_DATE || "2026-06-01",

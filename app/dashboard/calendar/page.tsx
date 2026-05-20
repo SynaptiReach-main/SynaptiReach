@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Bell, CalendarDays, CheckCircle2, Edit2, Loader2, MessageSquare, Plus, Sparkles, X } from "lucide-react";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
+import SimpleMetricModal, { type SimpleMetricDetail } from "@/components/dashboard/SimpleMetricModal";
 
 const emptyAppointment = { id: "", title: "", starts_at: "", ends_at: "", location: "", notes: "", status: "scheduled", lead_id: "", deal_id: "" };
 
@@ -21,6 +22,7 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [actionLoading, setActionLoading] = useState("");
+  const [selectedMetric, setSelectedMetric] = useState<SimpleMetricDetail | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -224,6 +226,7 @@ export default function CalendarPage() {
   return (
     <main className="min-h-screen text-white">
       <QueryRecordFocus keys={["appointmentId"]} />
+      <SimpleMetricModal metric={selectedMetric} onClose={() => setSelectedMetric(null)} />
       <section className="mb-8 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-5">
         <div>
           <div className="inline-flex rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-cyan-300">Real appointments</div>
@@ -244,16 +247,16 @@ export default function CalendarPage() {
 
       <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {[
-          ["Upcoming", appointments.filter((item) => item.status === "scheduled" && item.starts_at && new Date(item.starts_at).getTime() >= Date.now()).length],
-          ["Completed", appointments.filter((item) => item.status === "completed").length],
-          ["Cancelled", appointments.filter((item) => item.status === "cancelled").length],
-          ["No Show", appointments.filter((item) => item.status === "no_show").length],
-        ].map(([label, value]) => (
-          <div key={label} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+          ["Upcoming", appointments.filter((item) => item.status === "scheduled" && item.starts_at && new Date(item.starts_at).getTime() >= Date.now()).length, appointments.filter((item) => item.status === "scheduled" && item.starts_at && new Date(item.starts_at).getTime() >= Date.now())],
+          ["Completed", appointments.filter((item) => item.status === "completed").length, appointments.filter((item) => item.status === "completed")],
+          ["Cancelled", appointments.filter((item) => item.status === "cancelled").length, appointments.filter((item) => item.status === "cancelled")],
+          ["No Show", appointments.filter((item) => item.status === "no_show").length, appointments.filter((item) => item.status === "no_show")],
+        ].map(([label, value, records]: any) => (
+          <button key={label} onClick={() => setSelectedMetric({ title: label, value, records, description: `${label} appointment records from the current workspace.`, href: "/dashboard/calendar" })} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-left transition hover:-translate-y-0.5 hover:border-cyan-400/35 hover:bg-cyan-500/10">
             <CalendarDays className="mb-4 text-cyan-300" size={20} />
             <div className="text-3xl font-black">{value}</div>
             <div className="text-sm text-gray-500">{label}</div>
-          </div>
+          </button>
         ))}
       </section>
 

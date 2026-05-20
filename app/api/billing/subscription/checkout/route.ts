@@ -15,6 +15,18 @@ export async function POST(request: Request) {
     if (!plan) {
       return NextResponse.json({ success: false, error: "Select a valid SynaptiReach subscription plan." }, { status: 400 });
     }
+    const priceId = getPlanPriceId(plan);
+    if (!priceId) {
+      return NextResponse.json(
+        {
+          success: false,
+          setupRequired: true,
+          error: `Stripe price is not configured for ${plan.name}. Set ${plan.stripePriceEnv}.`,
+          stripePriceEnv: plan.stripePriceEnv,
+        },
+        { status: 503 }
+      );
+    }
 
     const supabase = createSupabaseAdmin();
     const context = await getWorkspaceContext(request);
@@ -67,7 +79,7 @@ export async function POST(request: Request) {
     if (billingError) throw billingError;
 
     const stripeSession = await createSubscriptionCheckoutSession({
-      priceId: getPlanPriceId(plan),
+      priceId,
       planSlug: plan.slug,
       planName: plan.name,
       billingMode: plan.billingMode,

@@ -324,7 +324,7 @@ create table if not exists public.marketing_campaign_logs (
   user_id uuid null,
   campaign_id uuid null,
   lead_id uuid null,
-  status text not null default 'pending',
+  status text not null default 'new',
   retry_count integer not null default 0,
   error text null,
   metadata jsonb not null default '{}'::jsonb,
@@ -756,6 +756,8 @@ create table if not exists public.waitlist_signups (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table if exists public.waitlist_signups alter column status set default 'new';
 
 create table if not exists public.crm_test_simulation_state (
   id uuid primary key default gen_random_uuid(),

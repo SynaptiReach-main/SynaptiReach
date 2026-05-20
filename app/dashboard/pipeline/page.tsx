@@ -27,6 +27,7 @@ export default function PipelinePage() {
   const [actionLoading, setActionLoading] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedMetric, setSelectedMetric] = useState<any | null>(null);
   const [error, setError] = useState("");
 
   async function loadData() {
@@ -84,6 +85,50 @@ export default function PipelinePage() {
     const maxValue = Math.max(...rows.map((row) => row.value), 1);
     return rows.map((row) => ({ ...row, width: Math.max(6, Math.round((row.value / maxValue) * 100)) }));
   }, [filtered]);
+  const pipelineMetricCards = [
+    {
+      label: "Pipeline Value",
+      value: money(totals.value),
+      icon: DollarSign,
+      records: filtered,
+      explanation: "Total estimated revenue from the deals currently matching your filters.",
+    },
+    {
+      label: "Weighted Value",
+      value: money(totals.weighted),
+      icon: DollarSign,
+      records: filtered,
+      explanation: "Revenue forecast adjusted by each deal probability.",
+    },
+    {
+      label: "Open Deals",
+      value: totals.open,
+      icon: BriefcaseBusiness,
+      records: filtered.filter((deal) => deal.status === "open"),
+      explanation: "Deals still in active sales stages and not won, lost, or archived.",
+    },
+    {
+      label: "Won Deals",
+      value: totals.won,
+      icon: Save,
+      records: filtered.filter((deal) => deal.stage === "won" || deal.status === "won"),
+      explanation: "Closed revenue opportunities marked won.",
+    },
+    {
+      label: "Lost Deals",
+      value: totals.lost,
+      icon: X,
+      records: filtered.filter((deal) => deal.stage === "lost" || deal.status === "lost"),
+      explanation: "Opportunities that were closed without converting.",
+    },
+    {
+      label: "Stale Deals",
+      value: totals.stale,
+      icon: Archive,
+      records: filtered.filter((deal) => isStaleDeal(deal)),
+      explanation: "Open deals with no update for 14 or more days.",
+    },
+  ];
 
   function statusForStage(stage: string) {
     if (stage === "won") return "won";
@@ -203,6 +248,47 @@ export default function PipelinePage() {
   return (
     <main className="min-h-screen text-white">
       <QueryRecordFocus keys={["dealId"]} />
+      {selectedMetric && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-3xl border border-cyan-400/20 bg-slate-950 shadow-2xl shadow-cyan-500/20">
+            <div className="flex items-start justify-between gap-4 border-b border-cyan-400/10 p-5">
+              <div>
+                <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Pipeline Metric</div>
+                <h2 className="mt-1 text-2xl font-black">{selectedMetric.label}</h2>
+                <p className="mt-1 text-sm text-cyan-50/55">{selectedMetric.explanation}</p>
+              </div>
+              <button onClick={() => setSelectedMetric(null)} className="rounded-2xl border border-white/10 p-2 text-cyan-100 hover:bg-white/5">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="max-h-[62vh] overflow-y-auto p-5">
+              {selectedMetric.records.length === 0 ? (
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center text-cyan-50/55">
+                  No real deals currently match this metric.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {selectedMetric.records.slice(0, 40).map((deal: any) => (
+                    <a key={deal.id} href={`/dashboard/pipeline?dealId=${encodeURIComponent(deal.id)}`} className="block rounded-2xl border border-white/10 bg-black/30 p-4 transition hover:border-cyan-400/30 hover:bg-cyan-500/10">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="font-bold text-white">{deal.title || "Untitled deal"}</div>
+                          <div className="mt-1 text-sm text-gray-500">{deal.company || "No company"} - {deal.stage || "new"}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-black text-cyan-200">{money(Number(deal.value || 0))}</div>
+                          <div className="text-xs text-gray-500">{Number(deal.probability || 0)}% probability</div>
+                        </div>
+                      </div>
+                      <div className="mt-2 text-xs text-gray-600">Expected close: {formatDate(deal.expected_close_date)}</div>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <section className="mb-8 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-5">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-cyan-300">Real pipeline</div>
@@ -221,12 +307,12 @@ export default function PipelinePage() {
       />
 
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {[["Pipeline Value", money(totals.value), DollarSign], ["Weighted Value", money(totals.weighted), DollarSign], ["Open Deals", totals.open, BriefcaseBusiness], ["Won Deals", totals.won, Save], ["Lost Deals", totals.lost, X], ["Stale Deals", totals.stale, Archive]].map(([label, value, Icon]: any) => (
-          <div key={label} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+        {pipelineMetricCards.map(({ label, value, icon: Icon, records, explanation }: any) => (
+          <button key={label} onClick={() => setSelectedMetric({ label, value, records, explanation })} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-left transition hover:-translate-y-0.5 hover:border-cyan-400/35 hover:bg-cyan-500/10">
             <Icon className="mb-4 text-cyan-300" size={20} />
             <div className="text-3xl font-black">{value}</div>
             <div className="text-sm text-gray-500">{label}</div>
-          </div>
+          </button>
         ))}
       </section>
 
@@ -354,6 +440,9 @@ export default function PipelinePage() {
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-2xl font-black">{form.id ? "Edit Deal" : "Create Deal"}</h2>
               <button onClick={() => setOpen(false)} className="rounded-xl border border-white/10 p-2"><X size={18} /></button>
+            </div>
+            <div className="mb-5 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4 text-sm text-cyan-50/85">
+              A deal is a revenue opportunity tied to a lead or company. Link the lead when available, set the estimated value, choose the current stage, and use probability to keep the weighted forecast realistic. Expected close dates help SynaptiReach flag stale opportunities and forecast revenue.
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Deal title" className="rounded-2xl border border-white/10 bg-black/40 p-3 outline-none" />

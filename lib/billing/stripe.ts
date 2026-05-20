@@ -71,15 +71,26 @@ async function stripePost(path: string, params: URLSearchParams) {
     };
   }
 
-  const response = await fetch(`https://api.stripe.com/v1/${path}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${secretKey}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-      "Stripe-Version": STRIPE_API_VERSION,
-    },
-    body: params,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`https://api.stripe.com/v1/${path}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Stripe-Version": STRIPE_API_VERSION,
+      },
+      body: params,
+    });
+  } catch {
+    return {
+      ok: false,
+      setupRequired: false,
+      status: 0,
+      body: null,
+      error: "Stripe request failed. Verify network access and Stripe test-mode configuration.",
+    };
+  }
 
   const body = await response.json().catch(() => ({}));
   return {

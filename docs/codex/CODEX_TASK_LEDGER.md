@@ -25,22 +25,50 @@ Codex must update this after every pass.
 | 10 | Waitlist system | Partial | global public waitlist widget/API/admin page added with first-5 cohort logic; hidden from demo/dashboard/admin paths | live Supabase insert/Resend confirmation/admin management actions | 2026-05-19 |
 | 11 | Industry pages/footer dropdown | Complete | dynamic industry pages added for required industries and compact footer solution list updated | monitor route coverage | 2026-05-19 |
 | 12 | Public info pages buildout | Partial | about/blog/careers/privacy/terms/security/support/analytics/ai-agents expanded; button cleanup applied for careers/privacy/support | deeper copy polish and visual review on mobile/desktop | 2026-05-19 |
-| 13 | Dashboard compaction/modals | Not Started |  |  | |
-| 14 | Metric popups across CRM | Not Started |  |  | |
-| 15 | Pipeline create deal help | Not Started |  |  | |
-| 16 | AI Command Center | Not Started |  |  | |
-| 17 | Workflow templates/signals | Not Started |  |  | |
-| 18 | Marketing recommendations polish | Not Started |  |  | |
-| 19 | AI task recommendations polish | Not Started |  |  | |
-| 20 | Mini-brain intelligence | Partial | helperResults are populated; shared MiniBrainInsightPanel is wired across required CRM pages; summary/run APIs return 200 without external AI | live seeded-workspace tuning, authenticated approve/dismiss DB-write verification, and deeper page-native metric modal wiring | 2026-05-19 |
-| 21 | Review-gated email/SMS replies | Not Started |  |  | |
-| 22 | Notification mark-read | Not Started |  |  | |
-| 23 | Contact/support/admin notifications | Not Started |  |  | |
-| 24 | Final build/tests/docs | Not Started |  |  | |
+| 13 | Dashboard compaction/modals | Complete | dashboard metrics grouped with View all mode; quick actions compacted; build and local page smoke pass | browser interaction polish only | 2026-05-19 |
+| 14 | Metric popups across CRM | Partial | dashboard, pipeline, tasks, calendar, communications, marketing, and workflow signals have real-data modals/popups; build and local page smoke pass | deeper native modal treatment for analytics, AI Assistant, and settings; browser interaction verification | 2026-05-19 |
+| 15 | Pipeline create deal help | Complete | create/edit deal modal now explains deal meaning, lead linkage, value/probability/stage, close date, and revenue forecasting | monitor UX | 2026-05-19 |
+| 16 | AI Command Center | Complete | AI Assistant includes provider/action readiness cards for CRM Intelligence, SynaptiReach Managed, BYOK, and future Local Connector; no secrets exposed | live provider-status browser review | 2026-05-19 |
+| 17 | Workflow templates/signals | Complete | workflow templates expanded and Live Workflow Signals have clickable detail popups with real records and review-gated actions | browser interaction verification | 2026-05-19 |
+| 18 | Marketing recommendations polish | Complete | Campaign Activity and CRM Intelligence Recommendations show recent 5 by default with View all/search; approve/deny preserved | live recommendation action verification | 2026-05-19 |
+| 19 | AI task recommendations polish | Complete | tasks page supports recommendations with approve, deny, assign, and staff selection | live seeded workspace browser verification | 2026-05-19 |
+| 20 | Mini-brain intelligence | Partial | helperResults are populated; shared CRM Intelligence panels are wired across required CRM pages; summary/run APIs return 200 without external AI; seeded workspace is live | authenticated approve/dismiss DB-write verification and further seeded-data tuning | 2026-05-19 |
+| 21 | Review-gated email/SMS replies | Partial | `POST /api/crm/communications/send` added with confirm=true, Resend/Twilio server-side setup-required behavior, sent/failed logging, notifications, and Confirm Send UI | live Resend/Twilio success-path verification; workspace BYOK provider credential storage | 2026-05-19 |
+| 22 | Notification mark-read | Complete | individual notification clicks mark read optimistically before navigation; mark-all-read is workspace constrained; build and local smoke pass | live persisted count verification in browser | 2026-05-19 |
+| 23 | Contact/support/admin notifications | Partial | contact/waitlist/service requests create notifications where implemented; admin contact/waitlist pages fail closed unless enabled; admin waitlist action secret route added | final admin auth/roles and live notification delivery verification | 2026-05-19 |
+| 24 | Final build/tests/docs | Partial | multiple `npm.cmd run build` passes; local changed-page smoke returned 200; fail-closed API probes passed; docs/checklist updated | production deploy/smoke, Stripe/Resend/Twilio/Supabase live-write verification, mobile/browser modal review | 2026-05-19 |
 
 ## Pass Log
 
 Add new entries below after each Codex pass.
+
+### 2026-05-19 - Launch Readiness Goal Checkpoint 1
+
+Date: 2026-05-19
+Model: Codex
+Prompt/Goal: Complete remaining launch-readiness tasks from the current working tree, starting with Tasks 5-12 verification/hardening.
+Completed: Read `docs/codex/SYNAPTIREACH_MASTER_V9.md`, `docs/codex/CODEX_TASK_LEDGER.md`, `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`, `package.json`, `.env.example`, and applicable Supabase/Stripe skill guidance. Confirmed the working tree is clean at the start of this goal and the latest local commit is `d74d852d Add SynaptiReach user staff portal prompt pack`. Confirmed ledger still marks Task 3 complete, Tasks 8/11 complete, Tasks 5/6/7/9/10/12 partial, Task 20 partial, and Tasks 13-19/21-24 not started.
+Skipped: No implementation changes at this checkpoint.
+Partial: The launch readiness goal is in progress.
+Blocked: Live Stripe/Supabase/Resend verification may require user-owned env/credential setup; this will be checked before marking any live-dependent task complete.
+Files changed: `docs/codex/CODEX_TASK_LEDGER.md`
+Build result: Not run at this checkpoint because no app/runtime behavior changed.
+Tests run: Required documentation reads, `git status --short`, `git log -1 --oneline`.
+Next recommended task: Harden Tasks 5-12 with local static checks, env documentation updates, setup-required behavior, and safe live-test commands before moving to Tasks 13-19.
+
+### 2026-05-19 - Launch Readiness Goal Checkpoint 2
+
+Date: 2026-05-19
+Model: Codex
+Prompt/Goal: Harden Tasks 5-12 before CRM UX work.
+Completed: Added fail-closed admin read gating for contact submissions and waitlist pages through `CRM_ADMIN_READ_ENABLED`; added secret-protected waitlist admin PATCH route; updated waitlist lifecycle default to `new`; added aliases for team size, needs, interested tier, and BYOK/managed interest in `/api/waitlist`; made subscription checkout return a clear setup-required error when the selected plan's Stripe price env var is missing; updated `.env.example` with Stripe price vars, simulation vars, admin vars, and Resend sender/contact vars.
+Skipped: Live Supabase/Stripe/Resend writes until valid local or production test credentials are used intentionally.
+Partial: Tasks 5, 7, 9, and 10 still require live external verification after build.
+Blocked: Full live verification depends on valid Supabase, Stripe test, and Resend env.
+Files changed: `.env.example`, `app/admin/dashboard/contact-submissions/page.tsx`, `app/admin/dashboard/waitlist/page.tsx`, `app/api/admin/waitlist/route.ts`, `app/api/billing/subscription/checkout/route.ts`, `app/api/waitlist/route.ts`, `lib/admin/access.ts`, `supabase/user_crm_full_completion_schema.sql`, `docs/codex/CODEX_TASK_LEDGER.md`
+Build result: Passed.
+Tests run: Static route/code inspection; `npm.cmd run build`; focused local production probes returned 200 for admin-gated/public pages, 403 for unauthorized admin waitlist PATCH, and clean validation/setup behavior for public APIs. A Stripe network probe exposed a generic `fetch failed`, so `lib/billing/stripe.ts` was hardened to return a clean Stripe network/configuration error.
+Next recommended task: Continue to Tasks 13-19 CRM UX/functionality polish.
 
 ### 2026-05-19 - Tasks 5-12 Checkpoint 1
 
@@ -293,6 +321,62 @@ Files changed: `app/api/intelligence/actions/route.ts`, `app/dashboard/*`, `comp
 Build result: Passed.
 Tests run: `npm.cmd run build`; env presence check; customer-facing intelligence wording grep; schema metadata grep; build artifact checks.
 Next recommended task: Continue next master task after Task 3, or use the seeded workspace to tune remaining Task 20 intelligence behavior.
+
+### 2026-05-19 - Launch Readiness Goal Checkpoint 3
+
+Date: 2026-05-19
+Model: Codex
+Prompt/Goal: Continue remaining launch-readiness work into Tasks 13-19 CRM UX/functionality polish.
+Completed: Condensed `/dashboard` metric display into grouped tabs with a View all metrics mode while preserving every metric and existing detail modal; compacted dashboard quick actions into primary actions plus a More actions menu; added clickable real-data pipeline metric modals and Create Deal guidance on `/dashboard/pipeline`; expanded `/dashboard/workflow` review-gated templates and Live Workflow Signals with detail popups; capped `/dashboard/marketing` Campaign Activity and CRM Intelligence Recommendations to recent 5 with View all and search; added AI Command Center provider/action readiness cards to `/dashboard/ai_assistant`; removed a visible `mini_brain` source label from AI Assistant insight cards.
+Skipped: Tasks 21-24 were not started at this checkpoint.
+Partial: Task 14 remains partial because page-native metric/card popups still need broader coverage across analytics, leads, tasks, calendar, communications, AI Assistant, and settings. Browser interaction testing remains pending.
+Blocked: None at this checkpoint.
+Files changed: `app/dashboard/page.tsx`, `app/dashboard/pipeline/page.tsx`, `app/dashboard/workflow/page.tsx`, `app/dashboard/marketing/page.tsx`, `app/dashboard/ai_assistant/page.tsx`, `docs/codex/CODEX_TASK_LEDGER.md`
+Build result: Passed after rerun with longer timeout. First build attempt compiled successfully but timed out while collecting page data at 120 seconds; second `npm.cmd run build` completed successfully.
+Tests run: Static inspection; targeted grep for customer-facing `mini-brain` wording in active app/component/lib code; `npm.cmd run build`.
+Next recommended task: Continue remaining Task 14 breadth and Tasks 21-24.
+
+### 2026-05-19 - Launch Readiness Goal Checkpoint 4
+
+Date: 2026-05-19
+Model: Codex
+Prompt/Goal: Continue final launch items with notification mark-read and review-gated communications sending.
+Completed: Updated CRM topbar notifications to mark individual notifications read optimistically before navigation; Mark all read now updates the local unread count immediately and API mark-all is workspace constrained. Added review-gated `POST /api/crm/communications/send` for confirmed email/SMS sending only, using Resend/Twilio server-side env when configured, logging sent/failed status back to `communications`, and creating a workspace notification. Added a Confirm Send action on draft/scheduled/failed outbound email/SMS communication cards. Added `TWILIO_FROM_NUMBER` to `.env.example`.
+Skipped: No external email or SMS was sent in this checkpoint.
+Partial: Live Resend/Twilio send verification remains external-credential/manual-test dependent. Workspace-specific BYOK provider credential storage is still future/provider setup work.
+Blocked: None for build-safe setup-required behavior; real send success path requires configured provider credentials and manual confirmation.
+Files changed: `app/dashboard/layout.tsx`, `app/api/crm/notifications/route.ts`, `app/api/crm/communications/send/route.ts`, `app/dashboard/communications/page.tsx`, `.env.example`, `docs/codex/CODEX_TASK_LEDGER.md`
+Build result: Passed. `npm.cmd run build` completed successfully and generated 150 app routes, including `/api/crm/communications/send`.
+Tests run: Static route/UI inspection; `npm.cmd run build`.
+Next recommended task: Run safe final checks for Task 24 and document remaining manual/external verification.
+
+### 2026-05-19 - Launch Readiness Goal Checkpoint 5
+
+Date: 2026-05-19
+Model: Codex
+Prompt/Goal: Broaden Task 14 metric popup coverage.
+Completed: Added shared `SimpleMetricModal` for compact real-data metric drilldowns. Wired clickable metric popups into `/dashboard/tasks`, `/dashboard/calendar`, `/dashboard/communications`, and `/dashboard/marketing` in addition to the already-updated dashboard and pipeline pages. Popups show matching real records, empty states, current values, and related-page links.
+Skipped: No external provider actions.
+Partial: Analytics, AI Assistant, and Settings still rely primarily on existing page panels/CRM Intelligence sections rather than the new shared page-native metric modal. Browser interaction testing remains pending.
+Blocked: None at code level.
+Files changed: `components/dashboard/SimpleMetricModal.tsx`, `app/dashboard/tasks/page.tsx`, `app/dashboard/calendar/page.tsx`, `app/dashboard/communications/page.tsx`, `app/dashboard/marketing/page.tsx`, `docs/codex/CODEX_TASK_LEDGER.md`
+Build result: Passed. `npm.cmd run build` completed successfully after shared metric modal wiring.
+Tests run: Static UI wiring inspection; `npm.cmd run build`.
+Next recommended task: Run final route/API smoke checks and document remaining manual/external verification.
+
+### 2026-05-19 - Launch Readiness Goal Checkpoint 6
+
+Date: 2026-05-19
+Model: Codex
+Prompt/Goal: Final build, safety checks, local smoke checks, and documentation update for this long goal pass.
+Completed: Updated current task table for Tasks 13-24. Confirmed `.env.local` is not tracked. Confirmed active `app`, `components`, and `lib` code has no customer-facing `mini-brain` / `mini brain` phrase matches. Local production smoke returned 200 for `/dashboard`, `/dashboard/tasks`, `/dashboard/calendar`, `/dashboard/communications`, `/dashboard/marketing`, `/dashboard/pipeline`, `/dashboard/workflow`, and `/dashboard/ai_assistant`. Fail-closed probes returned 400 for `/api/crm/communications/send` with missing communication ID and 403 for unauthorized `PATCH /api/admin/waitlist`.
+Skipped: No live Stripe Checkout, Resend delivery, Twilio delivery, or Supabase live-write mutation tests were run beyond local fail-closed checks.
+Partial: Tasks 5, 6, 7, 9, 10, 12, 14, 20, 21, 23, and 24 remain partial due to live external/manual verification and deeper UI/browser polish.
+Blocked: Real subscription lifecycle, contact/waitlist/service live writes, Resend/Twilio send success, production deploy smoke, and mobile/browser modal review require user-owned external setup/manual verification.
+Files changed: `.env.example`, admin pages/routes, billing checkout/Stripe helper, waitlist API, CRM dashboard pages, notification API/layout, communications send route/UI, shared metric modal, schema, ledger, and final checklist.
+Build result: Passed. Latest `npm.cmd run build` completed successfully with 150 app routes.
+Tests run: `npm.cmd run build`; local production route smoke; fail-closed API probes; `.env.local` tracked-file check; customer-facing wording grep; secret-reference source grep.
+Next recommended task: Run manual live verification for Stripe, Supabase writes, Resend/Twilio delivery, and browser/mobile modal behavior, then deploy and production-smoke this pass.
 
 ### Template
 

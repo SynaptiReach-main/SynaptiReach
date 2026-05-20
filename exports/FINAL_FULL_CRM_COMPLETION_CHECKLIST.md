@@ -1047,3 +1047,174 @@ Required live env for full verification:
 - Task 10: Partial. Waitlist widget/API/admin exists; live Supabase insert, Resend notification, and invite/admin action flows remain.
 - Task 11: Complete for current scope.
 - Task 12: Partial. Public pages are expanded and button cleanup is applied; final mobile/desktop visual polish remains.
+
+## Launch Readiness Goal Checkpoint 1 - 2026-05-19
+
+- [x] Started the full remaining launch-readiness goal from the current working tree.
+- [x] Read the required files before implementation:
+  - `docs/codex/SYNAPTIREACH_MASTER_V9.md`
+  - `docs/codex/CODEX_TASK_LEDGER.md`
+  - `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`
+  - `package.json`
+  - `.env.example`
+- [x] Confirmed the initial working tree was clean for this goal.
+- [x] Confirmed latest local commit at goal start:
+  - `d74d852d Add SynaptiReach user staff portal prompt pack`
+- [x] Preserved current Task 3 status:
+  - Complete.
+  - Test workspace `cc2d162a-33e9-4d0b-8a8f-b9d35f68d4a8` remains the only allowed simulated CRM workspace.
+- [x] Preserved current Business Intelligence / CRM Intelligence foundation.
+- [x] Confirmed Tasks 5-12 are the first active verification/hardening phase.
+- [ ] Continue Tasks 5-12 static/live verification and hardening.
+
+Security note: the Resend API key was previously pasted into chat during setup. Do not expose it in logs or source. Rotate the Resend API key after testing is complete.
+
+## Launch Readiness Goal Checkpoint 2 - Tasks 5-12 Hardening - 2026-05-19
+
+- [x] Added fail-closed admin record viewing:
+  - `/admin/dashboard/contact-submissions`
+  - `/admin/dashboard/waitlist`
+  - These pages no longer read Supabase records unless `CRM_ADMIN_READ_ENABLED=true`.
+- [x] Added secret-protected waitlist admin update route:
+  - `PATCH /api/admin/waitlist`
+  - Requires `CRM_ADMIN_ACTION_SECRET`.
+  - Supports lifecycle statuses:
+    - `new`
+    - `reviewed`
+    - `invited`
+    - `onboarded`
+    - `declined`
+- [x] Updated waitlist insert behavior:
+  - Default status is now `new`.
+  - API accepts aliases for `team_size`, `needs`, `interested_tier`, and `byok_managed_interest`.
+- [x] Updated Supabase schema idempotently:
+  - `waitlist_signups.status` create-table default is `new`.
+  - Existing table default is repaired with `alter table if exists public.waitlist_signups alter column status set default 'new';`.
+- [x] Hardened subscription checkout setup-required behavior:
+  - Missing Stripe price env vars return a clear 503 setup-required response before attempting checkout.
+  - No subscription is marked active without Stripe webhook confirmation.
+- [x] Updated `.env.example` with missing launch-readiness env vars:
+  - Stripe subscription price vars.
+  - Test simulation vars.
+  - Admin read/action gate vars.
+  - Resend sender/contact vars.
+- [x] Build verification for this checkpoint:
+  - `npm.cmd run build` passed.
+- [x] Focused local production probes:
+  - Admin-gated/public pages returned 200.
+  - Unauthorized admin waitlist PATCH returned 403.
+  - Empty contact/waitlist payloads returned validation errors.
+- [x] Hardened Stripe provider network failure handling:
+  - Stripe helper now returns a clear provider/network error instead of bubbling raw `fetch failed`.
+- [ ] Live Supabase/Stripe/Resend verification.
+
+## Launch Readiness Goal Checkpoint 3 - Tasks 13-19 CRM Polish - 2026-05-19
+
+- [x] Task 13 dashboard compaction:
+  - Grouped dashboard metrics into compact tabs with a View all metrics mode.
+  - Preserved all dashboard metrics and their real-data detail modal behavior.
+  - Collapsed secondary quick actions into a More actions menu while keeping every action available.
+- [x] Task 14 partial metric popup expansion:
+  - Added clickable pipeline metric modals for Pipeline Value, Weighted Value, Open Deals, Won Deals, Lost Deals, and Stale Deals.
+  - Modals use real deal records and link back to exact deal IDs through `/dashboard/pipeline?dealId=...`.
+  - Broader page-native metric popup coverage is still pending for several CRM pages.
+- [x] Task 15 pipeline help:
+  - Added Create Deal guidance explaining what a deal is, lead linkage, value, probability, stages, close dates, and forecasting impact.
+- [x] Task 16 AI Command Center:
+  - Added provider/action readiness cards for CRM Intelligence, SynaptiReach Managed, BYOK, and future Local Connector modes.
+  - Preserved review-gated actions and did not expose provider keys.
+- [x] Task 17 workflow templates/signals:
+  - Added review-gated templates for clicked-not-converted follow-up, abandoned setup reminder, failed payment follow-up, usage cap alert, staff reassignment, proposal follow-up, and service request intake.
+  - Expanded Live Workflow Signals into clickable detail popups with real records, explanations, recommended actions, and empty states.
+- [x] Task 18 marketing recommendations polish:
+  - Campaign Activity now shows recent 5 by default with View all and search.
+  - CRM Intelligence Recommendations now show recent 5 by default with View all and search.
+  - Existing approve/deny behavior remains review-gated.
+- [x] Task 19 current status:
+  - Tasks page already supports AI/CRM Intelligence task recommendations with approve, deny, assign, and staff selection.
+- [x] Customer-facing wording:
+  - Removed a visible `mini_brain` source label from AI Assistant insight cards.
+- [x] Build verification for this checkpoint:
+  - First `npm.cmd run build` attempt compiled successfully but timed out at 120 seconds while collecting page data.
+  - Second `npm.cmd run build` completed successfully.
+- [ ] Browser interaction verification for the new modals, signal popups, grouped metrics, and expanded marketing lists.
+
+## Launch Readiness Goal Checkpoint 4 - Tasks 21-22 Final Launch Items - 2026-05-19
+
+- [x] Task 21 review-gated communications sending:
+  - Added `POST /api/crm/communications/send`.
+  - Requires `confirm=true` and an existing workspace-scoped communication record.
+  - Sends only email or SMS.
+  - Uses Resend server-side for email when `RESEND_API_KEY` and `RESEND_FROM_EMAIL` are configured.
+  - Uses Twilio server-side for SMS when `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER` are configured.
+  - Returns setup-required errors if providers are missing.
+  - Updates the communication as `sent` or `failed` and stores provider metadata without exposing secrets.
+  - Creates a workspace notification for sent/failed outcomes.
+  - Added a Confirm Send action on outbound draft/scheduled/failed email/SMS cards in `/dashboard/communications`.
+  - No background auto-send loop was added.
+- [x] Task 22 notification mark-read:
+  - Topbar notification clicks now optimistically mark that individual notification as read before navigation.
+  - Mark all read updates the unread count immediately.
+  - API mark-all now requires a workspace context or explicit workspace ID and no longer updates all unread notifications globally when context is missing.
+- [x] `.env.example` now includes `TWILIO_FROM_NUMBER`.
+- [ ] Live Resend/Twilio success-path verification.
+- [ ] Workspace-level BYOK provider credential storage remains future/provider setup work.
+- [x] Build verification for this checkpoint:
+  - `npm.cmd run build` completed successfully and generated 150 app routes, including `/api/crm/communications/send`.
+
+## Launch Readiness Goal Checkpoint 5 - Task 14 Metric Popup Breadth - 2026-05-19
+
+- [x] Added shared real-data metric modal component:
+  - `components/dashboard/SimpleMetricModal.tsx`
+- [x] Added clickable metric popup coverage to:
+  - `/dashboard/tasks`
+  - `/dashboard/calendar`
+  - `/dashboard/communications`
+  - `/dashboard/marketing`
+- [x] These are now in addition to existing/new metric modal coverage on:
+  - `/dashboard`
+  - `/dashboard/pipeline`
+- [x] Popups include current value, real related records, empty states, and related-page links.
+- [ ] Analytics, AI Assistant, and Settings still need deeper page-native metric modal treatment beyond existing panels/CRM Intelligence cards.
+- [ ] Browser interaction verification remains.
+- [x] Build verification for this checkpoint:
+  - `npm.cmd run build` completed successfully after shared metric modal wiring.
+
+## Launch Readiness Goal Checkpoint 6 - Final Checks For This Pass - 2026-05-19
+
+- [x] Final build for this pass:
+  - `npm.cmd run build` passed.
+  - Build generated 150 app routes.
+- [x] Local production page smoke for changed CRM pages:
+  - `/dashboard` -> 200
+  - `/dashboard/tasks` -> 200
+  - `/dashboard/calendar` -> 200
+  - `/dashboard/communications` -> 200
+  - `/dashboard/marketing` -> 200
+  - `/dashboard/pipeline` -> 200
+  - `/dashboard/workflow` -> 200
+  - `/dashboard/ai_assistant` -> 200
+- [x] Fail-closed API probes:
+  - `POST /api/crm/communications/send` with `{}` -> 400, expected because `communication_id` is required.
+  - `PATCH /api/admin/waitlist` without admin secret -> 403, expected.
+- [x] Safety checks:
+  - `.env.local` is not tracked by git.
+  - Active `app`, `components`, and `lib` source has no customer-facing `mini-brain` / `mini brain` phrase matches.
+  - Secret source grep found only server-side env references, not committed secret values.
+  - No live Stripe mode switch was made.
+  - No external email/SMS/social send was triggered.
+  - No fake paid/subscribed state was created.
+- [x] Task status summary for this pass:
+  - Complete in this pass/current scope: Tasks 13, 15, 16, 17, 18, 19, 22.
+  - Still partial: Tasks 5, 6, 7, 9, 10, 12, 14, 20, 21, 23, 24.
+  - Preserved complete: Task 3 test workspace and Task 8/11 public services/industry coverage.
+- [ ] Manual/live verification still required:
+  - Stripe test checkout/session/webhook/trial lifecycle and Billing Portal.
+  - Supabase live writes for contact, waitlist, service requests, notification persistence, and communications send logs.
+  - Resend notification delivery and email send success path.
+  - Twilio SMS send success path.
+  - Admin role/auth model hardening beyond fail-closed env gates.
+  - Browser/mobile interaction pass for dashboard metric tabs, shared metric modals, workflow signal popups, marketing view-all/search, notification count decrement, and communications Confirm Send confirmation.
+  - Production deployment and production route/API smoke for this new pass.
+
+Reminder: the Resend API key was previously pasted into chat during setup. Rotate it after testing.

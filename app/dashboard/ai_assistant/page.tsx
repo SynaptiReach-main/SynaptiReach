@@ -152,6 +152,39 @@ export default function AIAssistantPage() {
 
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+          <div className="mb-6 rounded-3xl border border-cyan-400/20 bg-cyan-500/[0.06] p-5">
+            <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+              <div>
+                <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">AI Command Center</div>
+                <h2 className="mt-1 text-2xl font-black">Provider & Action Readiness</h2>
+                <p className="mt-1 text-sm text-gray-400">
+                  CRM Intelligence runs first. External providers can enhance answers only when configured and all customer-facing actions remain review-gated.
+                </p>
+              </div>
+              <button
+                onClick={runExecutiveReview}
+                disabled={agentLoading}
+                className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm font-bold text-cyan-100 disabled:opacity-60"
+              >
+                {agentLoading ? "Running..." : "Run Executive Agent"}
+              </button>
+            </div>
+            <div className="grid gap-3 md:grid-cols-4">
+              {[
+                ["CRM Intelligence", "Active", "Deterministic, zero-cost insight layer."],
+                ["SynaptiReach Managed", agentData?.provider ? "Available" : "Setup dependent", "Uses capped server-side providers."],
+                ["Bring Your Own Keys", "Supported", "Advanced users can connect their own providers."],
+                ["Local Connector", "Future setup", "Optional customer connector; production does not depend on localhost."],
+              ].map(([label, value, description]) => (
+                <div key={label} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <div className="text-sm font-bold text-white">{label}</div>
+                  <div className="mt-2 text-lg font-black text-cyan-200">{value}</div>
+                  <div className="mt-1 text-xs text-gray-500">{description}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="text-2xl font-black">CRM Assistant</h2>
@@ -303,7 +336,7 @@ export default function AIAssistantPage() {
                 <div key={item.id || item.title} className="rounded-2xl border border-white/10 bg-black/30 p-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2 py-1 text-xs font-bold text-cyan-100">
-                      {item.source || "mini_brain"}
+                      {item.source === "mini_brain" ? "built_in_intelligence" : item.source || "built_in_intelligence"}
                     </span>
                     <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-xs text-gray-400">
                       {item.priority || "medium"} / {Math.round(Number(item.confidence || 0) * 100)}%

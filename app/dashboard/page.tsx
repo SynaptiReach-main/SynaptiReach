@@ -66,6 +66,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [importOpen, setImportOpen] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
+  const [activeMetricGroup, setActiveMetricGroup] = useState("Summary");
+  const [showAllMetrics, setShowAllMetrics] = useState(false);
   const [error, setError] = useState("");
 
   async function loadDashboard() {
@@ -148,6 +150,18 @@ export default function DashboardPage() {
     { key: "workflow_runs", label: "Workflow Runs", value: metrics.workflows?.runs || 0, icon: GitBranch, href: "/dashboard/workflow", records: data?.workflowRuns || [] },
   ];
   const selectedMetricConfig = metricCards.find((item) => item.key === selectedMetric);
+  const metricGroups = [
+    { label: "Summary", keys: ["leads", "pipeline_value", "communications", "open_tasks", "appointments", "active_workflows"] },
+    { label: "Leads", keys: ["leads", "new_leads", "qualified_leads", "converted_leads"] },
+    { label: "Marketing", keys: ["scheduled_campaigns", "active_campaigns", "cancelled_campaigns", "campaign_opens", "campaign_clicks"] },
+    { label: "Pipeline", keys: ["pipeline_value", "open_deals", "won_deals", "lost_deals"] },
+    { label: "Tasks", keys: ["open_tasks", "overdue_tasks", "appointments"] },
+    { label: "Workflow", keys: ["active_workflows", "workflow_runs"] },
+    { label: "Communications", keys: ["communications"] },
+  ];
+  const visibleMetricCards = showAllMetrics
+    ? metricCards
+    : metricCards.filter((item) => (metricGroups.find((group) => group.label === activeMetricGroup) || metricGroups[0]).keys.includes(item.key));
   const dealStages = ["new", "qualified", "proposal", "negotiation", "won", "lost"].map((stage) => {
     const stageDeals = (data?.deals || []).filter((deal: any) => deal.stage === stage);
     return {
@@ -228,44 +242,51 @@ export default function DashboardPage() {
               Real leads, campaigns, communications, activity, and AI next actions from Supabase.
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={loadDashboard}
               disabled={loading}
-              className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-5 py-3 font-bold text-cyan-100 flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 font-bold text-cyan-100 flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <RefreshCw size={18} /> Refresh
             </button>
-            <a href="/dashboard/leads" className="rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-5 py-3 font-black text-black flex items-center gap-2">
+            <a href="/dashboard/leads" className="rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-4 py-3 font-black text-black flex items-center gap-2">
               <Plus size={18} /> Create Lead
             </a>
-            <button onClick={() => setImportOpen(true)} className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-5 py-3 font-bold text-cyan-100 flex items-center gap-2">
+            <button onClick={() => setImportOpen(true)} className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 font-bold text-cyan-100 flex items-center gap-2">
               <Upload size={18} /> Import CSV
             </button>
-            <a href="/dashboard/pipeline" className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 font-bold text-white flex items-center gap-2">
-              <DollarSign size={18} /> View Pipeline
-            </a>
-            <a href="/dashboard/tasks" className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 font-bold text-white flex items-center gap-2">
-              <ListTodo size={18} /> Add Task
-            </a>
-            <a href="/dashboard/analytics" className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 font-bold text-white flex items-center gap-2">
-              <BarChart3 size={18} /> View Analytics
-            </a>
-            <a href="/dashboard/workflow" className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 font-bold text-white flex items-center gap-2">
-              <GitBranch size={18} /> Create Workflow
-            </a>
-            <a href="/dashboard/marketing" className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 font-bold text-white flex items-center gap-2">
-              <Mail size={18} /> Email Campaign
-            </a>
-            <a href="/dashboard/marketing" className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 font-bold text-white flex items-center gap-2">
-              <MessageSquare size={18} /> SMS Campaign
-            </a>
-            <a href="/dashboard/marketing" className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 font-bold text-white flex items-center gap-2">
-              <Share2 size={18} /> Social Campaign
-            </a>
-            <a href="/dashboard/ai_assistant" className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-5 py-3 font-bold text-cyan-100 flex items-center gap-2">
+            <a href="/dashboard/ai_assistant" className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 font-bold text-cyan-100 flex items-center gap-2">
               <Bot size={18} /> Ask AI
             </a>
+            <details className="relative">
+              <summary className="cursor-pointer rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 font-bold text-white marker:text-cyan-300">
+                More actions
+              </summary>
+              <div className="absolute right-0 z-20 mt-3 grid w-72 gap-2 rounded-3xl border border-white/10 bg-[#070707] p-3 shadow-2xl shadow-cyan-500/10">
+                <a href="/dashboard/pipeline" className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 font-bold text-white flex items-center gap-2">
+                  <DollarSign size={18} /> View Pipeline
+                </a>
+                <a href="/dashboard/tasks" className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 font-bold text-white flex items-center gap-2">
+                  <ListTodo size={18} /> Add Task
+                </a>
+                <a href="/dashboard/analytics" className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 font-bold text-white flex items-center gap-2">
+                  <BarChart3 size={18} /> View Analytics
+                </a>
+                <a href="/dashboard/workflow" className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 font-bold text-white flex items-center gap-2">
+                  <GitBranch size={18} /> Create Workflow
+                </a>
+                <a href="/dashboard/marketing" className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 font-bold text-white flex items-center gap-2">
+                  <Mail size={18} /> Email Campaign
+                </a>
+                <a href="/dashboard/marketing" className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 font-bold text-white flex items-center gap-2">
+                  <MessageSquare size={18} /> SMS Campaign
+                </a>
+                <a href="/dashboard/marketing" className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 font-bold text-white flex items-center gap-2">
+                  <Share2 size={18} /> Social Campaign
+                </a>
+              </div>
+            </details>
           </div>
         </div>
       </section>
@@ -283,19 +304,54 @@ export default function DashboardPage() {
         limit={6}
       />
 
-      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-        {metricCards.map((item) => {
-          const Icon = item.icon;
-          return (
-            <button key={item.label} onClick={() => setSelectedMetric(item.key)} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-left transition hover:-translate-y-1 hover:border-cyan-400/35 hover:bg-cyan-500/10 hover:shadow-lg hover:shadow-cyan-500/10">
-              <div className="w-11 h-11 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 flex items-center justify-center mb-4">
-                <Icon className="text-cyan-300" size={20} />
-              </div>
-              <div className="text-3xl font-black">{item.value}</div>
-              <div className="text-sm text-gray-500">{item.label}</div>
+      <section className="mb-8 rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-xl font-black">CRM Metrics</h2>
+            <p className="text-sm text-gray-500">Grouped for scanning. Every metric still opens its real record detail.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {metricGroups.map((group) => (
+              <button
+                key={group.label}
+                onClick={() => {
+                  setActiveMetricGroup(group.label);
+                  setShowAllMetrics(false);
+                }}
+                className={`rounded-2xl border px-3 py-2 text-xs font-bold ${
+                  activeMetricGroup === group.label && !showAllMetrics
+                    ? "border-cyan-400/30 bg-cyan-500/15 text-cyan-100"
+                    : "border-white/10 bg-black/20 text-gray-300"
+                }`}
+              >
+                {group.label}
+              </button>
+            ))}
+            <button
+              onClick={() => setShowAllMetrics((value) => !value)}
+              className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100"
+            >
+              {showAllMetrics ? "Show grouped" : "View all metrics"}
             </button>
-          );
-        })}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-3">
+          {visibleMetricCards.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button key={item.label} onClick={() => setSelectedMetric(item.key)} className="rounded-2xl border border-white/10 bg-black/25 p-4 text-left transition hover:-translate-y-0.5 hover:border-cyan-400/35 hover:bg-cyan-500/10 hover:shadow-lg hover:shadow-cyan-500/10">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="w-9 h-9 rounded-xl border border-cyan-500/20 bg-cyan-500/10 flex items-center justify-center">
+                    <Icon className="text-cyan-300" size={17} />
+                  </div>
+                  <span className="text-[11px] text-cyan-100/70">{item.records.length}</span>
+                </div>
+                <div className="text-2xl font-black">{item.value}</div>
+                <div className="text-xs text-gray-500">{item.label}</div>
+              </button>
+            );
+          })}
+        </div>
       </section>
 
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">

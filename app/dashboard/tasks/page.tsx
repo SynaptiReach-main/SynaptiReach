@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Bot, CheckCircle2, Clock, Loader2, Plus, Save, Search, Trash2, UserPlus, X } from "lucide-react";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
+import SimpleMetricModal, { type SimpleMetricDetail } from "@/components/dashboard/SimpleMetricModal";
 
 const emptyTask = {
   id: "",
@@ -40,6 +41,7 @@ export default function TasksPage() {
   const [saving, setSaving] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [actionLoading, setActionLoading] = useState("");
+  const [selectedMetric, setSelectedMetric] = useState<SimpleMetricDetail | null>(null);
   const [dismissedRecommendations, setDismissedRecommendations] = useState<string[]>([]);
   const [recommendationAssignees, setRecommendationAssignees] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
@@ -322,6 +324,7 @@ export default function TasksPage() {
   return (
     <main className="min-h-screen text-white">
       <QueryRecordFocus keys={["taskId"]} />
+      <SimpleMetricModal metric={selectedMetric} onClose={() => setSelectedMetric(null)} />
       <section className="mb-8 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-5">
         <div>
           <div className="inline-flex rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-cyan-300">Follow-up system</div>
@@ -341,12 +344,17 @@ export default function TasksPage() {
       />
 
       <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        {[["Open", metrics.open, Clock], ["Completed", metrics.completed, CheckCircle2], ["High Priority", metrics.high, AlertTriangle], ["Overdue", metrics.overdue, AlertTriangle]].map(([label, value, Icon]: any) => (
-          <div key={label} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+        {[
+          ["Open", metrics.open, Clock, tasks.filter((task) => task.status === "open"), "Open tasks waiting for owner or staff action."],
+          ["Completed", metrics.completed, CheckCircle2, tasks.filter((task) => task.status === "completed"), "Completed tasks retained for activity review."],
+          ["High Priority", metrics.high, AlertTriangle, tasks.filter((task) => ["high", "urgent"].includes(task.priority)), "High-priority work that should be reviewed first."],
+          ["Overdue", metrics.overdue, AlertTriangle, tasks.filter((task) => task.status === "overdue"), "Tasks currently past their due date or marked overdue."],
+        ].map(([label, value, Icon, records, description]: any) => (
+          <button key={label} onClick={() => setSelectedMetric({ title: label, value, records, description, href: "/dashboard/tasks" })} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-left transition hover:-translate-y-0.5 hover:border-cyan-400/35 hover:bg-cyan-500/10">
             <Icon className="mb-4 text-cyan-300" size={20} />
             <div className="text-3xl font-black">{value}</div>
             <div className="text-sm text-gray-500">{label}</div>
-          </div>
+          </button>
         ))}
       </section>
 

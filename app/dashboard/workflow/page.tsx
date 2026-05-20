@@ -56,6 +56,14 @@ const workflowTemplates = [
     actions: ["create_campaign_recommendation", "draft_follow_up"],
   },
   {
+    name: "Clicked-not-converted follow-up",
+    summary: "Creates a review task for leads who clicked but have not converted.",
+    triggerType: "campaign_click_without_conversion",
+    condition: "Campaign has clicks and no conversion or matching lead is still open.",
+    action: "Create follow-up task and draft next-step message for review.",
+    actions: ["create_review_task", "draft_email_follow_up"],
+  },
+  {
     name: "High-intent lead alert",
     summary: "Surfaces conversion or request-info events so the owner can act quickly.",
     triggerType: "high_intent_event",
@@ -143,6 +151,54 @@ const workflowTemplates = [
     action: "Create response task and optional AI draft for review.",
     actions: ["create_response_task", "draft_email_follow_up"],
   },
+  {
+    name: "Abandoned onboarding/setup reminder",
+    summary: "Surfaces incomplete setup, provider, or import steps before launch readiness stalls.",
+    triggerType: "setup_incomplete",
+    condition: "Workspace setup, provider configuration, or first import is incomplete.",
+    action: "Create setup review task and owner notification.",
+    actions: ["create_review_task", "create_notification"],
+  },
+  {
+    name: "Failed payment follow-up",
+    summary: "Creates an internal billing review task when a failed payment event is detected.",
+    triggerType: "billing_payment_failed",
+    condition: "Billing event indicates failed payment or payment action required.",
+    action: "Create billing review task without changing subscription status.",
+    actions: ["create_review_task", "create_notification"],
+  },
+  {
+    name: "Usage cap reached alert",
+    summary: "Warns the owner before managed usage caps block automation.",
+    triggerType: "usage_cap_warning",
+    condition: "AI, email, SMS, or contacts usage reaches warning or hard-cap threshold.",
+    action: "Create usage review notification and suggested upgrade task.",
+    actions: ["create_notification", "create_review_task"],
+  },
+  {
+    name: "Staff reassignment suggestion",
+    summary: "Flags unassigned or overloaded work so the owner can rebalance tasks.",
+    triggerType: "staff_workload_risk",
+    condition: "Tasks are unassigned, overdue, or concentrated on one staff member.",
+    action: "Create staff assignment review task.",
+    actions: ["create_review_task", "suggest_staff_assignment"],
+  },
+  {
+    name: "Quote/proposal follow-up",
+    summary: "Creates a review task for proposal-stage deals that need a next step.",
+    triggerType: "proposal_follow_up_due",
+    condition: "Deal is in proposal or negotiation and has no recent activity.",
+    action: "Create proposal follow-up task and optional message draft.",
+    actions: ["create_deal_task", "draft_email_follow_up"],
+  },
+  {
+    name: "Service request intake workflow",
+    summary: "Routes consultation and service inquiries into a reviewable intake task.",
+    triggerType: "service_request_created",
+    condition: "New service request, contact inquiry, or waitlist signup mentions implementation help.",
+    action: "Create intake task and internal notification.",
+    actions: ["create_review_task", "create_notification"],
+  },
 ];
 
 function renderAction(action: any) {
@@ -160,6 +216,7 @@ export default function WorkflowPage() {
   const [creating, setCreating] = useState(false);
   const [workflowAction, setWorkflowAction] = useState("");
   const [selectedWorkflow, setSelectedWorkflow] = useState<any>(null);
+  const [selectedSignal, setSelectedSignal] = useState<any>(null);
   const [lastRunMessage, setLastRunMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -298,10 +355,138 @@ export default function WorkflowPage() {
   const pausedWorkflows = workflows.filter((workflow: any) => workflow.status === "paused").length;
   const draftWorkflows = workflows.filter((workflow: any) => workflow.status === "draft").length;
   const failedRuns = workflows.reduce((sum: number, workflow: any) => sum + Number(workflow.failure_count || 0), 0);
+  const dashboardLeads = data?.leads || [];
+  const dashboardDeals = data?.deals || [];
+  const dashboardTasks = data?.tasks || [];
+  const dashboardAppointments = data?.appointments || [];
+  const dashboardCommunications = data?.communications || [];
+  const workflowSignals = [
+    {
+      label: "Leads needing follow-up",
+      count: followups.length,
+      records: followups,
+      meaning: "Leads that need a timely owner response or follow-up task.",
+      action: "Open leads and create review-gated follow-up tasks.",
+      href: "/dashboard/leads",
+    },
+    {
+      label: "Hot leads",
+      count: dashboardLeads.filter((lead: any) => Number(lead.score || 0) >= 80 || lead.temperature === "hot").length,
+      records: dashboardLeads.filter((lead: any) => Number(lead.score || 0) >= 80 || lead.temperature === "hot"),
+      meaning: "High-score or hot-temperature leads that should not wait.",
+      action: "Review the lead and draft a human-approved response.",
+      href: "/dashboard/leads",
+    },
+    {
+      label: "Stale deals",
+      count: dashboardDeals.filter((deal: any) => deal.metadata?.stale || (deal.status === "open" && deal.updated_at && Date.now() - new Date(deal.updated_at).getTime() >= 14 * 86400000)).length,
+      records: dashboardDeals.filter((deal: any) => deal.metadata?.stale || (deal.status === "open" && deal.updated_at && Date.now() - new Date(deal.updated_at).getTime() >= 14 * 86400000)),
+      meaning: "Open deals that have not moved recently.",
+      action: "Create a deal recovery task or proposal follow-up.",
+      href: "/dashboard/pipeline",
+    },
+    {
+      label: "Overdue tasks",
+      count: dashboardTasks.filter((task: any) => task.status === "overdue").length,
+      records: dashboardTasks.filter((task: any) => task.status === "overdue"),
+      meaning: "Tasks already past their due window.",
+      action: "Prioritize or reassign the task.",
+      href: "/dashboard/tasks",
+    },
+    {
+      label: "Upcoming appointments",
+      count: dashboardAppointments.filter((appointment: any) => appointment.status === "scheduled").length,
+      records: dashboardAppointments.filter((appointment: any) => appointment.status === "scheduled"),
+      meaning: "Scheduled meetings that may need prep, reminders, or follow-up.",
+      action: "Review appointment prep and confirmation.",
+      href: "/dashboard/calendar",
+    },
+    {
+      label: "No-show appointments",
+      count: dashboardAppointments.filter((appointment: any) => appointment.status === "no_show" || appointment.status === "no-show").length,
+      records: dashboardAppointments.filter((appointment: any) => appointment.status === "no_show" || appointment.status === "no-show"),
+      meaning: "Missed meetings that need a recovery follow-up.",
+      action: "Create a no-show recovery task.",
+      href: "/dashboard/calendar",
+    },
+    {
+      label: "New inbound replies",
+      count: dashboardCommunications.filter((item: any) => item.direction === "inbound" && item.status !== "read").length,
+      records: dashboardCommunications.filter((item: any) => item.direction === "inbound" && item.status !== "read"),
+      meaning: "Inbound messages likely waiting for a reply.",
+      action: "Open communications and draft a reviewed response.",
+      href: "/dashboard/communications",
+    },
+    {
+      label: "Campaigns ready for review",
+      count: topCampaigns.length,
+      records: topCampaigns,
+      meaning: "Campaigns with enough activity to review performance or next steps.",
+      action: "Review performance and approve a safe follow-up.",
+      href: "/dashboard/marketing",
+    },
+    {
+      label: "Pending recommendations",
+      count: recommendations.length,
+      records: recommendations,
+      meaning: "CRM Intelligence recommendations waiting for review.",
+      action: "Approve, deny, or convert to a safe draft action.",
+      href: "/dashboard/ai_assistant",
+    },
+    {
+      label: "Workflow runs failed",
+      count: failedRuns,
+      records: workflows.filter((workflow: any) => Number(workflow.failure_count || 0) > 0),
+      meaning: "Workflow drafts or tests with failed run history.",
+      action: "Open the workflow detail and review conditions before activating.",
+      href: "/dashboard/workflow",
+    },
+  ];
 
   return (
     <main className="min-h-screen text-white">
       <QueryRecordFocus keys={["workflowId"]} />
+      {selectedSignal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-3xl border border-cyan-400/20 bg-slate-950 shadow-2xl shadow-cyan-500/20">
+            <div className="flex items-start justify-between gap-4 border-b border-cyan-400/10 p-5">
+              <div>
+                <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Workflow Signal</div>
+                <h2 className="mt-1 text-2xl font-black">{selectedSignal.label}</h2>
+                <p className="mt-1 text-sm text-cyan-50/55">{selectedSignal.meaning}</p>
+              </div>
+              <button onClick={() => setSelectedSignal(null)} className="rounded-2xl border border-white/10 p-2 text-cyan-100 hover:bg-white/5">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="max-h-[62vh] overflow-y-auto p-5">
+              <div className="mb-4 rounded-2xl border border-green-400/20 bg-green-500/10 p-4 text-sm text-green-100">
+                Recommended action: {selectedSignal.action}
+              </div>
+              {selectedSignal.records.length === 0 ? (
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center text-cyan-50/55">
+                  No real records currently match this signal.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {selectedSignal.records.slice(0, 30).map((record: any, index: number) => (
+                    <div key={record.id || index} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                      <div className="font-bold text-white">{record.name || record.title || record.subject || record.email || record.action || record.type || "Related record"}</div>
+                      <div className="mt-1 text-sm text-gray-500">{record.status || record.stage || record.channel || record.priority || "Needs review"}</div>
+                      <div className="mt-2 text-xs text-gray-600">{formatDate(record.created_at || record.updated_at || record.due_date || record.starts_at)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="border-t border-cyan-400/10 p-5">
+              <a href={selectedSignal.href} className="inline-flex rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-5 py-3 font-black text-black">
+                Open related page
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
       <section className="mb-8 rounded-3xl border border-white/10 bg-[#0b0b0b]/90 p-6 md:p-8 shadow-2xl shadow-cyan-500/5">
         <div className="flex flex-col 2xl:flex-row 2xl:items-center 2xl:justify-between gap-6">
           <div className="flex items-center gap-5">
@@ -491,18 +676,16 @@ export default function WorkflowPage() {
               <h2 className="text-xl font-black">Live Workflow Signals</h2>
             </div>
             <div className="space-y-3 text-sm text-gray-300">
-              <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/30 p-4">
-                <span>Leads needing follow-up</span>
-                <span className="font-black text-white">{followups.length}</span>
-              </div>
-              <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/30 p-4">
-                <span>Campaigns ready for review</span>
-                <span className="font-black text-white">{topCampaigns.length}</span>
-              </div>
-              <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/30 p-4">
-                <span>Review recommendations</span>
-                <span className="font-black text-white">{recommendations.length}</span>
-              </div>
+              {workflowSignals.map((signal) => (
+                <button
+                  key={signal.label}
+                  onClick={() => setSelectedSignal(signal)}
+                  className="flex w-full items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/30 p-4 text-left transition hover:border-cyan-400/30 hover:bg-cyan-500/10"
+                >
+                  <span>{signal.label}</span>
+                  <span className="font-black text-white">{signal.count}</span>
+                </button>
+              ))}
             </div>
           </div>
 

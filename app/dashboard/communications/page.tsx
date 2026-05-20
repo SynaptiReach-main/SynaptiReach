@@ -5,6 +5,7 @@ import { Bot, Eye, Loader2, Mail, MessageSquare, Phone, Search, Send, Share2, X 
 import { aiClient } from "@/src/ai/aiClient";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
+import SimpleMetricModal, { type SimpleMetricDetail } from "@/components/dashboard/SimpleMetricModal";
 
 const channels = ["all", "email", "sms", "social", "call", "note", "internal"];
 const statuses = ["all", "draft", "scheduled", "sent", "failed", "received"];
@@ -21,6 +22,7 @@ export default function CommunicationsPage() {
   const [aiMeta, setAiMeta] = useState<any>(null);
   const [leads, setLeads] = useState<any[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
+  const [selectedMetric, setSelectedMetric] = useState<SimpleMetricDetail | null>(null);
   const [reply, setReply] = useState({ channel: "email", subject: "", content: "" });
   const [replyAiMeta, setReplyAiMeta] = useState<any>(null);
   const [replyAiLoading, setReplyAiLoading] = useState(false);
@@ -224,6 +226,37 @@ export default function CommunicationsPage() {
     }
   }
 
+  async function confirmSendCommunication(item: any) {
+    if (!["email", "sms"].includes(item.channel)) {
+      setError("Only email and SMS are supported for confirmed external sending.");
+      return;
+    }
+    const confirmed = window.confirm(
+      `Send this ${item.channel.toUpperCase()} to ${item.recipient || "the selected recipient"} now? This external action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    try {
+      setSubmitting(true);
+      setError("");
+      const response = await fetch("/api/crm/communications/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ communication_id: item.id, confirm: true }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data?.error || "Failed to send communication.");
+      }
+      await loadData();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to send communication.");
+      await loadData();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   const leadById = new Map(leads.map((lead) => [lead.id, lead]));
 
   const stats = {
@@ -291,6 +324,7 @@ export default function CommunicationsPage() {
   return (
     <main className="min-h-screen text-white">
       <QueryRecordFocus keys={["conversationId", "communicationId", "leadId"]} />
+      <SimpleMetricModal metric={selectedMetric} onClose={() => setSelectedMetric(null)} />
       <div className="mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-400/20 bg-cyan-400/10 text-cyan-300 text-xs mb-4">
           <MessageSquare size={14} />
@@ -332,12 +366,31 @@ export default function CommunicationsPage() {
           { label: "Scheduled", value: stats.scheduled, icon: MessageSquare },
         ].map((item) => {
           const Icon = item.icon;
+          const records = communications.filter((communication) => {
+            if (item.label === "Total") return true;
+            if (item.label === "Email") return communication.channel === "email";
+            if (item.label === "SMS") return communication.channel === "sms";
+            if (item.label === "Social") return communication.channel === "social";
+            if (item.label === "Calls") return communication.channel === "call";
+            if (item.label === "Internal") return ["note", "internal"].includes(communication.channel);
+            return communication.status === item.label.toLowerCase();
+          });
           return (
-            <div key={item.label} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+            <button
+              key={item.label}
+              onClick={() => setSelectedMetric({
+                title: item.label,
+                value: item.value,
+                records,
+                description: `${item.label} communication records from the current workspace filters.`,
+                href: "/dashboard/communications",
+              })}
+              className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-left transition hover:-translate-y-0.5 hover:border-cyan-400/35 hover:bg-cyan-500/10"
+            >
               <Icon className="text-cyan-300 mb-4" size={20} />
               <div className="text-3xl font-black">{item.value}</div>
               <div className="text-sm text-gray-500">{item.label}</div>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -378,6 +431,15 @@ export default function CommunicationsPage() {
                     {item.campaign_id && <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-gray-300">campaign linked</span>}
                     {item.direction && <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-gray-300">{item.direction}</span>}
                   </div>
+                  {item.direction === "outbound" && ["draft", "scheduled", "failed"].includes(item.status || "draft") && ["email", "sms"].includes(item.channel) && (
+                    <button
+                      onClick={() => confirmSendCommunication(item)}
+                      disabled={submitting}
+                      className="mt-4 rounded-2xl border border-green-400/20 bg-green-500/10 px-4 py-2 text-xs font-bold text-green-100 disabled:opacity-60"
+                    >
+                      Confirm Send
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

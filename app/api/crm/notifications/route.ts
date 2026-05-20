@@ -305,9 +305,14 @@ export async function PATCH(req: Request) {
       query = query.eq("id", body.id);
       if (context.workspaceId) query = query.eq("workspace_id", context.workspaceId);
     } else if (body.mark_all_read) {
-      if (body.workspace_id || body.workspaceId) {
-        query = query.eq("workspace_id", body.workspace_id || body.workspaceId);
+      const workspaceId = context.workspaceId || body.workspace_id || body.workspaceId;
+      if (!workspaceId) {
+        return NextResponse.json(
+          { success: false, error: "Workspace context is required to mark all notifications read." },
+          { status: 400 }
+        );
       }
+      query = query.eq("workspace_id", workspaceId);
       query = query.eq("status", "unread");
     } else {
       return NextResponse.json(

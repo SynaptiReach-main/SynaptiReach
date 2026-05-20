@@ -226,13 +226,29 @@ export default function DashboardLayout({
     if (commandOpen) loadCommandData();
   }, [commandOpen]);
 
-  async function markNotificationsRead(id?: string) {
-    await fetch("/api/crm/notifications", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(id ? { id } : { mark_all_read: true }),
-    });
-    await loadNotifications();
+  async function markNotificationsRead(item?: CRMNotification) {
+    setNotifications((current) =>
+      current.map((notification) =>
+        item?.id
+          ? notification.id === item.id
+            ? { ...notification, status: "read" }
+            : notification
+          : { ...notification, status: "read" }
+      )
+    );
+
+    if (item?.derived) return;
+
+    try {
+      await fetch("/api/crm/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(item?.id ? { id: item.id } : { mark_all_read: true }),
+      });
+      await loadNotifications();
+    } catch {
+      await loadNotifications();
+    }
   }
 
   async function handleSignOut() {
@@ -509,7 +525,7 @@ export default function DashboardLayout({
                           href={item.href || pathname}
                           onClick={() => {
                             setNotificationsOpen(false);
-                            if (!item.derived) markNotificationsRead(item.id);
+                            markNotificationsRead(item);
                           }}
                           className="block rounded-2xl border border-transparent p-3 transition hover:border-cyan-400/15 hover:bg-cyan-500/10"
                         >
