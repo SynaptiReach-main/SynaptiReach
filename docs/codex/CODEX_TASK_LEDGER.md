@@ -42,6 +42,34 @@ Codex must update this after every pass.
 
 Add new entries below after each Codex pass.
 
+### 2026-05-20 - Launch Verification Checkpoint 1
+
+Date: 2026-05-20
+Model: Codex
+Prompt/Goal: Continue launch-readiness verification and hardening without restarting completed work.
+Completed: Read `docs/codex/SYNAPTIREACH_MASTER_V9.md` and `docs/codex/CODEX_TASK_LEDGER.md`; reviewed current checklist tail; confirmed current working tree is clean at commit `3453000e Harden launch readiness CRM billing contact waitlist and communications`; confirmed this shell does not expose required Supabase, Stripe, Resend, Twilio, admin, or test workspace env vars directly without printing values.
+Skipped: No local-AI, Task 3 bootstrap, simulation, or completed CRM Intelligence redo.
+Partial: Live Stripe/Supabase/Resend/Twilio verification still depends on env availability through Next runtime or user-owned manual testing.
+Blocked: Direct shell-level live verification is blocked by missing env in the current process; local Next runtime probes may still load `.env.local`.
+Files changed: `docs/codex/CODEX_TASK_LEDGER.md`
+Build result: Not run at this checkpoint because no runtime code changed yet.
+Tests run: Required docs reads; `git status --short`; `git log -1 --oneline`; non-secret env presence check.
+Next recommended task: Complete remaining Task 14 modal coverage for analytics, AI Assistant, and settings, then run build and safe runtime probes.
+
+### 2026-05-20 - Launch Verification Checkpoint 2
+
+Date: 2026-05-20
+Model: Codex
+Prompt/Goal: Finish remaining Task 14 native metric modal coverage.
+Completed: Verified `/dashboard/analytics` already has a native analytics detail modal. Added shared real-data metric modals to `/dashboard/ai_assistant` provider/action readiness cards and agent metric cards. Added shared real-data metric modals to `/dashboard/settings` integration status, billing status, and usage cards. Modal records are data-backed where available and provide related-page/hash links.
+Skipped: No changes to local AI architecture, Task 3 simulation, or existing CRM Intelligence internals.
+Partial: Browser click-through verification is still pending.
+Blocked: None for code-level Task 14 coverage.
+Files changed: `app/dashboard/ai_assistant/page.tsx`, `app/dashboard/settings/page.tsx`, `docs/codex/CODEX_TASK_LEDGER.md`
+Build result: `npm.cmd run build` passed on 2026-05-20 after the modal wiring. Next.js compiled successfully and generated 150/150 static pages.
+Tests run: Static page inspection; production build verification.
+Next recommended task: Run `npm.cmd run build`, then run local page smoke and API probes.
+
 ### 2026-05-19 - Launch Readiness Goal Checkpoint 1
 
 Date: 2026-05-19
