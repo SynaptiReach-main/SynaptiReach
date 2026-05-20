@@ -6,6 +6,7 @@ import { COMMITMENT_DISCOUNTS, CREDIT_PACKS, MANAGED_PLANS, SELF_SERVICE_BYOK_PL
 import { SERVICE_CATALOG } from "@/lib/billing/services";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
+import SimpleMetricModal, { type SimpleMetricDetail } from "@/components/dashboard/SimpleMetricModal";
 
 const defaultForm = {
   business_name: "",
@@ -52,6 +53,7 @@ export default function SettingsPage() {
   const [savingSection, setSavingSection] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [selectedMetric, setSelectedMetric] = useState<SimpleMetricDetail | null>(null);
   const [simulationStatus, setSimulationStatus] = useState<any>(null);
 
   async function loadSettings() {
@@ -381,6 +383,7 @@ export default function SettingsPage() {
   return (
     <main className="min-h-screen text-white">
       <QueryRecordFocus keys={["settingsId"]} hashIds={["billing", "usage", "providers", "services"]} />
+      <SimpleMetricModal metric={selectedMetric} onClose={() => setSelectedMetric(null)} />
       <div className="mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-400/20 bg-cyan-400/10 text-cyan-300 text-xs mb-4">
           <Settings size={14} />
@@ -568,13 +571,25 @@ export default function SettingsPage() {
                   Stripe: stripeReady,
                   "Vercel Cron": integrations.vercelCron,
                 }).map(([label, configured]) => (
-                  <div key={label} className="rounded-2xl border border-white/10 bg-black/30 p-4 flex items-center justify-between">
+                  <button
+                    key={label}
+                    onClick={() => setSelectedMetric({
+                      title: `${label} Integration`,
+                      value: configured ? "Configured" : "Missing",
+                      description: configured
+                        ? `${label} appears configured from server-side settings. Secrets are never displayed.`
+                        : `${label} setup is missing or disabled. Configure the provider server-side or through saved provider connections.`,
+                      records: providerConnections.filter((connection) => String(connection.provider || "").toLowerCase().includes(label.toLowerCase())),
+                      href: "/dashboard/settings#providers",
+                    })}
+                    className="rounded-2xl border border-white/10 bg-black/30 p-4 flex items-center justify-between text-left transition hover:border-cyan-400/30 hover:bg-cyan-500/10"
+                  >
                     <span className="text-sm text-gray-300">{label}</span>
                     <span className={`flex items-center gap-2 text-sm font-bold ${configured ? "text-cyan-300" : "text-red-200"}`}>
                       {configured ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
                       {configured ? "Configured" : "Missing"}
                     </span>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -663,10 +678,20 @@ export default function SettingsPage() {
                   ["Billing Mode", billing?.billing_mode || "not selected"],
                   ["Trial Ends", billing?.trial_ends_at ? new Date(billing.trial_ends_at).toLocaleString() : "not set"],
                 ].map(([label, value]) => (
-                  <div key={label} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <button
+                    key={label}
+                    onClick={() => setSelectedMetric({
+                      title: String(label),
+                      value: String(value),
+                      description: `${label} is pulled from the workspace billing account. Subscription and payment state still require Stripe webhook confirmation.`,
+                      records: billing ? [billing] : [],
+                      href: "/dashboard/settings#billing",
+                    })}
+                    className="rounded-2xl border border-white/10 bg-black/30 p-4 text-left transition hover:border-cyan-400/30 hover:bg-cyan-500/10"
+                  >
                     <div className="text-xs uppercase tracking-[0.18em] text-gray-500">{label}</div>
                     <div className="mt-2 font-black text-white">{value}</div>
-                  </div>
+                  </button>
                 ))}
               </div>
               <div className="mb-5 grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -676,11 +701,21 @@ export default function SettingsPage() {
                   ["SMS", usage.sms || 0, selectedPlan?.sms || "select plan"],
                   ["Contacts", usage.contacts || 0, selectedPlan?.contacts || "select plan"],
                 ].map(([label, used, cap]) => (
-                  <div key={label} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <button
+                    key={label}
+                    onClick={() => setSelectedMetric({
+                      title: `${label} Usage`,
+                      value: `${used} used`,
+                      description: `Current usage against the selected plan cap. Managed plans use hard caps and no surprise overages.`,
+                      records: [{ type: label, used, cap, plan: selectedPlan?.name || selectedPlanName }],
+                      href: "/dashboard/settings#usage",
+                    })}
+                    className="rounded-2xl border border-white/10 bg-black/30 p-4 text-left transition hover:border-cyan-400/30 hover:bg-cyan-500/10"
+                  >
                     <div className="text-sm text-gray-400">{label}</div>
                     <div className="mt-2 text-xl font-black">{used} used</div>
                     <div className="text-xs text-gray-500">out of {cap}</div>
-                  </div>
+                  </button>
                 ))}
               </div>
               <div className="rounded-2xl border border-white/10 bg-black/30 p-5">

@@ -163,9 +163,9 @@ export async function POST(request: Request) {
       table = "crm_tasks";
       created = data;
     } else if (insight.actionType === "draft_message") {
-      const { data, error } = await supabase.from("crm_messages").insert(draftMessageFromInsight(insight, context) as any).select().single();
+      const { data, error } = await supabase.from("communications").insert(draftMessageFromInsight(insight, context) as any).select().single();
       if (error) throw error;
-      table = "crm_messages";
+      table = "communications";
       created = data;
     } else if (insight.actionType === "create_workflow") {
       const { data, error } = await supabase.from("crm_workflows").insert(draftWorkflowFromInsight(insight, context) as any).select().single();

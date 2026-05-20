@@ -1218,3 +1218,79 @@ Security note: the Resend API key was previously pasted into chat during setup. 
   - Production deployment and production route/API smoke for this new pass.
 
 Reminder: the Resend API key was previously pasted into chat during setup. Rotate it after testing.
+
+## Launch Verification Checkpoint 1 - 2026-05-20
+
+- [x] Continued from the current working tree without restarting completed work.
+- [x] Read required docs:
+  - `docs/codex/SYNAPTIREACH_MASTER_V9.md`
+  - `docs/codex/CODEX_TASK_LEDGER.md`
+- [x] Confirmed current working tree was clean at start of this pass.
+- [x] Confirmed latest local commit:
+  - `3453000e Harden launch readiness CRM billing contact waitlist and communications`
+- [x] Confirmed this shell does not expose required Supabase/Stripe/Resend/Twilio/admin/test env vars directly. Next runtime probes may still load `.env.local`, but no secret values were printed.
+- [x] Preserved completed Task 3 simulation/test workspace and CRM Intelligence work.
+
+## Launch Verification Checkpoint 2 - Task 14 Completion - 2026-05-20
+
+- [x] Verified `/dashboard/analytics` already has native analytics metric detail modals.
+- [x] Added native/shared metric modal coverage to `/dashboard/ai_assistant`:
+  - provider/action readiness cards
+  - agent summary metric cards
+  - related records and related-page links where available
+- [x] Added native/shared metric modal coverage to `/dashboard/settings`:
+  - integration status cards
+  - billing status cards
+  - usage/cap cards
+- [x] Task 14 is now code-complete for the requested page coverage, pending browser interaction verification.
+- [x] Build verification for this checkpoint: `npm.cmd run build` passed on 2026-05-20 after a longer trace-collection timeout; Next.js generated 150/150 static pages.
+
+## Launch Verification Checkpoint 3 - Stripe Subscription Checkout - 2026-05-20
+
+- [x] Verified the six subscription plan definitions and caps in `lib/billing/plans.ts`:
+  - Basic BYOK, Growth BYOK, Premium BYOK
+  - Basic Managed, Growth Managed, Premium Managed
+- [x] Verified `POST /api/billing/subscription/checkout` uses Stripe Checkout subscription mode with a 14-day trial.
+- [x] Verified checkout creates billing records in `checkout_required` / `checkout_created` states only and does not mark subscriptions active without webhook confirmation.
+- [x] Verified Stripe webhook processing stores event IDs in `crm_billing_events` and treats duplicate event inserts as successful duplicate replays.
+- [x] Hardened checkout billing-account lookup so scoped requests do not select an arbitrary existing billing account.
+- [x] Live test-mode probes against all six configured Stripe price IDs returned HTTP 200 with `success: true`, `stripeConfigured: true`, and `setupRequired: false`.
+- [ ] Full signed webhook lifecycle replay remains a manual Stripe CLI/dashboard test.
+
+## Launch Verification Checkpoint 4 - Live Writes and Safety Routes - 2026-05-20
+
+- [x] Live `/api/contact` probe inserted a `contact_submissions` row and returned HTTP 200.
+- [x] Live `/api/waitlist` probe inserted a `waitlist_signups` row with status `new` and returned HTTP 200.
+- [x] Live `/api/crm/services/request` probe inserted a `crm_service_requests` row with consultation/review-gated status and returned HTTP 200.
+- [x] Verified service requests do not create paid state or bypass consultation.
+- [x] Hardened the shared Resend helper so provider/network failures return safe metadata instead of raw runtime failures.
+- [x] Added internal SynaptiReach Resend notification support for service requests.
+- [x] Verified `/api/crm/communications/send` requires `communication_id` and explicit `confirm=true` before any provider call.
+- [x] Verified the admin waitlist mutation path does not expose writes without the proper method/authorization.
+- [x] Verified customer-facing `mini-brain` / `mini brain` wording is absent from active app/component/lib source.
+- [x] Updated CRM Intelligence `draft_message` action persistence to create canonical `communications` drafts.
+- [ ] Resend provider-side delivery still needs review because live contact/waitlist probes returned `emailSent: false` while not setup-missing.
+- [ ] Authenticated CRM Intelligence approve/dismiss DB-write verification remains a browser/session test.
+
+## Launch Verification Checkpoint 5 - Final Build and Post-Build Probes - 2026-05-20
+
+- [x] `npm.cmd run build` passed after all launch-hardening changes in this pass.
+- [x] `.next/routes-manifest.json` exists after build.
+- [x] Stale `.next/server/vendor-chunks/@supabase.js` is not present after build.
+- [x] `.env.local` is not tracked by git.
+- [x] Local post-build page smoke returned HTTP 200 for:
+  - `/dashboard/analytics`
+  - `/dashboard/ai_assistant`
+  - `/dashboard/settings`
+  - `/dashboard/communications`
+- [x] `/api/intelligence/summary` returned seeded-workspace insights and helper results.
+- [x] `POST /api/intelligence/run` with `{"persist":false}` returned `persisted=0`.
+- [x] `POST /api/intelligence/actions` dismiss returned HTTP 200 and recorded a review-gated decision without sending, charging, or posting externally.
+- [x] Post-build `/api/crm/services/request` returned HTTP 200 with an inserted request and safe email status fields.
+- [x] Unauthorized `PATCH /api/admin/waitlist` returned HTTP 403.
+- [x] Secret scan found env-name references and mode-prefix checks only; no tracked secret file was found.
+- [ ] Remaining manual checks:
+  - signed Stripe webhook replay with Stripe CLI/dashboard
+  - Resend sender/domain/recipient delivery review
+  - Twilio success-path verification with test credentials
+  - authenticated browser review of metric modals and CRM Intelligence approve/dismiss interactions

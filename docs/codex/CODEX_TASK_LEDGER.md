@@ -17,16 +17,16 @@ Codex must update this after every pass.
 | 2 | Supabase schema/features | Partial | schema ran successfully | feature live-write tests | |
 | 3 | Test user/simulated workspace | Complete | live bootstrap/seed/tick succeeded for `donovan.mike966@gmail.com`; workspace `cc2d162a-33e9-4d0b-8a8f-b9d35f68d4a8`; seed returned rich CRM counts; tick advanced to day 3; browser login/pages verified by user; build passes; controls verify `workspaces.is_test_workspace=true` | Continue monitoring with future browser smoke tests; no Task 3 blocker remains | 2026-05-19 |
 | 4 | Demo/nav/performance | Complete | demo overview removed, nav non-sticky, build passes | monitor | |
-| 5 | Trial subscriptions/autorenewal | Partial | subscription Checkout intent route added; webhook subscription metadata update preserved; build passes | live Stripe price env/checkout/webhook verification; full restricted-state/trial notification automation | 2026-05-19 |
+| 5 | Trial subscriptions/autorenewal | Partial | all six Stripe test price checkout probes returned HTTP 200/success; subscription Checkout uses 14-day trial and webhook-only activation | signed webhook replay/lifecycle verification; full restricted-state/trial notification automation | 2026-05-20 |
 | 6 | Tiers/caps/BYOK/managed | Partial | central plan metadata includes BYOK/managed tiers, caps, price env names, credit-pack behavior; settings UI shows selected plan/caps | live billing account plan updates and cap enforcement tests | 2026-05-19 |
-| 7 | Services/settings requests | Partial | service catalog and dashboard consultation request route/UI added; no payment is faked | live Supabase service-request write verification with valid env/session | 2026-05-19 |
+| 7 | Services/settings requests | Complete | live service-request writes returned HTTP 200 with inserted IDs; requests stay consultation_requested/review-gated and no payment is faked; internal notification support added | monitor Resend provider delivery | 2026-05-20 |
 | 8 | Public services consultation flow | Complete | services page buttons now say Contact SynaptiReach and explain required 30-minute consultation while preserving pricing | monitor copy/UI | 2026-05-19 |
-| 9 | Contact form/admin handling | Partial | contact API/form/admin page added; route fails safely when Supabase env unavailable | live Supabase insert and Resend delivery verification | 2026-05-19 |
-| 10 | Waitlist system | Partial | global public waitlist widget/API/admin page added with first-5 cohort logic; hidden from demo/dashboard/admin paths | live Supabase insert/Resend confirmation/admin management actions | 2026-05-19 |
+| 9 | Contact form/admin handling | Partial | live contact insert returned HTTP 200 with inserted ID; admin page fails closed; Resend failure is safe | provider-side Resend delivery returned emailSent false and needs sender/domain/recipient review | 2026-05-20 |
+| 10 | Waitlist system | Partial | live waitlist insert returned HTTP 200 with status new; lifecycle route supports new/reviewed/invited/onboarded/declined; admin mutation is secret-protected | provider-side Resend delivery returned emailSent false; full admin lifecycle browser verification remains | 2026-05-20 |
 | 11 | Industry pages/footer dropdown | Complete | dynamic industry pages added for required industries and compact footer solution list updated | monitor route coverage | 2026-05-19 |
 | 12 | Public info pages buildout | Partial | about/blog/careers/privacy/terms/security/support/analytics/ai-agents expanded; button cleanup applied for careers/privacy/support | deeper copy polish and visual review on mobile/desktop | 2026-05-19 |
 | 13 | Dashboard compaction/modals | Complete | dashboard metrics grouped with View all mode; quick actions compacted; build and local page smoke pass | browser interaction polish only | 2026-05-19 |
-| 14 | Metric popups across CRM | Partial | dashboard, pipeline, tasks, calendar, communications, marketing, and workflow signals have real-data modals/popups; build and local page smoke pass | deeper native modal treatment for analytics, AI Assistant, and settings; browser interaction verification | 2026-05-19 |
+| 14 | Metric popups across CRM | Complete | dashboard, analytics, pipeline, tasks, calendar, communications, marketing, workflow, AI Assistant, and settings have real-data modal/popup coverage; build and local page smoke pass | browser interaction polish only | 2026-05-20 |
 | 15 | Pipeline create deal help | Complete | create/edit deal modal now explains deal meaning, lead linkage, value/probability/stage, close date, and revenue forecasting | monitor UX | 2026-05-19 |
 | 16 | AI Command Center | Complete | AI Assistant includes provider/action readiness cards for CRM Intelligence, SynaptiReach Managed, BYOK, and future Local Connector; no secrets exposed | live provider-status browser review | 2026-05-19 |
 | 17 | Workflow templates/signals | Complete | workflow templates expanded and Live Workflow Signals have clickable detail popups with real records and review-gated actions | browser interaction verification | 2026-05-19 |
@@ -35,8 +35,8 @@ Codex must update this after every pass.
 | 20 | Mini-brain intelligence | Partial | helperResults are populated; shared CRM Intelligence panels are wired across required CRM pages; summary/run APIs return 200 without external AI; seeded workspace is live | authenticated approve/dismiss DB-write verification and further seeded-data tuning | 2026-05-19 |
 | 21 | Review-gated email/SMS replies | Partial | `POST /api/crm/communications/send` added with confirm=true, Resend/Twilio server-side setup-required behavior, sent/failed logging, notifications, and Confirm Send UI | live Resend/Twilio success-path verification; workspace BYOK provider credential storage | 2026-05-19 |
 | 22 | Notification mark-read | Complete | individual notification clicks mark read optimistically before navigation; mark-all-read is workspace constrained; build and local smoke pass | live persisted count verification in browser | 2026-05-19 |
-| 23 | Contact/support/admin notifications | Partial | contact/waitlist/service requests create notifications where implemented; admin contact/waitlist pages fail closed unless enabled; admin waitlist action secret route added | final admin auth/roles and live notification delivery verification | 2026-05-19 |
-| 24 | Final build/tests/docs | Partial | multiple `npm.cmd run build` passes; local changed-page smoke returned 200; fail-closed API probes passed; docs/checklist updated | production deploy/smoke, Stripe/Resend/Twilio/Supabase live-write verification, mobile/browser modal review | 2026-05-19 |
+| 23 | Contact/support/admin notifications | Partial | contact/waitlist/service requests create notifications; service request internal email support added; admin contact/waitlist pages fail closed unless enabled; admin waitlist action secret route rejects unauthorized PATCH | final admin auth/roles and Resend provider delivery verification | 2026-05-20 |
+| 24 | Final build/tests/docs | Partial | `npm.cmd run build` passes after launch hardening; local changed-page smoke returned 200; Stripe checkout and Supabase live-write probes ran; docs/checklist updated | production deploy/smoke after this patch set, signed webhook replay, Resend/Twilio success-path verification, mobile/browser modal review | 2026-05-20 |
 
 ## Pass Log
 
@@ -69,6 +69,48 @@ Files changed: `app/dashboard/ai_assistant/page.tsx`, `app/dashboard/settings/pa
 Build result: `npm.cmd run build` passed on 2026-05-20 after the modal wiring. Next.js compiled successfully and generated 150/150 static pages.
 Tests run: Static page inspection; production build verification.
 Next recommended task: Run `npm.cmd run build`, then run local page smoke and API probes.
+
+### 2026-05-20 - Launch Verification Checkpoint 3
+
+Date: 2026-05-20
+Model: Codex
+Prompt/Goal: Verify and harden Stripe subscription checkout behavior.
+Completed: Verified `lib/billing/plans.ts` contains all six required BYOK/managed plan slugs, caps, monthly prices, and Stripe price env mappings. Verified `POST /api/billing/subscription/checkout` uses Stripe Checkout subscription mode with a 14-day trial and creates checkout-required/checkout-created billing states only; it does not mark subscriptions active without Stripe webhook confirmation. Verified `app/api/billing/stripe/webhook/route.ts` records Stripe event IDs in `crm_billing_events` and returns success for duplicate event inserts. Hardened checkout lookup so scoped requests no longer risk selecting an arbitrary existing billing account when no workspace/company/user scope is available. Live test-mode checkout probes for `basic-byok`, `growth-byok`, `premium-byok`, `basic-managed`, `growth-managed`, and `premium-managed` all returned HTTP 200 with `success: true`, `stripeConfigured: true`, and `setupRequired: false`; Checkout URLs/session IDs were intentionally not recorded in docs.
+Skipped: No Stripe live-mode changes and no fake subscription activation.
+Partial: Full webhook lifecycle completion still requires Stripe CLI/dashboard replay using signed webhook events.
+Blocked: None for Checkout Session creation with configured test price IDs.
+Files changed: `app/api/billing/subscription/checkout/route.ts`, `docs/codex/CODEX_TASK_LEDGER.md`
+Build result: Pending after checkout hardening patch.
+Tests run: `npm.cmd run build`; local runtime page/API smoke; six-plan Stripe Checkout Session probe in test mode.
+Next recommended task: Run contact, waitlist, service request, CRM Intelligence, communications, and admin safety probes, then rebuild.
+
+### 2026-05-20 - Launch Verification Checkpoint 4
+
+Date: 2026-05-20
+Model: Codex
+Prompt/Goal: Verify live contact, waitlist, service request, CRM Intelligence, and communication safety foundations.
+Completed: Live Supabase write probes succeeded for `/api/contact`, `/api/waitlist`, and `/api/crm/services/request`; each returned HTTP 200 with an inserted record ID. Contact and waitlist returned status `new` and safe Resend status flags. Service requests remain `consultation_requested` and do not create paid state. Hardened the Resend notification helper so network/provider failures return safe setup/error metadata instead of throwing raw fetch errors. Added internal SynaptiReach Resend notification support to service requests. Confirmed `/api/crm/communications/send` rejects missing `communication_id` and rejects `confirm:false` before any provider send. Confirmed admin contact/waitlist pages load fail-closed and waitlist admin mutation rejects unsupported methods without exposing data. Confirmed customer-facing `mini-brain` / `mini brain` wording is absent from `app`, `components`, and `lib`. Updated CRM Intelligence draft-message actions to create canonical `communications` drafts so they appear in the Communications Hub and remain review-gated.
+Skipped: No live customer email/SMS send was attempted; no Stripe live-mode or payment completion action was attempted.
+Partial: Resend internal notification delivery returned `emailSent: false` on contact/waitlist while not setup-missing, so sender/domain/recipient configuration still needs provider-side review. Authenticated CRM Intelligence approve/dismiss browser DB-write verification remains pending.
+Blocked: Full Resend delivery confirmation and authenticated action verification require provider/admin/browser context.
+Files changed: `lib/notifications/resend.ts`, `app/api/crm/services/request/route.ts`, `app/api/intelligence/actions/route.ts`, `docs/codex/CODEX_TASK_LEDGER.md`
+Build result: Pending after runtime hardening patches.
+Tests run: Local runtime page/API smoke; live Supabase contact/waitlist/service write probes; communication review-gate probes; admin safety probes; user-facing wording grep.
+Next recommended task: Run `npm.cmd run build`, then re-run patched runtime probes and final documentation updates.
+
+### 2026-05-20 - Launch Verification Checkpoint 5
+
+Date: 2026-05-20
+Model: Codex
+Prompt/Goal: Final build and post-build runtime verification for this hardening pass.
+Completed: `npm.cmd run build` passed after the checkout, service notification, Resend, intelligence action, AI Assistant modal, and Settings modal changes. Verified `.next/routes-manifest.json` exists and stale `.next/server/vendor-chunks/@supabase.js` does not. Verified `.env.local` is not tracked. Post-build local runtime smoke returned HTTP 200 for `/dashboard/analytics`, `/dashboard/ai_assistant`, `/dashboard/settings`, and `/dashboard/communications`. `/api/intelligence/summary` returned HTTP 200 with seeded-workspace insights and helper results. `/api/intelligence/run` with `{"persist":false}` returned HTTP 200 with `persisted=0`, confirming no durable recommendations are created by that transient path. `/api/intelligence/actions` dismiss returned HTTP 200 and recorded a review-gated decision without external action. Post-build service request probe returned HTTP 200 with an inserted request and safe email status fields. Unauthorized `PATCH /api/admin/waitlist` returned HTTP 403. Secret scan found env-name references and code prefix checks only, with no tracked `.env.local`.
+Skipped: No live customer communication send, no Stripe live-mode action, and no destructive simulation/test workspace reset.
+Partial: Resend provider delivery remains partial because contact/waitlist probes returned `emailSent: false`; Twilio success-path remains untested; signed Stripe webhook replay remains manual; browser click-through/modal review remains manual.
+Blocked: Only external/manual provider checks remain for those partial items.
+Files changed: `app/api/billing/subscription/checkout/route.ts`, `app/api/crm/services/request/route.ts`, `app/api/intelligence/actions/route.ts`, `app/dashboard/ai_assistant/page.tsx`, `app/dashboard/settings/page.tsx`, `lib/notifications/resend.ts`, `docs/codex/CODEX_TASK_LEDGER.md`, `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`
+Build result: `npm.cmd run build` passed.
+Tests run: production build; changed-page smoke; Stripe test-mode six-plan checkout probe; live contact/waitlist/service Supabase write probes; CRM Intelligence summary/run/action probes; communications review-gate probes; admin fail-closed probe; `.env.local` tracking check; user-facing wording grep; `.next` artifact check.
+Next recommended task: Manually verify signed Stripe webhook replay, Resend sender/domain delivery, Twilio provider success path, and browser/modal interactions; then deploy and run production smoke.
 
 ### 2026-05-19 - Launch Readiness Goal Checkpoint 1
 

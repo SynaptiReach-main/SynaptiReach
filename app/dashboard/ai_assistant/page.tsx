@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Bot, Brain, Loader2, Send, Sparkles, Zap } from "lucide-react";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
+import SimpleMetricModal, { type SimpleMetricDetail } from "@/components/dashboard/SimpleMetricModal";
 
 const prompts = [
   "What should I do next?",
@@ -41,6 +42,7 @@ export default function AIAssistantPage() {
   const [agentData, setAgentData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [agentLoading, setAgentLoading] = useState(true);
+  const [selectedMetric, setSelectedMetric] = useState<SimpleMetricDetail | null>(null);
   const [error, setError] = useState("");
 
   async function loadAgents() {
@@ -128,6 +130,7 @@ export default function AIAssistantPage() {
 
   return (
     <main className="min-h-screen text-white">
+      <SimpleMetricModal metric={selectedMetric} onClose={() => setSelectedMetric(null)} />
       <section className="mb-8">
         <div className="flex items-center gap-4 mb-5">
           <div className="w-16 h-16 rounded-3xl border border-cyan-500/20 bg-cyan-500/10 flex items-center justify-center">
@@ -171,16 +174,20 @@ export default function AIAssistantPage() {
             </div>
             <div className="grid gap-3 md:grid-cols-4">
               {[
-                ["CRM Intelligence", "Active", "Deterministic, zero-cost insight layer."],
-                ["SynaptiReach Managed", agentData?.provider ? "Available" : "Setup dependent", "Uses capped server-side providers."],
-                ["Bring Your Own Keys", "Supported", "Advanced users can connect their own providers."],
-                ["Local Connector", "Future setup", "Optional customer connector; production does not depend on localhost."],
-              ].map(([label, value, description]) => (
-                <div key={label} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                ["CRM Intelligence", "Active", "Deterministic, zero-cost insight layer.", agentData?.insights || []],
+                ["SynaptiReach Managed", agentData?.provider ? "Available" : "Setup dependent", "Uses capped server-side providers.", agentData?.provider_errors || []],
+                ["Bring Your Own Keys", "Supported", "Advanced users can connect their own providers.", agentData?.provider_errors || []],
+                ["Local Connector", "Future setup", "Optional customer connector; production does not depend on localhost.", []],
+              ].map(([label, value, description, records]: any) => (
+                <button
+                  key={label}
+                  onClick={() => setSelectedMetric({ title: label, value, description, records, href: "/dashboard/settings#providers" })}
+                  className="rounded-2xl border border-white/10 bg-black/30 p-4 text-left transition hover:border-cyan-400/30 hover:bg-cyan-500/10"
+                >
                   <div className="text-sm font-bold text-white">{label}</div>
                   <div className="mt-2 text-lg font-black text-cyan-200">{value}</div>
                   <div className="mt-1 text-xs text-gray-500">{description}</div>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -260,18 +267,28 @@ export default function AIAssistantPage() {
             ) : (
               <div className="space-y-3">
                 {[
-                  ["Hot Leads", agentData?.summary?.hot_leads || 0],
-                  ["Follow-ups Due", agentData?.summary?.followups_due || 0],
-                  ["Campaigns Reviewed", agentData?.summary?.campaign_count || 0],
-                  ["Open Deals", agentData?.summary?.open_deals || 0],
-                  ["Overdue Tasks", agentData?.summary?.overdue_tasks || 0],
-                  ["Active Workflows", agentData?.summary?.active_workflows || 0],
-                  ["Confidence", `${Math.round((agentData?.confidence || 0) * 100)}%`],
-                ].map(([label, value]) => (
-                  <div key={label} className="rounded-2xl border border-white/10 bg-black/30 p-4 flex items-center justify-between">
+                  ["Hot Leads", agentData?.summary?.hot_leads || 0, "/dashboard/leads", agentData?.hot_leads || []],
+                  ["Follow-ups Due", agentData?.summary?.followups_due || 0, "/dashboard/tasks", agentData?.followups || []],
+                  ["Campaigns Reviewed", agentData?.summary?.campaign_count || 0, "/dashboard/marketing", agentData?.top_campaigns || []],
+                  ["Open Deals", agentData?.summary?.open_deals || 0, "/dashboard/pipeline", agentData?.open_deals || []],
+                  ["Overdue Tasks", agentData?.summary?.overdue_tasks || 0, "/dashboard/tasks", agentData?.overdue_tasks || []],
+                  ["Active Workflows", agentData?.summary?.active_workflows || 0, "/dashboard/workflow", agentData?.workflows || []],
+                  ["Confidence", `${Math.round((agentData?.confidence || 0) * 100)}%`, "/dashboard/ai_assistant", agentData?.insights || []],
+                ].map(([label, value, href, records]: any) => (
+                  <button
+                    key={label}
+                    onClick={() => setSelectedMetric({
+                      title: label,
+                      value,
+                      records,
+                      description: `CRM agent metric generated from workspace data. ${label === "Confidence" ? "Confidence reflects deterministic signal coverage and available records." : "Open the related page to review records and safe next actions."}`,
+                      href,
+                    })}
+                    className="rounded-2xl border border-white/10 bg-black/30 p-4 flex items-center justify-between text-left transition hover:border-cyan-400/30 hover:bg-cyan-500/10"
+                  >
                     <span className="text-sm text-gray-400">{label}</span>
                     <span className="font-black text-cyan-300">{value}</span>
-                  </div>
+                  </button>
                 ))}
                 {(agentData?.provider || agentData?.model) && (
                   <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4 text-sm text-cyan-100">

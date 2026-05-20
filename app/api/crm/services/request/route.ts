@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/auth/getWorkspaceContext";
 import { findServiceCatalogItem } from "@/lib/billing/services";
 import { createSupabaseAdmin, friendlySupabaseError } from "@/lib/crm/supabaseAdmin";
+import { sendSynaptiReachEmail } from "@/lib/notifications/resend";
 
 async function safeInsert(supabase: any, table: string, values: Record<string, any>) {
   await supabase.from(table).insert(values).then(() => undefined).catch(() => undefined);
@@ -45,6 +46,22 @@ export async function POST(request: Request) {
       .single();
     if (error) throw error;
 
+    const internalEmail = await sendSynaptiReachEmail({
+      subject: `New SynaptiReach service request: ${item.itemName}`,
+      text: [
+        `Service: ${item.itemName}`,
+        `Category: ${item.category}`,
+        `Price: ${item.priceLabel}`,
+        `Recurring: ${item.recurring ? "yes" : "no"}`,
+        `Workspace ID: ${workspaceId || "Not provided"}`,
+        `Company ID: ${companyId || "Not provided"}`,
+        `User ID: ${userId || "Not provided"}`,
+        `Submitted: ${new Date().toISOString()}`,
+        "",
+        String(body.message || ""),
+      ].join("\n"),
+    });
+
     await safeInsert(supabase, "crm_notifications", {
       workspace_id: workspaceId,
       company_id: companyId,
@@ -57,7 +74,12 @@ export async function POST(request: Request) {
       record_type: "crm_service_requests",
       record_id: data.id,
       href: "/dashboard/settings#services",
-      metadata: { source: "service_request" },
+      metadata: {
+        source: "service_request",
+        email_sent: internalEmail.success,
+        email_setup_required: internalEmail.setupRequired,
+        email_error: internalEmail.error || null,
+      },
     });
 
     await safeInsert(supabase, "crm_audit_logs", {
@@ -70,7 +92,12 @@ export async function POST(request: Request) {
       details: { item_name: item.itemName, service_type: item.serviceType },
     });
 
-    return NextResponse.json({ success: true, request: data });
+    return NextResponse.json({
+      success: true,
+      request: data,
+      emailSent: internalEmail.success,
+      emailSetupRequired: internalEmail.setupRequired,
+    });
   } catch (error: any) {
     const friendly = friendlySupabaseError(error);
     return NextResponse.json(

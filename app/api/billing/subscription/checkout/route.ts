@@ -36,8 +36,19 @@ export async function POST(request: Request) {
     const now = new Date();
     const trialEndsAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
-    let existingQuery = applyWorkspaceScope(supabase.from("crm_billing_accounts").select("*"), context).limit(1);
-    const { data: existing } = await existingQuery.maybeSingle();
+    let existing = null;
+    if (workspaceId || companyId || userId) {
+      const billingScope = {
+        ...context,
+        workspaceId,
+        companyId,
+        userId,
+        isScoped: Boolean(workspaceId || companyId || userId),
+      };
+      const existingQuery = applyWorkspaceScope(supabase.from("crm_billing_accounts").select("*"), billingScope).limit(1);
+      const { data } = await existingQuery.maybeSingle();
+      existing = data;
+    }
 
     let customerId = existing?.stripe_customer_id || null;
     if (!customerId && getStripeBillingStatus().configured) {
