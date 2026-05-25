@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdmin, friendlySupabaseError } from "@/lib/crm/supabaseAdmin";
 import { verifyStripeWebhookSignature } from "@/lib/billing/stripe";
+import { sendSynaptiReachEmail } from "@/lib/notifications/resend";
 
 const SELECTED_EVENTS = new Set([
   "checkout.session.completed",
@@ -123,6 +124,53 @@ async function notifyBillingEvent(supabase: any, purchase: any, title: string, m
       source: "stripe_webhook",
     },
   });
+}
+
+async function sendCreditPackConfirmationEmail(supabase: any, purchase: any) {
+  const metadata = purchase?.metadata || {};
+  if (metadata.credit_pack_confirmation_email_sent) return { skipped: true, reason: "already_sent" };
+
+  const { data: settings } = purchase?.workspace_id
+    ? await supabase
+        .from("crm_settings")
+        .select("business_name, contact_email")
+        .eq("workspace_id", purchase.workspace_id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
+  const recipient = settings?.contact_email || metadata.customer_email || null;
+  if (!recipient) return { skipped: true, reason: "missing_recipient" };
+
+  const email = await sendSynaptiReachEmail({
+    to: recipient,
+    subject: `SynaptiReach credit pack confirmed: ${purchase.pack_type}`,
+    text: [
+      `Credit pack: ${purchase.pack_type}`,
+      `Amount: ${purchase.price_cents ? `$${(Number(purchase.price_cents) / 100).toLocaleString()}` : "Not recorded"}`,
+      `Quantity: ${purchase.quantity || 1}`,
+      `Status: ${purchase.status}`,
+      `Business: ${settings?.business_name || "Not provided"}`,
+      `Confirmed: ${new Date().toISOString()}`,
+      "",
+      "Stripe confirmed this payment. SynaptiReach will reflect credits through your billing and usage records. This email does not include card or payment method details.",
+    ].join("\n"),
+  });
+
+  await supabase
+    .from("crm_credit_pack_purchases")
+    .update({
+      metadata: {
+        ...metadata,
+        credit_pack_confirmation_email_sent: email.success,
+        credit_pack_confirmation_email_attempted_at: new Date().toISOString(),
+        credit_pack_confirmation_email_setup_required: email.setupRequired,
+        credit_pack_confirmation_email_error: email.error || null,
+      },
+    })
+    .eq("id", purchase.id);
+
+  return email;
 }
 
 async function updateBillingAccountFromCustomerObject(supabase: any, object: any, event: any) {
@@ -248,6 +296,7 @@ export async function POST(request: Request) {
       if (purchase) {
         const updated = await updatePurchaseFromStripe(supabase, purchase, "paid", object, event);
         await notifyBillingEvent(supabase, updated, "Credit pack payment completed", `${updated.pack_type} is paid and ready for credit fulfillment.`, "high");
+        await sendCreditPackConfirmationEmail(supabase, updated);
         purchase = updated;
       } else if (subscriptionAccount) {
         await safeInsert(supabase, "crm_notifications", {

@@ -11,10 +11,21 @@ async function safeInsert(supabase: any, table: string, values: Record<string, a
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const item = findServiceCatalogItem(body.item_name || body.itemName || body.service);
-    if (!item) {
+    const requestedItems = Array.isArray(body.items)
+      ? body.items
+      : Array.isArray(body.selected_items)
+        ? body.selected_items
+        : [body.item_name || body.itemName || body.service].filter(Boolean);
+    const items = requestedItems
+      .map((entry: any) => findServiceCatalogItem(typeof entry === "string" ? entry : entry?.item_name || entry?.itemName || entry?.name))
+      .filter(Boolean);
+    if (items.length === 0) {
       return NextResponse.json({ success: false, error: "Select a valid SynaptiReach service." }, { status: 400 });
     }
+    const item = items[0] as NonNullable<ReturnType<typeof findServiceCatalogItem>>;
+    const multi = items.length > 1;
+    const oneTimeTotal = items.filter((entry: any) => !entry.recurring).reduce((sum: number, entry: any) => sum + Number(entry.priceCents || 0), 0);
+    const monthlyTotal = items.filter((entry: any) => entry.recurring).reduce((sum: number, entry: any) => sum + Number(entry.priceCents || 0), 0);
 
     const supabase = createSupabaseAdmin();
     const context = await getWorkspaceContext(request);
@@ -28,18 +39,29 @@ export async function POST(request: Request) {
         workspace_id: workspaceId,
         company_id: companyId,
         user_id: userId,
-        service_type: item.serviceType,
-        item_name: item.itemName,
-        price_cents: item.priceCents,
-        recurring: item.recurring,
+        service_type: multi ? "bundle" : item.serviceType,
+        item_name: multi ? "Multiple services selected" : item.itemName,
+        price_cents: oneTimeTotal + monthlyTotal,
+        recurring: items.some((entry: any) => entry.recurring),
         status: "consultation_requested",
         consultation_required: true,
         metadata: {
           source: "dashboard_settings_services",
-          category: item.category,
-          price_label: item.priceLabel,
+          category: multi ? "Multiple categories" : item.category,
+          price_label: multi ? "Mixed pricing" : item.priceLabel,
+          selected_items: items.map((entry: any) => ({
+            service_type: entry.serviceType,
+            category: entry.category,
+            item_name: entry.itemName,
+            price_cents: entry.priceCents,
+            price_label: entry.priceLabel,
+            recurring: entry.recurring,
+          })),
+          one_time_total_cents: oneTimeTotal,
+          monthly_total_cents: monthlyTotal,
           note: "A 30-minute consultation is required before purchase or checkout.",
           message: body.message || null,
+          requested_timeline: body.requested_timeline || body.requestedTimeline || null,
         },
       })
       .select()
@@ -47,15 +69,16 @@ export async function POST(request: Request) {
     if (error) throw error;
 
     const internalEmail = await sendSynaptiReachEmail({
-      subject: `New SynaptiReach service request: ${item.itemName}`,
+      subject: `New SynaptiReach service request: ${multi ? "Multiple services selected" : item.itemName}`,
       text: [
-        `Service: ${item.itemName}`,
-        `Category: ${item.category}`,
-        `Price: ${item.priceLabel}`,
-        `Recurring: ${item.recurring ? "yes" : "no"}`,
+        "Selected services:",
+        ...items.map((entry: any) => `- ${entry.itemName} | ${entry.category} | ${entry.priceLabel} | ${entry.recurring ? "monthly" : "one-time"}`),
+        `One-time total: $${(oneTimeTotal / 100).toLocaleString()}`,
+        `Monthly total: $${(monthlyTotal / 100).toLocaleString()}/mo`,
         `Workspace ID: ${workspaceId || "Not provided"}`,
         `Company ID: ${companyId || "Not provided"}`,
         `User ID: ${userId || "Not provided"}`,
+        `Requested timeline: ${body.requested_timeline || body.requestedTimeline || "Not provided"}`,
         `Submitted: ${new Date().toISOString()}`,
         "",
         String(body.message || ""),
@@ -67,7 +90,7 @@ export async function POST(request: Request) {
       company_id: companyId,
       user_id: userId,
       title: "Service consultation requested",
-      message: `${item.itemName} request created. SynaptiReach should review and schedule a consultation.`,
+      message: `${multi ? `${items.length} selected services` : item.itemName} request created. SynaptiReach should review and schedule a consultation.`,
       type: "service",
       priority: "normal",
       status: "unread",
@@ -89,7 +112,7 @@ export async function POST(request: Request) {
       action: "service_consultation_requested",
       resource_type: "crm_service_requests",
       resource_id: data.id,
-      details: { item_name: item.itemName, service_type: item.serviceType },
+      details: { item_name: multi ? "Multiple services selected" : item.itemName, service_type: multi ? "multiple" : item.serviceType, selected_count: items.length },
     });
 
     return NextResponse.json({

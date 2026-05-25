@@ -122,7 +122,8 @@ export async function createCreditPackCheckoutSession(input: CheckoutInput) {
 
   const params = new URLSearchParams();
   params.set("mode", "payment");
-  params.set("success_url", `${input.origin}/dashboard/settings?checkout=success&session_id={CHECKOUT_SESSION_ID}`);
+  const purchaseParam = input.purchaseId ? `&purchase_id=${encodeURIComponent(input.purchaseId)}` : "";
+  params.set("success_url", `${input.origin}/dashboard/settings?checkout=success&session_id={CHECKOUT_SESSION_ID}${purchaseParam}`);
   params.set("cancel_url", `${input.origin}/dashboard/settings?checkout=cancelled`);
   params.set("line_items[0][quantity]", "1");
   params.set("line_items[0][price_data][currency]", "usd");

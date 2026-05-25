@@ -42,6 +42,34 @@ Codex must update this after every pass.
 
 Add new entries below after each Codex pass.
 
+### 2026-05-25 - Settings Billing UX Checkpoint 1
+
+Date: 2026-05-25
+Model: Codex
+Prompt/Goal: Run `docs/codex/SYNAPTIREACH_SETTINGS_BILLING_UX_GOAL.md` phase-by-phase from the current tree.
+Completed: Read the goal file, current task ledger, Stripe skill guidance, Settings page, settings route, billing checkout route, Stripe webhook route, billing plan/service helpers, service request route, Resend helper, and schema context. Refactored `/dashboard/settings` with a reusable collapsible `SettingsSection`; kept Setup & Usage Intelligence and Business Profile visible; moved AI behavior, provider keys, integration keys/status, AI providers, billing, services, and staff into compact collapsible sections. Added customer-facing integration cards for Stripe, Resend, Twilio, Ayrshare, Google Calendar, Google Business Profile, OpenAI, Gemini, OpenRouter, and Local Connector while removing Supabase/Vercel Cron from customer-facing status. Added credit-pack selection plus confirmation modal, Stripe return notice handling, billing setup confirmation modal, multi-service selection and consultation modal, CRM Automation & AI Behavior policy controls, polished billing-mode labels, credit return metadata, multi-service API support, and webhook-triggered SynaptiReach credit-pack confirmation email attempt. `npm.cmd run build` passed.
+Skipped: No Stripe live-mode change, no `.env.local` read/commit, no customer email/SMS auto-send.
+Partial: Browser click-through and live provider/webhook verification still pending.
+Blocked: None for code-level phases 1-8.
+Files changed: `app/dashboard/settings/page.tsx`, `app/api/crm/settings/route.ts`, `app/api/crm/services/request/route.ts`, `app/api/billing/stripe/webhook/route.ts`, `lib/billing/stripe.ts`, `docs/codex/CODEX_TASK_LEDGER.md`
+Build result: `npm.cmd run build` passed.
+Tests run: Static inspection and production build.
+Next recommended task: Run targeted settings/API runtime probes, customer-facing wording scan, `.env.local` tracking check, and final docs/checklist updates.
+
+### 2026-05-25 - Settings Billing UX Checkpoint 2
+
+Date: 2026-05-25
+Model: Codex
+Prompt/Goal: Final verification for Settings billing UX goal phases.
+Completed: Local runtime smoke returned HTTP 200 for `/dashboard/settings`; Stripe return query variants for Settings loaded without server errors; unauthorized `PATCH /api/admin/waitlist` returned HTTP 403. Multi-service consultation request probe returned HTTP 200 with two structured selected items and `consultation_requested` status. Credit-pack checkout intent probe returned HTTP 200 with `checkout_created` and a Stripe Checkout URL present in test mode. Verified `.env.local` is not tracked. Verified `.next/routes-manifest.json` exists and stale `.next/server/vendor-chunks/@supabase.js` is absent. Customer-facing Settings scan found no `mini-brain`, `mini brain`, `Start Stripe`, `AI Settings`, Supabase card, or Vercel Cron card text; remaining `byok`/`synaptireach_managed` strings are internal display-mapping logic only.
+Skipped: No live-mode Stripe action, no real customer send, and no destructive reset.
+Partial: Signed Stripe webhook replay and browser click-through verification of the new modals remain manual. Credit-pack confirmation email code is implemented but requires a real signed webhook event and Resend delivery configuration to verify end-to-end.
+Blocked: Only provider-owned/manual verification remains.
+Files changed: `app/dashboard/settings/page.tsx`, `app/api/crm/settings/route.ts`, `app/api/crm/services/request/route.ts`, `app/api/billing/stripe/webhook/route.ts`, `lib/billing/stripe.ts`, `docs/codex/CODEX_TASK_LEDGER.md`, `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`
+Build result: `npm.cmd run build` passed.
+Tests run: `npm.cmd run build`; local runtime Settings page smoke; admin fail-closed probe; multi-service request API probe; credit-pack intent API probe; `.env.local` tracking check; customer-facing wording scan; `.next` artifact check.
+Next recommended task: Browser-test the Settings accordions/modals, then replay a signed Stripe checkout webhook through the local/prod webhook endpoint and verify the credit-pack confirmation email metadata.
+
 ### 2026-05-20 - Launch Verification Checkpoint 1
 
 Date: 2026-05-20

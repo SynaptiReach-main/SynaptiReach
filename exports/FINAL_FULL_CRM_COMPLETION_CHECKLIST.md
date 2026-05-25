@@ -1,5 +1,53 @@
 # Final Full CRM Completion Checklist
 
+## Settings Billing UX Checkpoint 1 - 2026-05-25
+
+- [x] Read `docs/codex/SYNAPTIREACH_SETTINGS_BILLING_UX_GOAL.md` and continued from current working tree.
+- [x] Added reusable collapsible Settings sections.
+- [x] Kept Setup & Usage Intelligence and Business Profile non-collapsible.
+- [x] Added compact collapsible sections for:
+  - Trial, Caps & Billing Rules
+  - Services, Bundles & Retainers
+  - CRM Automation & AI Behavior
+  - Integration Status
+  - Connect Your AI Keys
+  - AI Providers
+  - Staff & Permissions
+- [x] Reworked customer-facing integration cards and removed Supabase/Vercel Cron from customer-facing status.
+- [x] Added selectable credit-pack UX with one Checkout button and confirmation modal.
+- [x] Added Stripe return notice for credit pack/subscription returns without claiming webhook confirmation early.
+- [x] Added billing setup confirmation modal with 14-day trial disclosure and Stripe security copy.
+- [x] Added multi-select service consultation UX.
+- [x] Updated service request API to accept `items` / `selected_items` arrays while preserving single-item compatibility.
+- [x] Added structured selected-service metadata and totals to service requests.
+- [x] Added app-level credit-pack confirmation email attempt from verified Stripe webhook processing.
+- [x] Added automation policy UI backed by `crm_settings.metadata.automation_policy`.
+- [x] `npm.cmd run build` passed after these changes.
+- [ ] Browser click-through and live webhook/provider verification still pending.
+
+## Settings Billing UX Checkpoint 2 - Final Verification - 2026-05-25
+
+- [x] Local `/dashboard/settings` smoke returned HTTP 200.
+- [x] Settings page with Stripe return query params loaded without server errors:
+  - `?checkout=success&session_id=...`
+  - `?subscription=success&session_id=...`
+- [x] Unauthorized admin waitlist mutation still fails closed with HTTP 403.
+- [x] Multi-service consultation request API returned HTTP 200 with structured selected items and `consultation_requested` status.
+- [x] Credit-pack checkout intent API returned HTTP 200 with `checkout_created` and a Stripe Checkout URL present in test mode.
+- [x] `.env.local` is not tracked.
+- [x] `.next/routes-manifest.json` exists.
+- [x] Stale `.next/server/vendor-chunks/@supabase.js` is absent.
+- [x] Customer-facing Settings source scan found no:
+  - `mini-brain`
+  - `mini brain`
+  - `Start Stripe`
+  - `AI Settings`
+  - Supabase customer integration card
+  - Vercel Cron customer integration card
+- [x] Remaining lowercase billing enum strings in Settings are internal mapping logic only.
+- [ ] Manual browser verification remains for accordion/modals, Stripe redirect UX, and exact visual layout.
+- [ ] Signed Stripe webhook replay remains required to verify app-level credit-pack confirmation email end-to-end.
+
 ## Request 1 - Public Footer/Page Tests
 
 - [x] Home page renders the shared public footer.

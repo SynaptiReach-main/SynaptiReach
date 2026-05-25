@@ -1,7 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, CreditCard, Database, KeyRound, Loader2, Settings, Sparkles, UserPlus, XCircle, Zap } from "lucide-react";
+import type { ReactNode } from "react";
+import {
+  CalendarDays,
+  CheckCircle2,
+  ChevronDown,
+  CreditCard,
+  Database,
+  KeyRound,
+  Loader2,
+  Mail,
+  MessageSquare,
+  Settings,
+  Share2,
+  ShieldCheck,
+  Sparkles,
+  UserPlus,
+  XCircle,
+  Zap,
+} from "lucide-react";
 import { COMMITMENT_DISCOUNTS, CREDIT_PACKS, MANAGED_PLANS, SELF_SERVICE_BYOK_PLANS, SUBSCRIPTION_PLANS, TRIAL_PLANS } from "@/lib/billing/plans";
 import { SERVICE_CATALOG } from "@/lib/billing/services";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
@@ -23,6 +41,135 @@ const defaultForm = {
   audience_description: "",
   automation_level: "review_required",
 };
+
+const defaultAutomationPolicy = {
+  mode: "assisted",
+  external_communication_safety: "review_required",
+  internal_action_safety: "review_required",
+  categories: {
+    email_replies: "review_required",
+    sms_replies: "review_required",
+    internal_tasks: "review_required",
+    lead_scoring_updates: "review_required",
+    deal_pipeline_updates: "review_required",
+    appointment_suggestions: "review_required",
+    workflow_recommendations: "review_required",
+    campaign_recommendations: "review_required",
+    intake_notifications: "review_required",
+  },
+};
+
+const automationModeLabels: Record<string, string> = {
+  conservative: "Conservative",
+  assisted: "Assisted",
+  autonomous_allowed: "Autonomous Where Allowed",
+  review_required: "Conservative",
+  recommend_only: "Conservative",
+};
+
+const behaviorLabels: Record<string, string> = {
+  review_required: "Review Needed First",
+  auto_safe: "Auto-Apply Where Safe",
+  disabled: "Disabled",
+};
+
+const categoryLabels: Record<string, string> = {
+  email_replies: "Email replies",
+  sms_replies: "SMS replies",
+  internal_tasks: "Internal tasks",
+  lead_scoring_updates: "Lead scoring updates",
+  deal_pipeline_updates: "Deal and pipeline updates",
+  appointment_suggestions: "Appointment suggestions",
+  workflow_recommendations: "Workflow recommendations",
+  campaign_recommendations: "Campaign recommendations",
+  intake_notifications: "Contact, waitlist, and service intake notifications",
+};
+
+function billingModeLabel(value: string | null | undefined) {
+  if (value === "byok") return "Bring Your Own Key";
+  if (value === "managed" || value === "synaptireach_managed") return "SynaptiReach Managed";
+  return value ? String(value) : "Not selected";
+}
+
+function planDisplayName(value: string | null | undefined) {
+  return (value || "Not selected").replace(/\bBYOK\b/g, "Bring Your Own Key");
+}
+
+function statusLabel(value: any) {
+  if (value === true) return "Configured";
+  if (value === false || value === null || value === undefined) return "Setup Required";
+  if (typeof value === "object") {
+    if (value.status === "disabled") return "Disabled";
+    if (value.configured || value.enabled || value.checkoutEnabled) return "Configured";
+    if (value.status === "missing") return "Setup Required";
+  }
+  return "Review";
+}
+
+function parseCreditPack(pack: string) {
+  const amount = pack.match(/\$(\d+)/);
+  const name = pack.split(":")[0]?.trim() || pack;
+  const detail = pack.split(":").slice(1).join(":").trim() || pack;
+  return {
+    name,
+    detail,
+    label: pack,
+    amountCents: amount ? Number(amount[1]) * 100 : null,
+    priceLabel: amount ? `$${amount[1]}` : "Price pending",
+  };
+}
+
+function serviceGroupLabel(category: string) {
+  if (category.includes("Execution")) return "Marketing Execution";
+  if (category.includes("Strategy")) return "Strategy";
+  if (category.includes("Advanced")) return "Advanced Marketing";
+  if (category.includes("AI Services")) return "AI Services";
+  if (category.includes("Branding & SEO")) return "Branding & SEO";
+  if (category.includes("Social & GMB")) return "Social & Google Business Profile";
+  if (category.includes("Service Bundles")) return "Service Bundles";
+  if (category.includes("Retainers")) return "Recurring Retainers";
+  return category;
+}
+
+function SettingsSection({
+  id,
+  title,
+  purpose,
+  status,
+  alert,
+  defaultOpen = false,
+  children,
+}: {
+  id?: string;
+  title: string;
+  purpose: string;
+  status?: string;
+  alert?: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section id={id} className="rounded-3xl border border-white/10 bg-white/[0.03]">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="flex w-full flex-col gap-4 p-5 text-left md:flex-row md:items-center md:justify-between"
+      >
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-xl font-black text-white">{title}</h2>
+            {status && <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-xs font-bold text-cyan-100">{status}</span>}
+            {alert && <span className="rounded-full border border-yellow-400/20 bg-yellow-500/10 px-3 py-1 text-xs font-bold text-yellow-100">{alert}</span>}
+          </div>
+          <p className="mt-2 text-sm text-gray-400">{purpose}</p>
+        </div>
+        <ChevronDown className={`text-cyan-200 transition ${open ? "rotate-180" : ""}`} size={20} />
+      </button>
+      {open && <div className="border-t border-white/10 p-5">{children}</div>}
+    </section>
+  );
+}
 
 const defaultStaffForm = {
   id: "",
@@ -55,6 +202,17 @@ export default function SettingsPage() {
   const [success, setSuccess] = useState("");
   const [selectedMetric, setSelectedMetric] = useState<SimpleMetricDetail | null>(null);
   const [simulationStatus, setSimulationStatus] = useState<any>(null);
+  const [automationPolicy, setAutomationPolicy] = useState<any>(defaultAutomationPolicy);
+  const [selectedCreditPack, setSelectedCreditPack] = useState<string>(CREDIT_PACKS[0] || "");
+  const [creditCheckoutModal, setCreditCheckoutModal] = useState(false);
+  const [creditReturn, setCreditReturn] = useState<any>(null);
+  const [selectedSubscriptionPlan, setSelectedSubscriptionPlan] = useState<string>("");
+  const [billingSetupModal, setBillingSetupModal] = useState(false);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [serviceRequestModal, setServiceRequestModal] = useState(false);
+  const [serviceNotes, setServiceNotes] = useState("");
+  const [serviceTimeline, setServiceTimeline] = useState("");
+  const [selectedIntegration, setSelectedIntegration] = useState<any>(null);
 
   async function loadSettings() {
     try {
@@ -86,6 +244,35 @@ export default function SettingsPage() {
       }
       setSimulationStatus(simulationData?.allowed ? simulationData : null);
       setForm({ ...defaultForm, ...(data.settings || {}) });
+      setAutomationPolicy({
+        ...defaultAutomationPolicy,
+        ...((data.settings?.metadata || {}).automation_policy || {}),
+        categories: {
+          ...defaultAutomationPolicy.categories,
+          ...((data.settings?.metadata || {}).automation_policy?.categories || {}),
+        },
+      });
+      const preferredPlanSlug =
+        data.billing?.metadata?.plan_slug ||
+        SUBSCRIPTION_PLANS.find((plan) => plan.name === (data.billing?.plan_tier || data.billing?.metadata?.selected_plan))?.slug ||
+        "growth-managed";
+      setSelectedSubscriptionPlan(preferredPlanSlug);
+
+      const params = new URLSearchParams(window.location.search);
+      const checkoutSessionId = params.get("session_id");
+      if ((params.get("checkout") === "success" || params.get("subscription") === "success") && checkoutSessionId) {
+        const storageKey = `synaptireach_checkout_notice_${checkoutSessionId}`;
+        if (!sessionStorage.getItem(storageKey)) {
+          const purchase = (data.creditPackPurchases || []).find((item: any) => item.checkout_reference === checkoutSessionId || item.metadata?.stripe_session_id === checkoutSessionId);
+          setCreditReturn({
+            kind: params.get("subscription") === "success" ? "subscription" : "credit_pack",
+            sessionId: checkoutSessionId,
+            purchase,
+            status: purchase?.status || "pending_webhook",
+          });
+          sessionStorage.setItem(storageKey, "shown");
+        }
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to load settings.");
     } finally {
@@ -128,6 +315,34 @@ export default function SettingsPage() {
 
   function updateField(key: string, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateAutomationCategory(key: string, value: string) {
+    setAutomationPolicy((current: any) => ({
+      ...current,
+      categories: {
+        ...(current.categories || {}),
+        [key]: value,
+      },
+    }));
+  }
+
+  async function saveAutomationSettings() {
+    const metadata = {
+      ...(settings?.metadata || {}),
+      automation_policy: {
+        ...automationPolicy,
+        updated_at: new Date().toISOString(),
+      },
+    };
+    return saveSettingsPatch({
+      brand_voice: form.brand_voice,
+      tone: form.tone,
+      cta_style: form.cta_style,
+      audience_description: form.audience_description,
+      automation_level: automationPolicy.mode === "conservative" ? "review_required" : automationPolicy.mode,
+      metadata,
+    }, "AI and automation behavior saved.");
   }
 
   async function saveProviderKeys(type: "ai" | "integration") {
@@ -189,14 +404,14 @@ export default function SettingsPage() {
       setSavingSection(pack);
       setError("");
       setSuccess("");
-      const priceMatch = pack.match(/\$(\d+)/);
+      const parsed = parseCreditPack(pack);
       const response = await fetch("/api/crm/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           section: "credit_pack_intent",
           pack,
-          price_cents: priceMatch ? Number(priceMatch[1]) * 100 : null,
+          price_cents: parsed.amountCents,
         }),
       });
       const data = await response.json();
@@ -269,25 +484,39 @@ export default function SettingsPage() {
     }
   }
 
-  async function requestService(itemName: string) {
+  async function requestServices() {
     try {
-      setSavingSection(`service_${itemName}`);
+      setSavingSection("services");
       setError("");
       setSuccess("");
+      if (selectedServices.length === 0) {
+        setError("Select at least one service, bundle, or retainer before requesting a consultation.");
+        return;
+      }
       const response = await fetch("/api/crm/services/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemName }),
+        body: JSON.stringify({ items: selectedServices, message: serviceNotes, requested_timeline: serviceTimeline }),
       });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data?.error || "Failed to request service consultation.");
-      setSuccess(`${itemName} consultation request saved. SynaptiReach will review before any purchase or checkout.`);
+      setSuccess(`${selectedServices.length} consultation item${selectedServices.length === 1 ? "" : "s"} saved. SynaptiReach will review before any purchase or checkout.`);
+      setServiceRequestModal(false);
+      setSelectedServices([]);
+      setServiceNotes("");
+      setServiceTimeline("");
       await loadSettings();
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to request service consultation.");
     } finally {
       setSavingSection("");
     }
+  }
+
+  function toggleService(itemName: string) {
+    setSelectedServices((current) =>
+      current.includes(itemName) ? current.filter((item) => item !== itemName) : [...current, itemName]
+    );
   }
 
   async function runSimulationAction(action: "seed" | "tick" | "reset" | "pause" | "resume") {
@@ -377,8 +606,124 @@ export default function SettingsPage() {
   }, {});
   const selectedPlanName = billing?.plan_tier || billing?.metadata?.selected_plan || "Growth Trial";
   const selectedPlan = [...TRIAL_PLANS, ...SUBSCRIPTION_PLANS].find((plan) => plan.name === selectedPlanName);
+  const checkoutPlan = SUBSCRIPTION_PLANS.find((plan) => plan.slug === selectedSubscriptionPlan) || SUBSCRIPTION_PLANS.find((plan) => plan.name === selectedPlanName) || SUBSCRIPTION_PLANS[4] || SUBSCRIPTION_PLANS[0];
   const stripeStatus = integrations.stripe || {};
   const stripeReady = Boolean(stripeStatus.checkoutEnabled || stripeStatus.configured);
+  const selectedPackDetails = parseCreditPack(selectedCreditPack);
+  const serviceItemsByName = SERVICE_CATALOG.reduce((map: Record<string, any>, item) => {
+    map[item.itemName] = item;
+    return map;
+  }, {});
+  const selectedServiceItems = selectedServices.map((name) => serviceItemsByName[name]).filter(Boolean);
+  const serviceOneTimeTotal = selectedServiceItems.filter((item) => !item.recurring).reduce((sum, item) => sum + Number(item.priceCents || 0), 0);
+  const serviceMonthlyTotal = selectedServiceItems.filter((item) => item.recurring).reduce((sum, item) => sum + Number(item.priceCents || 0), 0);
+  const groupedServices = SERVICE_CATALOG.reduce((groups: Record<string, any[]>, item) => {
+    const group = serviceGroupLabel(item.category);
+    groups[group] = [...(groups[group] || []), item];
+    return groups;
+  }, {});
+  const integrationCards = [
+    {
+      key: "stripe",
+      label: "Stripe / Billing",
+      icon: CreditCard,
+      status: statusLabel(stripeStatus),
+      configured: stripeReady,
+      description: "Hosted checkout, subscriptions, credit packs, and billing portal sessions.",
+      fields: ["Stripe secret key", "Publishable key", "Webhook secret", "Plan price IDs"],
+      managed: "SynaptiReach server-side configuration",
+    },
+    {
+      key: "resend",
+      label: "Resend / Email",
+      icon: Mail,
+      status: statusLabel(integrations.resend || connectionByProvider.resend),
+      configured: Boolean(integrations.resend || connectionByProvider.resend),
+      description: "Transactional email and review-gated outbound email sending.",
+      fields: ["Resend API key", "Sender email/domain"],
+      managed: "SynaptiReach Managed or Bring Your Own Key",
+    },
+    {
+      key: "twilio",
+      label: "Twilio / SMS",
+      icon: MessageSquare,
+      status: statusLabel(integrations.twilio || connectionByProvider.twilio_auth_token),
+      configured: Boolean(integrations.twilio || connectionByProvider.twilio_auth_token),
+      description: "Review-gated SMS replies and future managed SMS subaccount support.",
+      fields: ["Account SID", "Auth token", "From number"],
+      managed: "SynaptiReach Managed or Bring Your Own Key",
+    },
+    {
+      key: "ayrshare",
+      label: "Ayrshare / Social",
+      icon: Share2,
+      status: statusLabel(integrations.ayrshare || connectionByProvider.ayrshare),
+      configured: Boolean(integrations.ayrshare || connectionByProvider.ayrshare),
+      description: "Optional social publishing through platform profiles or customer-provided Ayrshare keys.",
+      fields: ["Ayrshare API key", "Profile key"],
+      managed: "Platform mode by default; Bring Your Own Key for advanced customers",
+    },
+    {
+      key: "calendar",
+      label: "Google Calendar / Calendar Sync",
+      icon: CalendarDays,
+      status: "Future Ready",
+      configured: false,
+      description: "Calendar sync remains setup-required/future-ready; internal appointments continue working.",
+      fields: ["Google OAuth connection"],
+      managed: "Customer connection required",
+    },
+    {
+      key: "gmb",
+      label: "Google Business Profile",
+      icon: Database,
+      status: "Future Ready",
+      configured: false,
+      description: "Future local presence integration for reviews and profile workflows.",
+      fields: ["Google Business Profile connection"],
+      managed: "Customer connection required",
+    },
+    {
+      key: "openai",
+      label: "OpenAI",
+      icon: Sparkles,
+      status: statusLabel(integrations.openai),
+      configured: Boolean(integrations.openai?.configured || connectionByProvider.openai),
+      description: "Optional premium AI provider. Disabled unless explicitly enabled server-side.",
+      fields: ["OpenAI key", "AI_ENABLE_OPENAI flag"],
+      managed: "SynaptiReach Managed or Bring Your Own Key",
+    },
+    {
+      key: "gemini",
+      label: "Gemini",
+      icon: Sparkles,
+      status: statusLabel(integrations.gemini || connectionByProvider.gemini),
+      configured: Boolean(integrations.gemini?.configured || connectionByProvider.gemini),
+      description: "AI provider for enhanced recommendations when configured.",
+      fields: ["Gemini API key"],
+      managed: "SynaptiReach Managed or Bring Your Own Key",
+    },
+    {
+      key: "openrouter",
+      label: "OpenRouter",
+      icon: Sparkles,
+      status: statusLabel(integrations.openrouter || connectionByProvider.openrouter),
+      configured: Boolean(integrations.openrouter?.configured || connectionByProvider.openrouter),
+      description: "AI provider fallback with configurable model routing.",
+      fields: ["OpenRouter API key", "Model"],
+      managed: "SynaptiReach Managed or Bring Your Own Key",
+    },
+    {
+      key: "local_connector",
+      label: "Local Connector",
+      icon: ShieldCheck,
+      status: "Future Ready",
+      configured: false,
+      description: "Future optional desktop connector for local AI tasks. Not required for launch.",
+      fields: ["Connector app", "Pairing token", "Local model health"],
+      managed: "Customer local setup",
+    },
+  ];
 
   return (
     <main className="min-h-screen text-white">
@@ -443,13 +788,13 @@ export default function SettingsPage() {
 
           <MiniBrainInsightPanel
             title="Setup & Usage Intelligence"
-            subtitle="Provider readiness, BYOK setup, billing usage, and launch-readiness checks without exposing secrets."
+            subtitle="Provider readiness, Bring Your Own Key setup, billing usage, and launch-readiness checks without exposing secrets."
             types={["billing_usage_intelligence", "onboarding_setup", "safety_compliance", "simulation"]}
           />
 
           <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div className="xl:col-span-2 space-y-6">
-              <div id="providers" className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+              <div id="profile" className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
                 <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <h2 className="text-2xl font-black">Business Profile</h2>
                   <button onClick={() => saveSettingsPatch({
@@ -487,47 +832,61 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/[0.05] p-6">
-                <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div className="flex items-center gap-3">
-                    <Sparkles className="text-cyan-300" size={22} />
-                    <h2 className="text-2xl font-black">AI Settings</h2>
-                  </div>
-                  <button onClick={() => saveSettingsPatch({
-                    brand_voice: form.brand_voice,
-                    tone: form.tone,
-                    cta_style: form.cta_style,
-                    audience_description: form.audience_description,
-                    automation_level: form.automation_level,
-                  }, "AI settings saved.")} disabled={saving} className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm font-bold text-cyan-100 disabled:opacity-60">
-                    {saving ? "Saving..." : "Save AI Settings"}
-                  </button>
+              <SettingsSection
+                title="CRM Automation & AI Behavior"
+                purpose="Controls message drafting, task recommendations, workflow actions, appointment suggestions, lead scoring, campaign recommendations, and external-send safety."
+                status={automationModeLabels[automationPolicy.mode] || "Assisted"}
+                alert={automationPolicy.categories?.email_replies === "auto_safe" || automationPolicy.categories?.sms_replies === "auto_safe" ? "External send opt-in review" : undefined}
+              >
+                <div className="mb-5 rounded-2xl border border-cyan-400/15 bg-cyan-500/[0.05] p-4 text-sm text-cyan-50/75">
+                  External email and SMS remain review-gated unless a workspace explicitly opts in and provider readiness is verified. This page saves policy; send routes still require explicit confirmation.
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input value={form.brand_voice || ""} onChange={(event) => updateField("brand_voice", event.target.value)} placeholder="Brand Voice" className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
-                  <input value={form.tone || ""} onChange={(event) => updateField("tone", event.target.value)} placeholder="Tone" className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
-                  <input value={form.cta_style || ""} onChange={(event) => updateField("cta_style", event.target.value)} placeholder="Preferred CTA Style" className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
-                  <select value={form.automation_level || "review_required"} onChange={(event) => updateField("automation_level", event.target.value)} className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white">
-                    <option value="review_required">Review Required</option>
-                    <option value="assistive">Assistive</option>
-                    <option value="recommend_only">Recommend Only</option>
+                  <input value={form.brand_voice || ""} onChange={(event) => updateField("brand_voice", event.target.value)} placeholder="Brand voice" className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
+                  <input value={form.tone || ""} onChange={(event) => updateField("tone", event.target.value)} placeholder="Default response tone" className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
+                  <input value={form.cta_style || ""} onChange={(event) => updateField("cta_style", event.target.value)} placeholder="Preferred CTA style" className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
+                  <select value={automationPolicy.mode || "assisted"} onChange={(event) => setAutomationPolicy((current: any) => ({ ...current, mode: event.target.value }))} className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white">
+                    <option value="conservative">Conservative - Always ask first</option>
+                    <option value="assisted">Assisted - Prepare drafts and recommendations</option>
+                    <option value="autonomous_allowed">Autonomous Where Allowed - Internal actions only</option>
+                  </select>
+                  <select value={automationPolicy.external_communication_safety || "review_required"} onChange={(event) => setAutomationPolicy((current: any) => ({ ...current, external_communication_safety: event.target.value }))} className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white">
+                    <option value="review_required">External communication safety: Review Needed First</option>
+                    <option value="disabled">External communication safety: Disabled</option>
+                    <option value="auto_safe">External communication safety: Auto-send where explicitly allowed</option>
+                  </select>
+                  <select value={automationPolicy.internal_action_safety || "review_required"} onChange={(event) => setAutomationPolicy((current: any) => ({ ...current, internal_action_safety: event.target.value }))} className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white">
+                    <option value="review_required">Internal action safety: Review Needed First</option>
+                    <option value="auto_safe">Internal action safety: Auto-Apply Where Safe</option>
+                    <option value="disabled">Internal action safety: Disabled</option>
                   </select>
                 </div>
-                <textarea value={form.audience_description || ""} onChange={(event) => updateField("audience_description", event.target.value)} placeholder="Audience Description" className="mt-4 w-full min-h-[140px] rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
-              </div>
-
-              <button onClick={saveSettings} disabled={saving} className="rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-6 py-4 font-black text-black flex items-center gap-2">
-                {saving ? <Loader2 className="animate-spin" size={18} /> : <Zap size={18} />}
-                Save Settings
-              </button>
-
-              <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/[0.05] p-6">
-                <div className="mb-5 flex items-center gap-3">
-                  <KeyRound className="text-cyan-300" size={22} />
-                  <h2 className="text-2xl font-black">Connect Your AI Keys</h2>
+                <textarea value={form.audience_description || ""} onChange={(event) => updateField("audience_description", event.target.value)} placeholder="Audience / customer profile" className="mt-4 w-full min-h-[120px] rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
+                <div className="mt-5 grid gap-3 md:grid-cols-2">
+                  {Object.entries(categoryLabels).map(([key, label]) => (
+                    <label key={key} className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                      <div className="mb-2 text-sm font-bold text-white">{label}</div>
+                      <select value={automationPolicy.categories?.[key] || "review_required"} onChange={(event) => updateAutomationCategory(key, event.target.value)} className="w-full rounded-xl border border-white/10 bg-black/40 p-3 text-sm text-white">
+                        <option value="review_required">Review Needed First</option>
+                        <option value="auto_safe">Auto-Apply / Auto-Send where safe and allowed</option>
+                        <option value="disabled">Disabled</option>
+                      </select>
+                    </label>
+                  ))}
                 </div>
+                <button onClick={saveAutomationSettings} disabled={saving} className="mt-5 rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-6 py-4 font-black text-black flex items-center gap-2 disabled:opacity-60">
+                  {saving ? <Loader2 className="animate-spin" size={18} /> : <ShieldCheck size={18} />}
+                  Save AI & Automation Settings
+                </button>
+              </SettingsSection>
+
+              <SettingsSection
+                title="Connect Your AI Keys"
+                purpose="Save customer-provided AI provider keys server-side. Saved keys are encrypted and shown only as masked labels."
+                status="Bring Your Own Key"
+              >
                 <p className="mb-4 text-sm text-gray-400">
-                  SynaptiReach keys are never shown. Your BYOK keys are encrypted server-side and displayed only as configured/missing after save.
+                  SynaptiReach keys are never shown. Your Bring Your Own Key credentials are encrypted server-side and displayed only as configured/missing after save.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <input type="password" value={providerKeys.gemini} onChange={(event) => setProviderKeys({ ...providerKeys, gemini: event.target.value })} placeholder="Gemini API key" className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
@@ -538,13 +897,13 @@ export default function SettingsPage() {
                 <button onClick={() => saveProviderKeys("ai")} disabled={savingSection === "ai"} className="mt-4 rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-5 py-3 font-black text-black disabled:opacity-60">
                   {savingSection === "ai" ? "Saving..." : "Save AI Provider Keys"}
                 </button>
-              </div>
+              </SettingsSection>
 
-              <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-                <div className="mb-5 flex items-center gap-3">
-                  <Database className="text-cyan-300" size={22} />
-                  <h2 className="text-2xl font-black">Connect Sending Integrations</h2>
-                </div>
+              <SettingsSection
+                title="Connect Sending Integrations"
+                purpose="Save customer-provided email, SMS, and social provider credentials without exposing secrets in the browser."
+                status="Review-gated sends"
+              >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <input type="password" value={integrationKeys.resend} onChange={(event) => setIntegrationKeys({ ...integrationKeys, resend: event.target.value })} placeholder="Resend API key" className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
                   <input type="password" value={integrationKeys.twilioAccountSid} onChange={(event) => setIntegrationKeys({ ...integrationKeys, twilioAccountSid: event.target.value })} placeholder="Twilio Account SID" className="rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
@@ -554,51 +913,48 @@ export default function SettingsPage() {
                 <button onClick={() => saveProviderKeys("integration")} disabled={savingSection === "integration"} className="mt-4 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-5 py-3 font-bold text-cyan-100 disabled:opacity-60">
                   {savingSection === "integration" ? "Saving..." : "Save Integration Keys"}
                 </button>
-              </div>
+              </SettingsSection>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 h-fit">
-              <div className="flex items-center gap-3 mb-5">
-                <Database className="text-cyan-300" size={22} />
-                <h2 className="text-xl font-black">Integration Status</h2>
+            <SettingsSection
+              id="providers"
+              title="Integration Status"
+              purpose="Customer-facing provider status for billing, email, SMS, social, calendar, Google profile, AI providers, and future local connector."
+              status={`${integrationCards.filter((item) => item.configured).length} configured`}
+              alert={stripeReady ? undefined : "Billing setup required"}
+            >
+              <div className="grid gap-3 md:grid-cols-2">
+                {integrationCards.map((integration) => {
+                  const Icon = integration.icon;
+                  return (
+                    <button
+                      key={integration.key}
+                      onClick={() => setSelectedIntegration(integration)}
+                      className="rounded-2xl border border-white/10 bg-black/30 p-4 text-left transition hover:border-cyan-400/30 hover:bg-cyan-500/10"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <Icon className="text-cyan-300" size={18} />
+                          <div>
+                            <div className="font-bold text-white">{integration.label}</div>
+                            <div className="mt-1 text-xs text-gray-500">{integration.description}</div>
+                          </div>
+                        </div>
+                        <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-bold ${integration.configured ? "border-cyan-400/20 bg-cyan-500/10 text-cyan-100" : "border-yellow-400/20 bg-yellow-500/10 text-yellow-100"}`}>
+                          {integration.status}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-              <div className="space-y-3">
-                {Object.entries({
-                  Supabase: integrations.supabase,
-                  Resend: integrations.resend,
-                  Twilio: integrations.twilio,
-                  Ayrshare: integrations.ayrshare,
-                  Stripe: stripeReady,
-                  "Vercel Cron": integrations.vercelCron,
-                }).map(([label, configured]) => (
-                  <button
-                    key={label}
-                    onClick={() => setSelectedMetric({
-                      title: `${label} Integration`,
-                      value: configured ? "Configured" : "Missing",
-                      description: configured
-                        ? `${label} appears configured from server-side settings. Secrets are never displayed.`
-                        : `${label} setup is missing or disabled. Configure the provider server-side or through saved provider connections.`,
-                      records: providerConnections.filter((connection) => String(connection.provider || "").toLowerCase().includes(label.toLowerCase())),
-                      href: "/dashboard/settings#providers",
-                    })}
-                    className="rounded-2xl border border-white/10 bg-black/30 p-4 flex items-center justify-between text-left transition hover:border-cyan-400/30 hover:bg-cyan-500/10"
-                  >
-                    <span className="text-sm text-gray-300">{label}</span>
-                    <span className={`flex items-center gap-2 text-sm font-bold ${configured ? "text-cyan-300" : "text-red-200"}`}>
-                      {configured ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
-                      {configured ? "Configured" : "Missing"}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
+            </SettingsSection>
 
-            <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/[0.05] p-6 h-fit">
-              <div className="flex items-center gap-3 mb-5">
-                <Sparkles className="text-cyan-300" size={22} />
-                <h2 className="text-xl font-black">AI Providers</h2>
-              </div>
+            <SettingsSection
+              title="AI Providers"
+              purpose="Provider readiness and routing metadata. Secrets are never displayed."
+              status={aiProviders?.priority?.length ? `${aiProviders.priority.length} in routing order` : "Review"}
+            >
               <div className="space-y-3">
                 {[
                   ["Gemini", "gemini"],
@@ -635,7 +991,7 @@ export default function SettingsPage() {
                         {priority > 0 ? `Priority ${priority}` : "Not in active priority"}
                       </div>
                       {connectionByProvider[key]?.key_label && (
-                        <div className="text-xs text-gray-500 mt-1">BYOK saved: {connectionByProvider[key].key_label}</div>
+                        <div className="text-xs text-gray-500 mt-1">Bring Your Own Key saved: {connectionByProvider[key].key_label}</div>
                       )}
                       {key === "openrouter" && (
                         <div className="text-xs text-gray-500 mt-1">
@@ -661,21 +1017,24 @@ export default function SettingsPage() {
                   </div>
                 )}
               </div>
-            </div>
+            </SettingsSection>
 
-            <div id="billing" className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 h-fit xl:col-span-3">
-              <div className="flex items-center gap-3 mb-5">
-                <Zap className="text-cyan-300" size={22} />
-                <h2 className="text-xl font-black">Trial, Caps & Billing Rules</h2>
-              </div>
+            <div className="xl:col-span-3">
+            <SettingsSection
+              id="billing"
+              title="Trial, Caps & Billing Rules"
+              purpose="Current plan, trial, billing status, usage caps, and safe Stripe-hosted setup controls."
+              status={billing?.status || "Setup Required"}
+              alert={stripeReady ? undefined : "Stripe setup required"}
+            >
               <div className="mb-5 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4 text-sm text-cyan-100">
-                14-day free trial. No managed SMS during trial unless the user connects their own Twilio/BYOK provider. Trial caps are hard caps, no overages. Commit before your trial ends and save up to 30%.
+                14-day free trial. No managed SMS during trial unless the user connects their own Twilio provider. Trial caps are hard caps, no overages. Commit before your trial ends and save up to 30%.
               </div>
               <div className="mb-5 grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[
-                  ["Plan", selectedPlanName],
-                  ["Status", billing?.status || "trial/setup required"],
-                  ["Billing Mode", billing?.billing_mode || "not selected"],
+                  ["Plan", planDisplayName(selectedPlanName)],
+                  ["Status", billing?.status || "Setup required"],
+                  ["Billing Mode", billingModeLabel(billing?.billing_mode)],
                   ["Trial Ends", billing?.trial_ends_at ? new Date(billing.trial_ends_at).toLocaleString() : "not set"],
                 ].map(([label, value]) => (
                   <button
@@ -707,7 +1066,7 @@ export default function SettingsPage() {
                       title: `${label} Usage`,
                       value: `${used} used`,
                       description: `Current usage against the selected plan cap. Managed plans use hard caps and no surprise overages.`,
-                      records: [{ type: label, used, cap, plan: selectedPlan?.name || selectedPlanName }],
+                      records: [{ type: label, used, cap, plan: planDisplayName(selectedPlan?.name || selectedPlanName) }],
                       href: "/dashboard/settings#usage",
                     })}
                     className="rounded-2xl border border-white/10 bg-black/30 p-4 text-left transition hover:border-cyan-400/30 hover:bg-cyan-500/10"
@@ -722,7 +1081,7 @@ export default function SettingsPage() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <div className="text-xs uppercase tracking-[0.18em] text-gray-500">Selected tier</div>
-                    <div className="mt-2 text-xl font-black text-white">{selectedPlan?.name || selectedPlanName}</div>
+                    <div className="mt-2 text-xl font-black text-white">{planDisplayName(selectedPlan?.name || selectedPlanName)}</div>
                   </div>
                   {selectedPlan && "price" in selectedPlan && <div className="text-xl font-black text-cyan-300">{selectedPlan.price}</div>}
                 </div>
@@ -775,50 +1134,68 @@ export default function SettingsPage() {
                 <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
                   <h3 className="font-black">Usage Cost Rules</h3>
                   <p className="mt-2 text-sm text-gray-400">
-                    BYOK users pay their own provider usage separately. SynaptiReach-managed plans consume included credits and require credit packs or an upgrade after caps are reached.
+                    Bring Your Own Key users pay their own provider usage separately. SynaptiReach Managed plans consume included credits and require credit packs or an upgrade after caps are reached.
                   </p>
                 </div>
               </div>
               <div className="mt-6 rounded-2xl border border-cyan-400/15 bg-cyan-500/[0.04] p-5">
-                <h3 className="text-xl font-black">Select a Paid Plan</h3>
+                <h3 className="text-xl font-black">Complete Billing Setup</h3>
                 <p className="mt-2 text-sm text-cyan-50/65">
-                  After the 14-day trial, your selected plan renews automatically unless canceled before the trial ends. Checkout is hosted by Stripe, and no subscription is marked active until Stripe confirms it.
+                  Onboarding is the primary place to choose a plan and add a payment method. Settings lets you resume billing setup, change plan, or manage billing later. After the 14-day trial, your selected plan renews automatically unless canceled before the trial ends. Checkout is hosted by Stripe, and no subscription is marked active until Stripe confirms it.
                 </p>
                 <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {SUBSCRIPTION_PLANS.map((plan) => (
-                    <div key={plan.slug} className={`rounded-2xl border p-4 ${selectedPlanName === plan.name ? "border-cyan-300/50 bg-cyan-400/10" : "border-white/10 bg-black/30"}`}>
+                    <button key={plan.slug} type="button" onClick={() => setSelectedSubscriptionPlan(plan.slug)} className={`rounded-2xl border p-4 text-left transition ${selectedSubscriptionPlan === plan.slug ? "border-cyan-300/50 bg-cyan-400/10" : "border-white/10 bg-black/30 hover:border-cyan-400/30"}`}>
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <div className="font-black text-white">{plan.name}</div>
-                          <div className="text-xs text-gray-500">{plan.billingMode === "byok" ? "Bring your own provider keys" : "SynaptiReach-managed credits"}</div>
+                          <div className="font-black text-white">{planDisplayName(plan.name)}</div>
+                          <div className="text-xs text-gray-500">{billingModeLabel(plan.billingMode)}</div>
                         </div>
                         <div className="font-black text-cyan-200">{plan.price}</div>
                       </div>
                       <div className="mt-3 text-xs text-gray-400">
                         {plan.overCapBehavior}
                       </div>
-                      <button
-                        onClick={() => startSubscriptionCheckout(plan.slug)}
-                        disabled={Boolean(savingSection)}
-                        className="mt-4 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 disabled:opacity-60"
-                      >
-                        {savingSection === `subscription_${plan.slug}` ? "Creating..." : stripeReady ? "Start Stripe Trial Checkout" : "Record Subscription Intent"}
-                      </button>
-                    </div>
+                    </button>
                   ))}
+                </div>
+                <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <div className="text-sm text-gray-400">Selected plan</div>
+                      <div className="mt-1 font-black text-white">{planDisplayName(checkoutPlan?.name || "Select a plan")} · {checkoutPlan ? billingModeLabel(checkoutPlan.billingMode) : "Not selected"}</div>
+                    </div>
+                    <button
+                      onClick={() => setBillingSetupModal(true)}
+                      disabled={!checkoutPlan || Boolean(savingSection)}
+                      className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm font-bold text-cyan-100 disabled:opacity-60"
+                    >
+                      {stripeReady ? (billing?.stripe_customer_id ? "Change Plan" : "Complete Billing Setup") : "Record Billing Intent"}
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="mt-6">
                 <h3 className="mb-3 text-xl font-black">Credit Packs</h3>
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {CREDIT_PACKS.map((pack) => (
-                    <div key={pack} className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                      <div className="font-bold text-white">{pack}</div>
-                      <button onClick={() => createCreditPackIntent(pack)} disabled={Boolean(savingSection)} className="mt-3 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 disabled:opacity-60">
-                        {savingSection === pack ? "Creating..." : stripeReady ? "Start Stripe Checkout" : "Create Checkout Intent"}
-                      </button>
-                    </div>
+                    <button key={pack} type="button" onClick={() => setSelectedCreditPack(pack)} className={`rounded-2xl border p-4 text-left transition ${selectedCreditPack === pack ? "border-cyan-300/50 bg-cyan-400/10" : "border-white/10 bg-black/30 hover:border-cyan-400/30"}`}>
+                      <div className="font-bold text-white">{parseCreditPack(pack).name}</div>
+                      <div className="mt-1 text-sm text-gray-400">{parseCreditPack(pack).detail}</div>
+                    </button>
                   ))}
+                </div>
+                <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <div className="text-sm text-gray-400">Selected credit pack</div>
+                      <div className="mt-1 font-black text-white">{selectedPackDetails.name} · {selectedPackDetails.priceLabel}</div>
+                      <div className="mt-1 text-xs text-gray-500">{selectedPackDetails.detail}. Stripe securely handles payment details.</div>
+                    </div>
+                    <button onClick={() => setCreditCheckoutModal(true)} disabled={Boolean(savingSection)} className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm font-bold text-cyan-100 disabled:opacity-60">
+                      Checkout
+                    </button>
+                  </div>
                 </div>
                 {creditPackPurchases.length > 0 && (
                   <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-gray-400">
@@ -826,44 +1203,63 @@ export default function SettingsPage() {
                   </div>
                 )}
               </div>
+            </SettingsSection>
             </div>
 
-            <div id="services" className="rounded-3xl border border-cyan-400/15 bg-cyan-500/[0.04] p-6 h-fit xl:col-span-3">
-              <div className="mb-5 flex items-center gap-3">
-                <Sparkles className="text-cyan-300" size={22} />
-                <h2 className="text-xl font-black">Services, Bundles & Retainers</h2>
-              </div>
+            <div id="services" className="xl:col-span-3">
+            <SettingsSection
+              title="Services, Bundles & Retainers"
+              purpose="Select one or more implementation services and request a consultation. No payment is triggered from this section."
+              status={`${selectedServices.length} selected`}
+              defaultOpen={false}
+            >
               <p className="mb-5 text-sm text-cyan-50/65">
                 Request a 30-minute SynaptiReach consultation before purchasing implementation services. Requests are stored for review and do not trigger payment.
               </p>
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {SERVICE_CATALOG.map((item) => (
-                  <div key={`${item.serviceType}-${item.itemName}`} className={`rounded-2xl border p-4 ${item.popular ? "border-cyan-300/45 bg-cyan-400/10" : "border-white/10 bg-black/30"}`}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="font-black text-white">{item.itemName}</div>
-                        <div className="text-xs text-gray-500">{item.category}</div>
-                      </div>
-                      <div className="font-black text-cyan-200">{item.priceLabel}</div>
+              <div className="space-y-5">
+                {Object.entries(groupedServices).map(([group, items]) => (
+                  <div key={group} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <h3 className="mb-3 font-black text-white">{group}</h3>
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      {items.map((item) => (
+                        <button key={`${item.serviceType}-${item.itemName}`} type="button" onClick={() => toggleService(item.itemName)} className={`rounded-2xl border p-4 text-left transition ${selectedServices.includes(item.itemName) ? "border-cyan-300/50 bg-cyan-400/10" : item.popular ? "border-cyan-300/25 bg-cyan-400/5 hover:border-cyan-400/40" : "border-white/10 bg-black/30 hover:border-cyan-400/30"}`}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="font-black text-white">{item.itemName}</div>
+                              <div className="text-xs text-gray-500">{item.recurring ? "Monthly retainer" : "One-time service"}</div>
+                            </div>
+                            <div className="font-black text-cyan-200">{item.priceLabel}</div>
+                          </div>
+                          {item.popular && <div className="mt-2 text-xs font-black text-green-200">MOST POPULAR</div>}
+                        </button>
+                      ))}
                     </div>
-                    {item.popular && <div className="mt-2 text-xs font-black text-green-200">MOST POPULAR</div>}
-                    <button
-                      onClick={() => requestService(item.itemName)}
-                      disabled={Boolean(savingSection)}
-                      className="mt-4 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100 disabled:opacity-60"
-                    >
-                      {savingSection === `service_${item.itemName}` ? "Requesting..." : "Request Consultation"}
-                    </button>
                   </div>
                 ))}
               </div>
+              <div className="mt-5 rounded-2xl border border-white/10 bg-black/30 p-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <div className="text-sm text-gray-400">Selected estimate</div>
+                    <div className="mt-1 font-black text-white">
+                      ${(serviceOneTimeTotal / 100).toLocaleString()} one-time · ${(serviceMonthlyTotal / 100).toLocaleString()}/mo recurring
+                    </div>
+                    <div className="mt-1 text-xs text-gray-500">Consultation required before purchase, checkout, or fulfillment.</div>
+                  </div>
+                  <button onClick={() => setServiceRequestModal(true)} disabled={selectedServices.length === 0 || Boolean(savingSection)} className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm font-bold text-cyan-100 disabled:opacity-60">
+                    Request Consultation
+                  </button>
+                </div>
+              </div>
+            </SettingsSection>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 h-fit xl:col-span-3">
-              <div className="mb-5 flex items-center gap-3">
-                <UserPlus className="text-cyan-300" size={22} />
-                <h2 className="text-xl font-black">Staff & Permissions</h2>
-              </div>
+            <div className="xl:col-span-3">
+            <SettingsSection
+              title="Staff & Permissions"
+              purpose="Invite staff, review permissions, and prepare for role-based CRM access."
+              status={`${staffMembers.length} staff`}
+            >
               <p className="mb-5 text-sm text-gray-400">
                 Staff records and granted permissions are stored server-side. The UI exposes allowed actions, and API routes can enforce these permissions through the shared workspace access helpers.
               </p>
@@ -934,8 +1330,154 @@ export default function SettingsPage() {
                   ))}
                 </div>
               </div>
+            </SettingsSection>
             </div>
           </section>
+          {creditReturn && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+              <div className="w-full max-w-lg rounded-3xl border border-cyan-400/20 bg-slate-950 p-6 shadow-2xl shadow-cyan-500/10">
+                <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
+                  {creditReturn.kind === "subscription" ? "Subscription checkout received" : "Credit pack purchase received"}
+                </div>
+                <h3 className="mt-2 text-2xl font-black text-white">
+                  {creditReturn.purchase?.pack_type || (creditReturn.kind === "subscription" ? "Billing setup submitted" : "Credit pack checkout submitted")}
+                </h3>
+                <p className="mt-3 text-sm text-gray-300">
+                  {creditReturn.status === "paid"
+                    ? "Stripe has confirmed this payment. SynaptiReach will reflect the updated state in billing and usage records."
+                    : creditReturn.kind === "subscription"
+                      ? "Your Stripe checkout was submitted. SynaptiReach will update subscription state only after Stripe webhook confirmation."
+                      : "Your payment was submitted. SynaptiReach will apply credits after Stripe confirms the payment."}
+                </p>
+                <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-gray-400">
+                  Status: <span className="font-bold text-white">{creditReturn.status === "paid" ? "Confirmed" : "Pending Stripe webhook confirmation"}</span>
+                </div>
+                <button onClick={() => setCreditReturn(null)} className="mt-5 rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-5 py-3 font-black text-black">
+                  Got it
+                </button>
+              </div>
+            </div>
+          )}
+
+          {creditCheckoutModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+              <div className="w-full max-w-lg rounded-3xl border border-cyan-400/20 bg-slate-950 p-6 shadow-2xl shadow-cyan-500/10">
+                <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">Secure checkout</div>
+                <h3 className="mt-2 text-2xl font-black text-white">{selectedPackDetails.name}</h3>
+                <p className="mt-3 text-sm text-gray-300">{selectedPackDetails.detail}</p>
+                <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <div className="text-sm text-gray-400">Amount</div>
+                  <div className="mt-1 text-2xl font-black text-white">{selectedPackDetails.priceLabel}</div>
+                  <div className="mt-2 text-xs text-gray-500">Stripe securely handles payment details. Credits are not applied until webhook confirmation.</div>
+                </div>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <button onClick={() => createCreditPackIntent(selectedCreditPack)} disabled={Boolean(savingSection)} className="rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-5 py-3 font-black text-black disabled:opacity-60">
+                    {savingSection === selectedCreditPack ? "Creating..." : "Checkout"}
+                  </button>
+                  <button onClick={() => setCreditCheckoutModal(false)} className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 font-bold text-white">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {billingSetupModal && checkoutPlan && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+              <div className="w-full max-w-xl rounded-3xl border border-cyan-400/20 bg-slate-950 p-6 shadow-2xl shadow-cyan-500/10">
+                <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">Billing setup confirmation</div>
+                <h3 className="mt-2 text-2xl font-black text-white">{planDisplayName(checkoutPlan.name)}</h3>
+                <p className="mt-3 text-sm text-gray-300">
+                  This starts Stripe-hosted setup for a 14-day trial. A card is required before trial activation. After the trial, {planDisplayName(checkoutPlan.name)} renews automatically unless canceled before the trial ends.
+                </p>
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                    <div className="text-sm text-gray-400">Billing mode</div>
+                    <div className="mt-1 font-black text-white">{billingModeLabel(checkoutPlan.billingMode)}</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                    <div className="text-sm text-gray-400">Monthly price</div>
+                    <div className="mt-1 font-black text-white">{checkoutPlan.price}</div>
+                  </div>
+                </div>
+                <p className="mt-4 text-xs text-gray-500">Stripe handles payment details securely. SynaptiReach employees never see card numbers. Subscription state changes only after verified Stripe webhook events.</p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <button onClick={() => startSubscriptionCheckout(checkoutPlan.slug)} disabled={Boolean(savingSection)} className="rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-5 py-3 font-black text-black disabled:opacity-60">
+                    {savingSection === `subscription_${checkoutPlan.slug}` ? "Creating..." : "Continue to Stripe Checkout"}
+                  </button>
+                  <button onClick={() => setBillingSetupModal(false)} className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 font-bold text-white">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {serviceRequestModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+              <div className="w-full max-w-2xl rounded-3xl border border-cyan-400/20 bg-slate-950 p-6 shadow-2xl shadow-cyan-500/10">
+                <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">Consultation request</div>
+                <h3 className="mt-2 text-2xl font-black text-white">Review selected services</h3>
+                <div className="mt-4 max-h-56 overflow-y-auto rounded-2xl border border-white/10 bg-black/30 p-4">
+                  {selectedServiceItems.map((item) => (
+                    <div key={item.itemName} className="flex items-center justify-between gap-3 border-b border-white/10 py-2 last:border-b-0">
+                      <div>
+                        <div className="font-bold text-white">{item.itemName}</div>
+                        <div className="text-xs text-gray-500">{serviceGroupLabel(item.category)}</div>
+                      </div>
+                      <div className="font-bold text-cyan-200">{item.priceLabel}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-gray-400">One-time estimate: <span className="font-black text-white">${(serviceOneTimeTotal / 100).toLocaleString()}</span></div>
+                  <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-gray-400">Monthly estimate: <span className="font-black text-white">${(serviceMonthlyTotal / 100).toLocaleString()}/mo</span></div>
+                </div>
+                <input value={serviceTimeline} onChange={(event) => setServiceTimeline(event.target.value)} placeholder="Requested timeline" className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
+                <textarea value={serviceNotes} onChange={(event) => setServiceNotes(event.target.value)} placeholder="Notes, goals, or implementation needs" className="mt-3 min-h-[110px] w-full rounded-2xl border border-white/10 bg-black/30 p-4 text-white" />
+                <p className="mt-3 text-xs text-gray-500">A 30-minute consultation is required before purchase. This does not trigger Stripe checkout or mark anything paid.</p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <button onClick={requestServices} disabled={savingSection === "services"} className="rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-5 py-3 font-black text-black disabled:opacity-60">
+                    {savingSection === "services" ? "Requesting..." : "Request Consultation"}
+                  </button>
+                  <button onClick={() => setServiceRequestModal(false)} className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 font-bold text-white">Cancel</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {selectedIntegration && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+              <div className="w-full max-w-xl rounded-3xl border border-cyan-400/20 bg-slate-950 p-6 shadow-2xl shadow-cyan-500/10">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">Integration configuration</div>
+                    <h3 className="mt-2 text-2xl font-black text-white">{selectedIntegration.label}</h3>
+                  </div>
+                  <button onClick={() => setSelectedIntegration(null)} className="rounded-full border border-white/10 px-3 py-1 text-sm text-white">Close</button>
+                </div>
+                <p className="mt-3 text-sm text-gray-300">{selectedIntegration.description}</p>
+                <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-gray-400">
+                  Status: <span className="font-bold text-white">{selectedIntegration.status}</span>
+                </div>
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                    <div className="mb-2 text-sm font-bold text-white">Required fields</div>
+                    <ul className="space-y-1 text-xs text-gray-400">
+                      {selectedIntegration.fields.map((field: string) => <li key={field}>{field}</li>)}
+                    </ul>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                    <div className="mb-2 text-sm font-bold text-white">Management mode</div>
+                    <div className="text-xs text-gray-400">{selectedIntegration.managed}</div>
+                  </div>
+                </div>
+                <div className="mt-4 rounded-2xl border border-yellow-400/20 bg-yellow-500/10 p-4 text-xs text-yellow-100">
+                  Secrets remain server-side. Use the key forms on this page or server environment variables to configure providers. Test connection actions remain setup-required unless a safe provider test route exists.
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </main>

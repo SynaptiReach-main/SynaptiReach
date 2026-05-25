@@ -303,6 +303,8 @@ export async function PATCH(req: Request) {
           : stripeSession.error || "Payment provider checkout is not connected yet.",
         stripe_configured: getStripeBillingStatus().configured,
         stripe_session_id: stripeSession.success ? stripeSession.sessionId : undefined,
+        return_url_has_purchase_id: true,
+        checkout_status: stripeSession.success ? "created_pending_webhook" : "setup_required",
         purchase_id: purchase.id,
       };
 
@@ -343,6 +345,22 @@ export async function PATCH(req: Request) {
 
     const values = pickSettings(body);
     values.workspace_id = values.workspace_id || context.workspaceId || null;
+    if (body.metadata && typeof body.metadata === "object") {
+      let existingMetadata: Record<string, any> = {};
+      if (body.id) {
+        const { data: existingSettings } = await supabase
+          .from("crm_settings")
+          .select("metadata")
+          .eq("id", body.id)
+          .maybeSingle();
+        existingMetadata = existingSettings?.metadata || {};
+      }
+      values.metadata = {
+        ...existingMetadata,
+        ...body.metadata,
+        automation_policy: body.metadata.automation_policy || existingMetadata.automation_policy,
+      };
+    }
 
     if (body.id) {
       const { data, error } = await supabase
