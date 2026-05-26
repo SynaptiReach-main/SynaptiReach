@@ -1,5 +1,24 @@
 # Final Full CRM Completion Checklist
 
+## Settings Billing UX Manual Review Follow-up - 2026-05-26
+
+- [x] Read `docs/codex/SYNAPTIREACH_SETTINGS_BILLING_UX_GOAL.md`.
+- [x] Read `docs/codex/CODEX_TASK_LEDGER.md`.
+- [x] Read `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`.
+- [x] Continued from current working tree without restarting completed work.
+- [x] Confirmed latest committed code is `0daa1412 Improve settings billing UX and consultation flows`.
+- [x] No issue-supported code changes were made because the supplied browser review entries still contained placeholders instead of concrete pass/fail notes.
+- [x] `npm.cmd run build` passed and generated 150/150 static pages.
+- [ ] Concrete manual browser review notes still needed for:
+  - Settings accordions/modals
+  - Credit pack selection + Checkout button
+  - Services multi-select consultation request
+  - CRM Automation & AI Behavior save flow
+  - Integration config modal/drawer
+  - Production smoke after deploy
+- [ ] Signed Stripe webhook replay still needed for end-to-end app-level credit-pack confirmation email verification.
+- [ ] Resend delivery/provider configuration still needs final confirmation.
+
 ## Settings Billing UX Checkpoint 1 - 2026-05-25
 
 - [x] Read `docs/codex/SYNAPTIREACH_SETTINGS_BILLING_UX_GOAL.md` and continued from current working tree.
