@@ -1,5 +1,35 @@
 # Final Full CRM Completion Checklist
 
+## Settings Manual Review Fixes - 2026-05-26
+
+- [x] Read `docs/codex/SYNAPTIREACH_SETTINGS_BILLING_UX_GOAL.md`.
+- [x] Read `docs/codex/CODEX_TASK_LEDGER.md`.
+- [x] Read `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`.
+- [x] Made `Setup & Usage Intelligence` collapsible/expandable.
+- [x] Preserved the existing CRM Intelligence panel/content and API behavior.
+- [x] Made `Business Profile` collapsible/expandable.
+- [x] Added collapsed Business Profile summary from business name, industry, and contact email where available.
+- [x] Preserved existing Business Profile save behavior.
+- [x] Improved Integration Status modal/drawer so supported integrations can add/update:
+  - Resend/email provider key
+  - Twilio Account SID
+  - Twilio Auth Token
+  - Ayrshare key
+  - Gemini key
+  - OpenRouter key
+  - OpenRouter model
+  - OpenAI key
+- [x] Integration modal uses existing encrypted provider connection save path.
+- [x] Existing configured keys are represented only by saved masked key labels.
+- [x] Integration modal shows management mode and setup/future-ready status.
+- [x] Test Connection is shown as disabled/future-ready because safe provider test endpoints are not available for every provider.
+- [x] Added mobile-safe scrolling to Settings modals/drawers.
+- [x] `npm.cmd run build` passed and generated 150/150 static pages.
+- [x] `.env.local` is not tracked.
+- [x] Customer-facing Settings source scan found no `mini-brain`, `mini brain`, `Start Stripe Checkout`, `AI Settings`, Supabase, or Vercel Cron wording.
+- [ ] Manual mobile browser review of `/dashboard/settings` remains.
+- [ ] Signed Stripe webhook replay still needed for end-to-end app-level credit-pack confirmation email verification.
+
 ## Settings Billing UX Manual Review Follow-up - 2026-05-26
 
 - [x] Read `docs/codex/SYNAPTIREACH_SETTINGS_BILLING_UX_GOAL.md`.

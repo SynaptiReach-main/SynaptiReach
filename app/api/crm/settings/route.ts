@@ -232,7 +232,7 @@ export async function PATCH(req: Request) {
     if (body.section === "provider_connections") {
       const saved = [];
       for (const connection of body.connections || []) {
-        if (connection.secret || connection.apiKey || connection.value) {
+        if (connection.secret || connection.apiKey || connection.value || connection.model || connection.status) {
           saved.push(await saveConnection(supabase, {
             ...connection,
             workspace_id: connection.workspace_id || connection.workspaceId || context.workspaceId || null,

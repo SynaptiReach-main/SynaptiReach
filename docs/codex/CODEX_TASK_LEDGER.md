@@ -42,6 +42,20 @@ Codex must update this after every pass.
 
 Add new entries below after each Codex pass.
 
+### 2026-05-26 - Settings Manual Review Fixes
+
+Date: 2026-05-26
+Model: Codex
+Prompt/Goal: Fix only issues from the manual Settings browser review.
+Completed: Read `docs/codex/SYNAPTIREACH_SETTINGS_BILLING_UX_GOAL.md`, `docs/codex/CODEX_TASK_LEDGER.md`, and `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`. Made `Setup & Usage Intelligence` collapsible while preserving the existing CRM Intelligence panel and API behavior. Made `Business Profile` collapsible with a collapsed summary using business name, industry, and contact email where available, while preserving the existing editable fields and Save Profile behavior. Enhanced the Integration Status configuration modal so supported integrations can add/update Resend, Twilio Account SID, Twilio Auth Token, Ayrshare, Gemini, OpenRouter key/model, and OpenAI values through the existing encrypted `provider_connections` save path. Added masked saved-key labels where available, management-mode/status copy, disabled future-ready Test Connection affordance, and mobile-safe scrolling modal layouts. Updated the settings route to allow supported provider metadata/model updates through the existing provider connection section. Ran `npm.cmd run build`; build passed and generated 150/150 static pages. Confirmed `.env.local` is not tracked and customer-facing Settings source contains no `mini-brain`, `mini brain`, `Start Stripe Checkout`, `AI Settings`, Supabase, or Vercel Cron wording.
+Skipped: No changes to Stripe live mode, no `.env.local` access/commit, no secret printing, no auto-send, and no auto-charge behavior.
+Partial: Mobile layout still needs manual device/browser review because the user marked it not checked yet. Integration Test Connection remains future-ready because no safe provider test endpoint exists for every provider.
+Blocked: Signed Stripe webhook replay and app-level credit-pack confirmation email verification remain external/manual.
+Files changed: `app/dashboard/settings/page.tsx`, `app/api/crm/settings/route.ts`, `docs/codex/CODEX_TASK_LEDGER.md`, `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`
+Build result: `npm.cmd run build` passed.
+Tests run: required docs reads; `npm.cmd run build`; `.env.local` tracking check; customer-facing Settings wording scan.
+Next recommended task: Manual mobile review of `/dashboard/settings`, then signed Stripe webhook replay to verify credit-pack confirmation email metadata.
+
 ### 2026-05-26 - Settings Billing UX Manual Review Follow-up
 
 Date: 2026-05-26

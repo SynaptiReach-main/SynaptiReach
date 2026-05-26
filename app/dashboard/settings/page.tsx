@@ -213,6 +213,16 @@ export default function SettingsPage() {
   const [serviceNotes, setServiceNotes] = useState("");
   const [serviceTimeline, setServiceTimeline] = useState("");
   const [selectedIntegration, setSelectedIntegration] = useState<any>(null);
+  const [integrationConfig, setIntegrationConfig] = useState({
+    resend: "",
+    twilioAccountSid: "",
+    twilioAuthToken: "",
+    ayrshare: "",
+    gemini: "",
+    openrouter: "",
+    openrouter_model: "",
+    openai: "",
+  });
 
   async function loadSettings() {
     try {
@@ -315,6 +325,74 @@ export default function SettingsPage() {
 
   function updateField(key: string, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function openIntegrationConfig(integration: any) {
+    setSelectedIntegration(integration);
+    setIntegrationConfig({
+      resend: "",
+      twilioAccountSid: "",
+      twilioAuthToken: "",
+      ayrshare: "",
+      gemini: "",
+      openrouter: "",
+      openrouter_model: aiProviders?.openrouter_model || integrations.openrouter?.model || connectionByProvider.openrouter?.metadata?.model || "",
+      openai: "",
+    });
+  }
+
+  async function saveSelectedIntegration() {
+    if (!selectedIntegration) return;
+    try {
+      setSavingSection(`integration_modal_${selectedIntegration.key}`);
+      setError("");
+      setSuccess("");
+      const connections: any[] = [];
+      if (selectedIntegration.key === "resend" && integrationConfig.resend) {
+        connections.push({ provider: "resend", provider_type: "integration", secret: integrationConfig.resend });
+      }
+      if (selectedIntegration.key === "twilio") {
+        if (integrationConfig.twilioAccountSid) connections.push({ provider: "twilio_account_sid", provider_type: "integration", secret: integrationConfig.twilioAccountSid });
+        if (integrationConfig.twilioAuthToken) connections.push({ provider: "twilio_auth_token", provider_type: "integration", secret: integrationConfig.twilioAuthToken });
+      }
+      if (selectedIntegration.key === "ayrshare" && integrationConfig.ayrshare) {
+        connections.push({ provider: "ayrshare", provider_type: "integration", secret: integrationConfig.ayrshare });
+      }
+      if (selectedIntegration.key === "gemini" && integrationConfig.gemini) {
+        connections.push({ provider: "gemini", provider_type: "ai", secret: integrationConfig.gemini });
+      }
+      if (selectedIntegration.key === "openrouter" && (integrationConfig.openrouter || integrationConfig.openrouter_model)) {
+        connections.push({
+          provider: "openrouter",
+          provider_type: "ai",
+          secret: integrationConfig.openrouter || undefined,
+          model: integrationConfig.openrouter_model || aiProviders?.openrouter_model || "openrouter/free",
+          status: connectionByProvider.openrouter ? "configured" : "missing",
+        });
+      }
+      if (selectedIntegration.key === "openai" && integrationConfig.openai) {
+        connections.push({ provider: "openai", provider_type: "ai", secret: integrationConfig.openai });
+      }
+      if (connections.length === 0) {
+        setError("Enter a supported key or model value before saving this integration.");
+        return;
+      }
+
+      const response = await fetch("/api/crm/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ section: "provider_connections", connections }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data?.error || "Failed to save integration configuration.");
+      setSuccess(`${selectedIntegration.label} configuration saved server-side.`);
+      setSelectedIntegration(null);
+      await loadSettings();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to save integration configuration.");
+    } finally {
+      setSavingSection("");
+    }
   }
 
   function updateAutomationCategory(key: string, value: string) {
@@ -786,17 +864,29 @@ export default function SettingsPage() {
             </div>
           )}
 
-          <MiniBrainInsightPanel
+          <SettingsSection
             title="Setup & Usage Intelligence"
-            subtitle="Provider readiness, Bring Your Own Key setup, billing usage, and launch-readiness checks without exposing secrets."
-            types={["billing_usage_intelligence", "onboarding_setup", "safety_compliance", "simulation"]}
-          />
+            purpose="Provider readiness, Bring Your Own Key setup, billing usage, and launch-readiness checks without exposing secrets."
+            status="Readiness signals"
+            defaultOpen={false}
+          >
+            <MiniBrainInsightPanel
+              title="Setup & Usage Intelligence"
+              subtitle="Provider readiness, Bring Your Own Key setup, billing usage, and launch-readiness checks without exposing secrets."
+              types={["billing_usage_intelligence", "onboarding_setup", "safety_compliance", "simulation"]}
+            />
+          </SettingsSection>
 
           <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div className="xl:col-span-2 space-y-6">
-              <div id="profile" className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+              <SettingsSection
+                id="profile"
+                title="Business Profile"
+                purpose="Workspace identity, sender defaults, contact details, and timezone."
+                status={`${form.business_name || "Unnamed business"}${form.industry ? ` · ${form.industry}` : ""}${form.contact_email ? ` · ${form.contact_email}` : ""}`}
+                defaultOpen={false}
+              >
                 <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <h2 className="text-2xl font-black">Business Profile</h2>
                   <button onClick={() => saveSettingsPatch({
                     business_name: form.business_name,
                     industry: form.industry,
@@ -830,7 +920,7 @@ export default function SettingsPage() {
                     />
                   ))}
                 </div>
-              </div>
+              </SettingsSection>
 
               <SettingsSection
                 title="CRM Automation & AI Behavior"
@@ -929,7 +1019,7 @@ export default function SettingsPage() {
                   return (
                     <button
                       key={integration.key}
-                      onClick={() => setSelectedIntegration(integration)}
+                      onClick={() => openIntegrationConfig(integration)}
                       className="rounded-2xl border border-white/10 bg-black/30 p-4 text-left transition hover:border-cyan-400/30 hover:bg-cyan-500/10"
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -1334,8 +1424,8 @@ export default function SettingsPage() {
             </div>
           </section>
           {creditReturn && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-              <div className="w-full max-w-lg rounded-3xl border border-cyan-400/20 bg-slate-950 p-6 shadow-2xl shadow-cyan-500/10">
+            <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-3 py-6 sm:items-center sm:p-4">
+              <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-cyan-400/20 bg-slate-950 p-5 shadow-2xl shadow-cyan-500/10 sm:p-6">
                 <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
                   {creditReturn.kind === "subscription" ? "Subscription checkout received" : "Credit pack purchase received"}
                 </div>
@@ -1360,8 +1450,8 @@ export default function SettingsPage() {
           )}
 
           {creditCheckoutModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-              <div className="w-full max-w-lg rounded-3xl border border-cyan-400/20 bg-slate-950 p-6 shadow-2xl shadow-cyan-500/10">
+            <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-3 py-6 sm:items-center sm:p-4">
+              <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-cyan-400/20 bg-slate-950 p-5 shadow-2xl shadow-cyan-500/10 sm:p-6">
                 <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">Secure checkout</div>
                 <h3 className="mt-2 text-2xl font-black text-white">{selectedPackDetails.name}</h3>
                 <p className="mt-3 text-sm text-gray-300">{selectedPackDetails.detail}</p>
@@ -1383,8 +1473,8 @@ export default function SettingsPage() {
           )}
 
           {billingSetupModal && checkoutPlan && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-              <div className="w-full max-w-xl rounded-3xl border border-cyan-400/20 bg-slate-950 p-6 shadow-2xl shadow-cyan-500/10">
+            <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-3 py-6 sm:items-center sm:p-4">
+              <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-3xl border border-cyan-400/20 bg-slate-950 p-5 shadow-2xl shadow-cyan-500/10 sm:p-6">
                 <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">Billing setup confirmation</div>
                 <h3 className="mt-2 text-2xl font-black text-white">{planDisplayName(checkoutPlan.name)}</h3>
                 <p className="mt-3 text-sm text-gray-300">
@@ -1414,8 +1504,8 @@ export default function SettingsPage() {
           )}
 
           {serviceRequestModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-              <div className="w-full max-w-2xl rounded-3xl border border-cyan-400/20 bg-slate-950 p-6 shadow-2xl shadow-cyan-500/10">
+            <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-3 py-6 sm:items-center sm:p-4">
+              <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-cyan-400/20 bg-slate-950 p-5 shadow-2xl shadow-cyan-500/10 sm:p-6">
                 <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">Consultation request</div>
                 <h3 className="mt-2 text-2xl font-black text-white">Review selected services</h3>
                 <div className="mt-4 max-h-56 overflow-y-auto rounded-2xl border border-white/10 bg-black/30 p-4">
@@ -1447,8 +1537,8 @@ export default function SettingsPage() {
           )}
 
           {selectedIntegration && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-              <div className="w-full max-w-xl rounded-3xl border border-cyan-400/20 bg-slate-950 p-6 shadow-2xl shadow-cyan-500/10">
+            <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-3 py-6 sm:items-center sm:p-4">
+              <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-3xl border border-cyan-400/20 bg-slate-950 p-5 shadow-2xl shadow-cyan-500/10 sm:p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">Integration configuration</div>
@@ -1460,6 +1550,24 @@ export default function SettingsPage() {
                 <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-gray-400">
                   Status: <span className="font-bold text-white">{selectedIntegration.status}</span>
                 </div>
+                {(() => {
+                  const keyLabels: Record<string, string[]> = {
+                    resend: ["resend"],
+                    twilio: ["twilio_account_sid", "twilio_auth_token"],
+                    ayrshare: ["ayrshare"],
+                    gemini: ["gemini"],
+                    openrouter: ["openrouter"],
+                    openai: ["openai"],
+                  };
+                  const labels = (keyLabels[selectedIntegration.key] || [])
+                    .map((provider) => connectionByProvider[provider]?.key_label)
+                    .filter(Boolean);
+                  return labels.length > 0 ? (
+                    <div className="mt-3 rounded-2xl border border-cyan-400/15 bg-cyan-500/[0.06] p-4 text-xs text-cyan-100">
+                      Saved key label{labels.length === 1 ? "" : "s"}: {labels.join(", ")}
+                    </div>
+                  ) : null;
+                })()}
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
                   <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
                     <div className="mb-2 text-sm font-bold text-white">Required fields</div>
@@ -1472,8 +1580,51 @@ export default function SettingsPage() {
                     <div className="text-xs text-gray-400">{selectedIntegration.managed}</div>
                   </div>
                 </div>
+                {["resend", "twilio", "ayrshare", "gemini", "openrouter", "openai"].includes(selectedIntegration.key) ? (
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+                    <div className="mb-3 text-sm font-bold text-white">Add or update configuration</div>
+                    <div className="grid gap-3">
+                      {selectedIntegration.key === "resend" && (
+                        <input type="password" value={integrationConfig.resend} onChange={(event) => setIntegrationConfig({ ...integrationConfig, resend: event.target.value })} placeholder="Resend API key" className="w-full rounded-2xl border border-white/10 bg-black/40 p-4 text-white" />
+                      )}
+                      {selectedIntegration.key === "twilio" && (
+                        <>
+                          <input type="password" value={integrationConfig.twilioAccountSid} onChange={(event) => setIntegrationConfig({ ...integrationConfig, twilioAccountSid: event.target.value })} placeholder="Twilio Account SID" className="w-full rounded-2xl border border-white/10 bg-black/40 p-4 text-white" />
+                          <input type="password" value={integrationConfig.twilioAuthToken} onChange={(event) => setIntegrationConfig({ ...integrationConfig, twilioAuthToken: event.target.value })} placeholder="Twilio Auth Token" className="w-full rounded-2xl border border-white/10 bg-black/40 p-4 text-white" />
+                        </>
+                      )}
+                      {selectedIntegration.key === "ayrshare" && (
+                        <input type="password" value={integrationConfig.ayrshare} onChange={(event) => setIntegrationConfig({ ...integrationConfig, ayrshare: event.target.value })} placeholder="Ayrshare API key" className="w-full rounded-2xl border border-white/10 bg-black/40 p-4 text-white" />
+                      )}
+                      {selectedIntegration.key === "gemini" && (
+                        <input type="password" value={integrationConfig.gemini} onChange={(event) => setIntegrationConfig({ ...integrationConfig, gemini: event.target.value })} placeholder="Gemini API key" className="w-full rounded-2xl border border-white/10 bg-black/40 p-4 text-white" />
+                      )}
+                      {selectedIntegration.key === "openrouter" && (
+                        <>
+                          <input type="password" value={integrationConfig.openrouter} onChange={(event) => setIntegrationConfig({ ...integrationConfig, openrouter: event.target.value })} placeholder="OpenRouter API key" className="w-full rounded-2xl border border-white/10 bg-black/40 p-4 text-white" />
+                          <input value={integrationConfig.openrouter_model} onChange={(event) => setIntegrationConfig({ ...integrationConfig, openrouter_model: event.target.value })} placeholder="OpenRouter model" className="w-full rounded-2xl border border-white/10 bg-black/40 p-4 text-white" />
+                        </>
+                      )}
+                      {selectedIntegration.key === "openai" && (
+                        <input type="password" value={integrationConfig.openai} onChange={(event) => setIntegrationConfig({ ...integrationConfig, openai: event.target.value })} placeholder="OpenAI key" className="w-full rounded-2xl border border-white/10 bg-black/40 p-4 text-white" />
+                      )}
+                    </div>
+                    <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                      <button onClick={saveSelectedIntegration} disabled={Boolean(savingSection)} className="w-full rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-5 py-3 font-black text-black disabled:opacity-60 sm:w-auto">
+                        {savingSection === `integration_modal_${selectedIntegration.key}` ? "Saving..." : "Save / Update"}
+                      </button>
+                      <button disabled className="w-full rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 font-bold text-gray-500 sm:w-auto">
+                        Test connection future-ready
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4 text-xs text-gray-400">
+                    This integration is future/setup required. Configuration and test-connection actions will be enabled when a safe provider route exists.
+                  </div>
+                )}
                 <div className="mt-4 rounded-2xl border border-yellow-400/20 bg-yellow-500/10 p-4 text-xs text-yellow-100">
-                  Secrets remain server-side. Use the key forms on this page or server environment variables to configure providers. Test connection actions remain setup-required unless a safe provider test route exists.
+                  Secrets remain server-side and encrypted through the existing provider connection save path. Saved secrets are never displayed; only masked key labels are shown.
                 </div>
               </div>
             </div>
