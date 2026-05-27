@@ -10,3 +10,6 @@ node_modules/
 .next
 .vercel
 .env*.local
+
+# Local model files
+Modelfile.gemma4-e2b-smallctx
