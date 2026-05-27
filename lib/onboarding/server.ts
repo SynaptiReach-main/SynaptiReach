@@ -80,42 +80,174 @@ function listFromText(value?: string) {
     .filter(Boolean);
 }
 
-const workflowDraftTemplates: Record<string, { name: string; trigger: string; condition: string; action: string }> = {
+const workflowDraftTemplates: Record<string, { name: string; trigger: string; condition: string; action: string; what: string; why: string }> = {
   new_lead_followup: {
     name: "New lead follow-up draft",
     trigger: "lead_created",
     condition: "A new lead is created and has not been contacted.",
     action: "Create a review-gated follow-up task and draft message.",
+    what: "Prepares fast first-touch follow-up for new inquiries.",
+    why: "External messages need human review so tone, consent, and offer details are correct.",
   },
   stale_deal_followup: {
     name: "Stale deal follow-up draft",
     trigger: "deal_stage_stale",
     condition: "A deal has not moved stages within the expected sales-process window.",
     action: "Create an internal task to review the deal and update the next step.",
+    what: "Flags opportunities that may need owner attention.",
+    why: "Pipeline status changes and outreach should be reviewed before action.",
   },
   appointment_reminder: {
     name: "Appointment reminder draft",
     trigger: "appointment_upcoming",
     condition: "An appointment is upcoming and reminder setup is allowed.",
     action: "Create an internal reminder. External SMS/email remains review-gated.",
+    what: "Prepares reminder tasks around upcoming appointments.",
+    why: "Timing, channel consent, and customer details must be checked first.",
   },
   opened_not_clicked: {
     name: "Opened-not-clicked follow-up draft",
     trigger: "campaign_open_no_click",
     condition: "A lead opened a campaign but did not click.",
     action: "Draft a follow-up task or message for review.",
+    what: "Surfaces warm campaign engagement for follow-up.",
+    why: "Campaign follow-up remains review-gated to avoid unwanted outreach.",
   },
   missed_response: {
     name: "Unread inbound response draft",
     trigger: "communication_unread",
     condition: "An inbound customer response remains unread.",
     action: "Create a high-priority follow-up task.",
+    what: "Keeps inbound replies from being missed.",
+    why: "Responses may contain sensitive context and should be reviewed by a person.",
   },
   review_request: {
     name: "Post-service review request draft",
     trigger: "service_completed",
     condition: "A customer reaches the post-service stage.",
     action: "Draft a review request for manual approval.",
+    what: "Prepares a review request after service completion.",
+    why: "Review asks should be sent only after confirming the job outcome.",
+  },
+  missed_call_followup: {
+    name: "Missed call follow-up draft",
+    trigger: "missed_call",
+    condition: "A missed call is recorded and no follow-up exists.",
+    action: "Create a callback task and draft a follow-up message.",
+    what: "Captures phone leads that did not become conversations.",
+    why: "Phone context and consent should be checked before messaging.",
+  },
+  quote_sent_followup: {
+    name: "Quote sent follow-up draft",
+    trigger: "quote_sent",
+    condition: "A quote was sent and no response is recorded after the review window.",
+    action: "Create a quote follow-up task.",
+    what: "Keeps quoted opportunities moving.",
+    why: "Pricing and quote details must be reviewed before outreach.",
+  },
+  estimate_reminder: {
+    name: "Estimate reminder draft",
+    trigger: "estimate_pending",
+    condition: "An estimate is pending and the appointment window is approaching.",
+    action: "Create an estimate reminder task.",
+    what: "Prepares internal reminders for estimate-related work.",
+    why: "Customer timing and service details should be confirmed first.",
+  },
+  no_show_recovery: {
+    name: "No-show recovery draft",
+    trigger: "appointment_no_show",
+    condition: "An appointment is marked no-show and recovery is allowed.",
+    action: "Draft a reschedule task or message for approval.",
+    what: "Helps recover missed appointments.",
+    why: "No-show follow-up can be sensitive and must stay human-reviewed.",
+  },
+  completed_appointment_review: {
+    name: "Completed appointment review request draft",
+    trigger: "appointment_completed",
+    condition: "An appointment is completed and review request policy allows a draft.",
+    action: "Create a review request draft.",
+    what: "Prepares review asks after completed appointments.",
+    why: "Review requests must only follow confirmed completed work.",
+  },
+  referral_request_won: {
+    name: "Won customer referral request draft",
+    trigger: "deal_won",
+    condition: "A customer converts and referral timing is appropriate.",
+    action: "Draft a referral request task.",
+    what: "Creates a reviewable referral ask after conversion.",
+    why: "Relationship context should be checked before asking for referrals.",
+  },
+  payment_checkpoint_reminder: {
+    name: "Payment checkpoint reminder draft",
+    trigger: "payment_checkpoint_due",
+    condition: "A payment or project checkpoint is approaching.",
+    action: "Create an internal billing checkpoint task.",
+    what: "Flags payment or milestone follow-up for review.",
+    why: "Billing communication requires extra care and Stripe/webhook state stays authoritative.",
+  },
+  cold_lead_reactivation: {
+    name: "Cold lead reactivation draft",
+    trigger: "lead_cold",
+    condition: "A cold lead has been inactive beyond the selected window.",
+    action: "Draft a reactivation task or campaign idea.",
+    what: "Prepares safe re-engagement for older leads.",
+    why: "Reactivation requires consent and relevance review.",
+  },
+  high_intent_inquiry_alert: {
+    name: "High-intent website inquiry alert draft",
+    trigger: "website_inquiry_high_intent",
+    condition: "A website inquiry includes high-intent buying or booking signals.",
+    action: "Create a high-priority owner alert.",
+    what: "Alerts the team to urgent website inquiries.",
+    why: "Scoring should inform action, not auto-send without review.",
+  },
+  new_lead_owner_assignment: {
+    name: "New lead owner assignment draft",
+    trigger: "lead_created",
+    condition: "A new lead has no owner and assignment rules are available.",
+    action: "Suggest an owner assignment task.",
+    what: "Prepares owner assignment suggestions.",
+    why: "Staff assignment should be reviewed against capacity and permissions.",
+  },
+  trial_usage_cap_warning: {
+    name: "Trial usage cap warning draft",
+    trigger: "usage_cap_threshold",
+    condition: "Trial usage approaches a configured cap.",
+    action: "Create an internal billing and usage review task.",
+    what: "Warns owners before managed trial caps are reached.",
+    why: "Billing and cap responses should be reviewed before purchase or upgrade action.",
+  },
+  campaign_reply_triage: {
+    name: "Campaign reply triage draft",
+    trigger: "campaign_reply_received",
+    condition: "A reply arrives from a campaign audience member.",
+    action: "Create a reply triage task.",
+    what: "Routes campaign replies for review.",
+    why: "Replies can include objections, opt-outs, or support needs.",
+  },
+  upsell_cross_sell_followup: {
+    name: "Upsell/cross-sell follow-up draft",
+    trigger: "customer_eligible_for_offer",
+    condition: "A customer appears eligible for a relevant next service.",
+    action: "Draft an internal offer review task.",
+    what: "Prepares expansion opportunities for existing customers.",
+    why: "Offers must match customer history and avoid pushy outreach.",
+  },
+  dormant_customer_winback: {
+    name: "Dormant customer winback draft",
+    trigger: "customer_dormant",
+    condition: "A past customer has no recent activity and winback is allowed.",
+    action: "Draft a winback task or campaign idea.",
+    what: "Prepares dormant customer reactivation.",
+    why: "Winback messaging requires consent and relevance review.",
+  },
+  vip_lead_escalation: {
+    name: "VIP/high-value lead escalation draft",
+    trigger: "lead_value_high",
+    condition: "A lead is tagged VIP or exceeds the configured value threshold.",
+    action: "Create an escalation task for the owner.",
+    what: "Highlights high-value leads for fast owner review.",
+    why: "Escalation affects team priority and should be confirmed.",
   },
 };
 
@@ -331,6 +463,8 @@ async function upsertSettings(supabase: any, workspace: any, user: any, payload:
       legal_profile: {
         legal_name: profile.legalName || null,
         tax_id_last4_present: Boolean(profile.taxIdLast4),
+        reviewed: Boolean(profile.legalReviewed),
+        review_status: profile.legalReviewed ? "reviewed" : "pending_review",
       },
       address: profile.address || null,
       team_size: profile.teamSize || null,
@@ -347,6 +481,7 @@ async function upsertSettings(supabase: any, workspace: any, user: any, payload:
       marketing_setup: {
         goals: marketing.goals || [],
         channels: marketing.channels || [],
+        strategy: marketing.strategy || null,
         first_campaign_idea: marketing.firstCampaignIdea || null,
         notification_preferences: marketing.notificationPreferences || [],
       },
@@ -379,9 +514,17 @@ async function upsertSettings(supabase: any, workspace: any, user: any, payload:
       },
       integration_preferences: {
         email: integrations.emailMode || "later",
+        email_reviewed: Boolean(integrations.emailReviewed || integrations.emailMode),
+        email_review_choice: integrations.emailReviewChoice || integrations.emailMode || "later",
         sms: integrations.smsMode || "later",
+        sms_reviewed: Boolean(integrations.smsReviewed || integrations.smsMode),
+        sms_review_choice: integrations.smsReviewChoice || integrations.smsMode || "later",
         social: integrations.socialMode || "later",
+        calendar: integrations.calendarMode || "later",
+        calendar_required_for_launch: Boolean(integrations.calendarRequiredForLaunch),
+        calendar_reviewed: Boolean(integrations.calendarMode),
       },
+      service_menu: payload.serviceMenu || {},
     },
   };
 
@@ -407,14 +550,8 @@ async function upsertBilling(supabase: any, workspace: any, user: any, payload: 
   const plan = getSubscriptionPlan(payload.plan?.planSlug);
   if (!plan) return null;
 
-  const billingIntent = payload.plan?.billingIntent || "continue_later";
+  const billingIntent = payload.plan?.billingIntent || "start_trial";
   const stripeReady = Boolean(getStripeBillingStatus().configured && getPlanPriceId(plan));
-  const status =
-    billingIntent === "checkout_started"
-      ? "checkout_created"
-      : billingIntent === "checkout_now" || billingIntent === "start_trial"
-        ? stripeReady ? "checkout_required" : "setup_required"
-        : "setup_required";
 
   const { data: existing, error: existingError } = await supabase
     .from("crm_billing_accounts")
@@ -424,6 +561,16 @@ async function upsertBilling(supabase: any, workspace: any, user: any, payload: 
     .limit(1)
     .maybeSingle();
   if (existingError) throw existingError;
+
+  const webhookOwnedStatuses = new Set(["trialing", "active", "past_due", "canceled", "unpaid", "checkout_completed"]);
+  const checkoutSessionId = payload.plan?.checkoutSessionId || existing?.metadata?.stripe_session_id || null;
+  const status = webhookOwnedStatuses.has(existing?.status)
+    ? existing.status
+    : checkoutSessionId || billingIntent === "checkout_started"
+      ? "pending_webhook"
+      : billingIntent === "checkout_now" || billingIntent === "start_trial"
+        ? stripeReady ? "checkout_required" : "setup_required"
+        : "setup_required";
 
   const values = {
     workspace_id: workspace.id,
@@ -464,6 +611,10 @@ async function upsertBilling(supabase: any, workspace: any, user: any, payload: 
           "Trial feature access can be broader than the selected post-trial tier. Existing data is not deleted; future usage beyond the selected plan cap is restricted until upgrade or eligible capacity is added.",
       },
       billing_intent: billingIntent,
+      checkout_session_id: checkoutSessionId,
+      stripe_session_id: checkoutSessionId,
+      checkout_submitted_at: checkoutSessionId ? existing?.metadata?.checkout_submitted_at || new Date().toISOString() : existing?.metadata?.checkout_submitted_at || null,
+      checkout_return_state: payload.plan?.checkoutReturnState || existing?.metadata?.checkout_return_state || null,
       source: "onboarding",
       stripe_configured: getStripeBillingStatus().configured,
       stripe_price_configured: Boolean(getPlanPriceId(plan)),
@@ -526,6 +677,12 @@ async function saveProviderSetup(supabase: any, workspace: any, user: any, paylo
   const ai = payload.ai || {};
   const integrations = payload.integrations || {};
   const saves = [];
+  const emailChoice = integrations.emailReviewChoice || integrations.emailMode;
+  const smsChoice = integrations.smsReviewChoice || integrations.smsMode;
+  const normalizedEmailMode =
+    emailChoice === "setup_now" ? integrations.emailMode || "byok" : emailChoice === "not_using" ? "skip" : emailChoice === "managed_later" ? "managed" : emailChoice === "byok_later" ? "byok" : integrations.emailMode;
+  const normalizedSmsMode =
+    smsChoice === "setup_now" ? integrations.smsMode || "byok" : smsChoice === "not_using" ? "skip" : smsChoice === "managed_later" ? "managed" : smsChoice === "byok_later" ? "byok" : integrations.smsMode;
 
   if (ai.mode) {
     const aiSecret = ai.openaiKey || ai.geminiKey || ai.openrouterKey || ai.anthropicKey || "";
@@ -549,31 +706,35 @@ async function saveProviderSetup(supabase: any, workspace: any, user: any, paylo
     }));
   }
 
-  if (integrations.emailMode) {
+  if (normalizedEmailMode) {
     saves.push(upsertConnection(supabase, workspace, user, {
-      provider: integrations.emailMode === "byok" ? "resend" : "managed_email",
+      provider: normalizedEmailMode === "byok" ? "resend" : "managed_email",
       provider_type: "email",
-      status: integrations.emailMode === "skip" ? "skipped" : integrations.resendApiKey ? "configured" : "pending",
+      status: normalizedEmailMode === "skip" ? "skipped" : integrations.resendApiKey ? "configured" : "pending",
       secret: integrations.resendApiKey || "",
       metadata: {
+        reviewed: Boolean(integrations.emailReviewed || emailChoice),
+        review_choice: emailChoice || null,
         sender_email: integrations.senderEmail || null,
-        domain_status: integrations.emailMode === "managed" ? "domain_verification_required" : null,
+        domain_status: normalizedEmailMode === "managed" ? "domain_verification_required" : null,
       },
     }));
   }
 
-  if (integrations.smsMode) {
+  if (normalizedSmsMode) {
     saves.push(upsertConnection(supabase, workspace, user, {
-      provider: integrations.smsMode === "byok" ? "twilio" : "managed_sms",
+      provider: normalizedSmsMode === "byok" ? "twilio" : "managed_sms",
       provider_type: "sms",
       status:
-        integrations.smsMode === "skip"
+        normalizedSmsMode === "skip"
           ? "skipped"
           : integrations.twilioAccountSid && integrations.twilioAuthToken
             ? "configured"
             : "pending",
       secret: integrations.twilioAuthToken || "",
       metadata: {
+        reviewed: Boolean(integrations.smsReviewed || smsChoice),
+        review_choice: smsChoice || null,
         from_number_present: Boolean(integrations.twilioFromNumber),
         a2p_acknowledged: Boolean(payload.automation?.smsComplianceAck),
         managed_sms_requested: Boolean(payload.plan?.managedSms?.requested),
@@ -598,8 +759,12 @@ async function saveProviderSetup(supabase: any, workspace: any, user: any, paylo
     saves.push(upsertConnection(supabase, workspace, user, {
       provider: "google_calendar",
       provider_type: "calendar",
-      status: integrations.calendarMode === "skip" ? "skipped" : "pending",
-      metadata: { setup_note: "OAuth connection must be completed from provider settings." },
+      status: integrations.calendarMode === "internal_only" ? "skipped" : "pending",
+      metadata: {
+        setup_note: "OAuth connection must be completed from provider settings.",
+        calendar_mode: integrations.calendarMode,
+        required_for_launch: Boolean(integrations.calendarRequiredForLaunch),
+      },
     }));
   }
 
@@ -644,6 +809,7 @@ async function saveStarterLead(supabase: any, workspace: any, user: any, payload
 async function saveStaff(supabase: any, workspace: any, user: any, payload: Record<string, any>) {
   const members = Array.isArray(payload.staff?.members) ? payload.staff.members : [];
   const saved = [];
+  const allowedPermissions = new Set(["leads", "pipeline", "tasks", "calendar", "communications", "marketing", "workflow", "settings_read", "admin"]);
 
   for (const member of members) {
     if (!member?.name && !member?.email) continue;
@@ -652,11 +818,8 @@ async function saveStaff(supabase: any, workspace: any, user: any, payload: Reco
     else query = query.eq("name", member.name);
     const { data: existing, error: existingError } = await query.maybeSingle();
     if (existingError) throw existingError;
-    if (existing?.id) continue;
 
-    const { data, error } = await supabase
-      .from("crm_staff")
-      .insert({
+    const staffValues = {
         workspace_id: workspace.id,
         company_id: workspace.company_id || null,
         user_id: user.id,
@@ -666,11 +829,14 @@ async function saveStaff(supabase: any, workspace: any, user: any, payload: Reco
         title: member.title || null,
         status: "invited",
         metadata: { source: "onboarding", invite_pending: true, email_sent: false, requested_permissions: member.permissions || [] },
-      })
-      .select("*")
-      .single();
+      };
+    const { data, error } = existing?.id
+      ? await supabase.from("crm_staff").update(staffValues).eq("id", existing.id).select("*").single()
+      : await supabase.from("crm_staff").insert(staffValues).select("*").single();
     if (error) throw error;
+    await supabase.from("crm_staff_permissions").delete().eq("workspace_id", workspace.id).eq("staff_id", data.id).then(() => undefined).catch(() => undefined);
     for (const permission of member.permissions || []) {
+      if (!allowedPermissions.has(permission)) continue;
       await supabase
         .from("crm_staff_permissions")
         .insert({
@@ -723,6 +889,11 @@ async function saveWorkflowDrafts(supabase: any, workspace: any, user: any, payl
         metadata: {
           source: "onboarding",
           template_id: id,
+          what_it_does: template.what,
+          trigger: template.trigger,
+          condition: template.condition,
+          draft_action_created: template.action,
+          review_gate_reason: template.why,
           review_required: true,
           external_actions_send_nothing_until_confirmed: true,
           onboarding_notes: workflowSetup.notes || null,
@@ -827,11 +998,12 @@ async function saveLaunchRecommendations(supabase: any, workspace: any, payload:
 }
 
 async function loadWorkspaceSnapshot(supabase: any, workspaceId: string) {
-  const [settings, billing, connections, csvImports, staff, leads, workflows, recommendations, serviceRequests] = await Promise.all([
+  const [settings, billing, connections, csvImports, menuUploads, staff, leads, workflows, recommendations, serviceRequests] = await Promise.all([
     supabase.from("crm_settings").select("*").eq("workspace_id", workspaceId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("crm_billing_accounts").select("*").eq("workspace_id", workspaceId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("crm_provider_connections").select("id,provider,provider_type,status,key_label,last_verified_at,metadata").eq("workspace_id", workspaceId).limit(100),
     supabase.from("crm_csv_imports").select("*").eq("workspace_id", workspaceId).order("created_at", { ascending: false }).limit(10),
+    supabase.from("crm_service_menu_uploads").select("*").eq("workspace_id", workspaceId).order("created_at", { ascending: false }).limit(25),
     supabase.from("crm_staff").select("id,name,email,title,status,metadata").eq("workspace_id", workspaceId).neq("status", "archived").limit(50),
     supabase.from("leads").select("id,source,imported,metadata").eq("workspace_id", workspaceId).eq("archived", false).limit(500),
     supabase.from("crm_workflows").select("id,name,status,metadata").eq("workspace_id", workspaceId).limit(100),
@@ -844,6 +1016,7 @@ async function loadWorkspaceSnapshot(supabase: any, workspaceId: string) {
     billing: billing.data || null,
     providerConnections: connections.data || [],
     csvImports: csvImports.data || [],
+    menuUploads: menuUploads.data || [],
     staff: staff.data || [],
     leads: leads.data || [],
     workflows: workflows.data || [],
@@ -860,17 +1033,25 @@ function connectionReady(connections: any[], type: string) {
   return "missing";
 }
 
+function reviewedConnectionReady(connections: any[], type: string, reviewed?: boolean) {
+  if (reviewed) return "complete";
+  return connectionReady(connections, type);
+}
+
 export function calculateOnboardingReadiness(payload: Record<string, any>, snapshot: any) {
   const profile = snapshot.settings || {};
   const billing = snapshot.billing || {};
   const connections = snapshot.providerConnections || [];
   const leadCount = snapshot.leads?.length || 0;
+  const menuUploadCount = snapshot.menuUploads?.length || 0;
   const importedCount = (snapshot.csvImports || []).reduce((sum: number, item: any) => sum + Number(item.imported_rows || 0), 0);
   const staffCount = snapshot.staff?.length || 0;
   const workflowDraftCount = (snapshot.workflows || []).filter((item: any) => item.metadata?.source === "onboarding").length;
   const assistanceRequestCount = (snapshot.serviceRequests || []).filter((item: any) => item.metadata?.source === "onboarding_help").length;
   const automation = profile.metadata?.automation_policy || payload.automation || {};
   const settingsMeta = profile.metadata || {};
+  const integrationPrefs = settingsMeta.integration_preferences || {};
+  const legalProfile = settingsMeta.legal_profile || {};
   const help = payload.help || {};
   const emailVerified = Boolean(snapshot.user?.emailConfirmed);
 
@@ -903,8 +1084,9 @@ export function calculateOnboardingReadiness(payload: Record<string, any>, snaps
     {
       id: "legal_company",
       label: "Legal/company information reviewed",
-      status: settingsMeta.legal_profile?.legal_name || payload.businessProfile?.legalName ? "complete" : "pending",
+      status: legalProfile.reviewed || payload.businessProfile?.legalReviewed ? "complete" : "pending",
       href: "/dashboard/settings#business",
+      detail: legalProfile.review_status || "Review the legal/company information or intentionally mark it for later review.",
     },
     {
       id: "sales_setup",
@@ -930,7 +1112,12 @@ export function calculateOnboardingReadiness(payload: Record<string, any>, snaps
             ? "pending"
             : "missing",
       href: "/dashboard/settings#billing",
-      detail: billing.status || "No billing setup state saved yet.",
+      detail:
+        billing.status === "pending_webhook" || billing.status === "checkout_created"
+          ? "Stripe checkout submitted. Waiting for webhook confirmation."
+          : ["trialing", "active", "checkout_completed"].includes(billing.status)
+            ? "Payment method on file."
+            : billing.status || "No billing setup state saved yet.",
     },
     {
       id: "trial_acknowledgements",
@@ -951,14 +1138,28 @@ export function calculateOnboardingReadiness(payload: Record<string, any>, snaps
     {
       id: "email",
       label: "Email integration reviewed",
-      status: connectionReady(connections, "email"),
+      status: reviewedConnectionReady(connections, "email", integrationPrefs.email_reviewed || payload.integrations?.emailReviewed || payload.integrations?.emailReviewChoice),
       href: "/dashboard/settings#integrations",
     },
     {
       id: "sms",
       label: "SMS integration reviewed",
-      status: connectionReady(connections, "sms"),
+      status: reviewedConnectionReady(connections, "sms", integrationPrefs.sms_reviewed || payload.integrations?.smsReviewed || payload.integrations?.smsReviewChoice),
       href: "/dashboard/settings#integrations",
+    },
+    {
+      id: "calendar",
+      label: "Calendar setup reviewed",
+      status: integrationPrefs.calendar_reviewed || payload.integrations?.calendarMode ? "complete" : "pending",
+      href: "/dashboard/settings#integrations",
+      detail: "Google Calendar OAuth is completed later from provider settings, or the internal CRM calendar can be used.",
+    },
+    {
+      id: "service_menu",
+      label: "Service/product menu reviewed",
+      status: payload.serviceMenu?.files?.length || menuUploadCount > 0 ? "pending" : payload.serviceMenu?.notAvailable ? "skipped" : "pending",
+      href: "/onboarding",
+      detail: payload.serviceMenu?.files?.length || menuUploadCount > 0 ? "Menu upload saved for analysis/review." : "Upload is optional and can be reviewed later.",
     },
     {
       id: "lead_setup",
@@ -1061,9 +1262,15 @@ export async function loadOnboardingState(request: Request) {
     .maybeSingle();
   if (sessionError) throw sessionError;
 
-  const snapshot = await loadWorkspaceSnapshot(supabase, workspace.id);
+  const snapshot: any = await loadWorkspaceSnapshot(supabase, workspace.id);
   snapshot.user = { email: user.email, emailConfirmed: Boolean(user.email_confirmed_at) };
-  const payload = session?.payload || {};
+  const payload = {
+    ...(session?.payload || {}),
+    serviceMenu: {
+      ...((session?.payload || {}).serviceMenu || {}),
+      files: ((session?.payload || {}).serviceMenu?.files?.length ? (session?.payload || {}).serviceMenu.files : snapshot.menuUploads || []),
+    },
+  };
 
   return {
     success: true,
@@ -1105,18 +1312,21 @@ export async function saveOnboardingState(request: Request, input: SaveInput) {
     });
   }
 
-  const snapshot = await loadWorkspaceSnapshot(supabase, workspace.id);
+  const snapshot: any = await loadWorkspaceSnapshot(supabase, workspace.id);
   snapshot.user = { email: user.email, emailConfirmed: Boolean(user.email_confirmed_at) };
   const readiness = calculateOnboardingReadiness(payload, snapshot);
   await saveLaunchRecommendations(supabase, workspace, payload, readiness);
-  const billingReady = readiness.checks.find((check: any) => check.id === "billing")?.status === "complete";
+  const billingCheck = readiness.checks.find((check: any) => check.id === "billing");
+  const billingReady = billingCheck?.status === "complete";
+  const billingSubmitted = billingReady || billingCheck?.status === "pending";
   const trialAcknowledged = readiness.checks.find((check: any) => check.id === "trial_acknowledgements")?.status === "complete";
   const emailVerified = readiness.checks.find((check: any) => check.id === "email_verification")?.status === "complete";
-  const requiredReady = ["business_profile", "plan", "ai", "automation_safety"].every((id) => {
+  const requiredReady = ["business_profile", "legal_company", "plan", "ai", "email", "sms", "automation_safety"].every((id) => {
     const status = readiness.checks.find((check: any) => check.id === id)?.status;
     return status === "complete";
   });
   const effectiveComplete = Boolean(input.complete && billingReady && trialAcknowledged && emailVerified && requiredReady);
+  const submittedForReview = Boolean(input.complete && !effectiveComplete && billingSubmitted && trialAcknowledged && requiredReady);
   const session = await upsertSession(supabase, {
     workspace_id: workspace.id,
     user_id: user.id,
@@ -1128,7 +1338,9 @@ export async function saveOnboardingState(request: Request, input: SaveInput) {
       completed_steps: input.completedSteps || [],
       skipped_steps: input.skippedSteps || {},
       readiness_score: readiness.score,
-      completion_blocked_reason: input.complete && !effectiveComplete ? "Email verification, required workspace fields, provider mode, Stripe setup confirmation, and trial acknowledgements are required before onboarding is complete." : null,
+      submitted_for_review: submittedForReview,
+      submitted_for_review_at: submittedForReview ? new Date().toISOString() : null,
+      completion_blocked_reason: input.complete && !effectiveComplete ? "Email verification, required workspace fields, provider mode, reviewed Email/SMS setup choices, Stripe webhook confirmation, and trial acknowledgements are required before onboarding is complete. Pending Stripe checkout can be submitted for review but does not activate trial access." : null,
       completed_at: effectiveComplete ? new Date().toISOString() : null,
     },
   });

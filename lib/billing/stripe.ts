@@ -36,6 +36,7 @@ type SubscriptionCheckoutInput = {
   workspaceId?: string | null;
   companyId?: string | null;
   userId?: string | null;
+  source?: "settings" | "onboarding" | string | null;
 };
 
 const STRIPE_API_VERSION = "2026-04-22.dahlia";
@@ -197,13 +198,23 @@ export async function createSubscriptionCheckoutSession(input: SubscriptionCheck
   }
 
   const params = new URLSearchParams();
+  const source = input.source === "onboarding" ? "onboarding" : "settings";
+  const successPath =
+    source === "onboarding"
+      ? "/onboarding?checkout=success&session_id={CHECKOUT_SESSION_ID}&step=billing"
+      : "/dashboard/settings?subscription=success&session_id={CHECKOUT_SESSION_ID}";
+  const cancelPath =
+    source === "onboarding"
+      ? "/onboarding?checkout=cancelled&step=billing"
+      : "/dashboard/settings?subscription=cancelled";
   params.set("mode", "subscription");
-  params.set("success_url", `${input.origin}/dashboard/settings?subscription=success&session_id={CHECKOUT_SESSION_ID}`);
-  params.set("cancel_url", `${input.origin}/dashboard/settings?subscription=cancelled`);
+  params.set("success_url", `${input.origin}${successPath}`);
+  params.set("cancel_url", `${input.origin}${cancelPath}`);
   params.set("line_items[0][price]", input.priceId);
   params.set("line_items[0][quantity]", "1");
   params.set("subscription_data[trial_period_days]", "14");
   params.set("subscription_data[metadata][source]", "synaptireach_subscription_checkout");
+  params.set("subscription_data[metadata][checkout_origin]", source);
   params.set("subscription_data[metadata][plan_slug]", input.planSlug);
   params.set("subscription_data[metadata][plan_name]", input.planName);
   params.set("subscription_data[metadata][billing_mode]", input.billingMode);
@@ -214,6 +225,7 @@ export async function createSubscriptionCheckoutSession(input: SubscriptionCheck
   if (input.userId) params.set("subscription_data[metadata][user_id]", input.userId);
   if (input.customerId) params.set("customer", input.customerId);
   params.set("metadata[source]", "synaptireach_subscription_checkout");
+  params.set("metadata[checkout_origin]", source);
   params.set("metadata[plan_slug]", input.planSlug);
   params.set("metadata[plan_name]", input.planName);
   params.set("metadata[billing_mode]", input.billingMode);

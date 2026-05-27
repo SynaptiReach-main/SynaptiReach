@@ -11,8 +11,11 @@ Server APIs:
 - `POST /api/onboarding/complete` saves final state, marks the onboarding session complete, and redirects to `/dashboard`.
 - `POST /api/onboarding/integrations` is a compatibility path for integration-only onboarding saves.
 - `POST /api/onboarding/upload` currently fails with setup-required until real file storage is connected.
+- `POST /api/onboarding/upload` accepts service/product menu PDF/image uploads, stores the file in the `onboarding-files` Supabase Storage bucket when configured, records metadata in `crm_service_menu_uploads`, and creates a review recommendation when parsing is still manual.
 
-State is stored in existing tables: `workspaces`, `workspace_members`, `onboarding_sessions`, `crm_settings`, `crm_billing_accounts`, `crm_provider_connections`, `crm_csv_imports`, `leads`, `crm_staff`, `crm_staff_permissions`, `crm_workflows`, and `crm_ai_recommendations`. Billing setup records plan/trial intent, usage caps, acknowledgements, and managed SMS readiness only; active subscription/payment/trialing status remains Stripe-webhook owned.
+State is stored in existing tables: `workspaces`, `workspace_members`, `onboarding_sessions`, `crm_settings`, `crm_billing_accounts`, `crm_provider_connections`, `crm_csv_imports`, `crm_service_menu_uploads`, `leads`, `crm_staff`, `crm_staff_permissions`, `crm_workflows`, and `crm_ai_recommendations`. Billing setup records plan/trial intent, usage caps, acknowledgements, checkout submission, and managed SMS readiness only; active subscription/payment/trialing status remains Stripe-webhook owned.
+
+Onboarding-originated Stripe Checkout uses `/onboarding?checkout=success&session_id={CHECKOUT_SESSION_ID}&step=billing` and `/onboarding?checkout=cancelled&step=billing`. Settings-originated checkout keeps the Settings return path.
 
 The onboarding wizard now supports two 14-day trial paths:
 

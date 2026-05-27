@@ -16,6 +16,7 @@ The current wizard collects:
 
 - account owner details
 - business profile, legal/company details, industry, service type, target customer, main offer, preferred CTA, sales process, and brand voice
+- legal/company review acknowledgement and optional service/product menu upload
 - trial path, post-trial plan, Stripe card acknowledgement, auto-renewal acknowledgement, usage caps, and managed SMS approval intent
 - AI processing mode, provider setup, assistant behavior, and rule-based intelligence preference
 - email, SMS, social, and calendar integration setup states
@@ -36,6 +37,7 @@ The wizard writes to existing structures where possible:
 - `crm_staff` and `crm_staff_permissions` for pending staff invite rows and requested access. No invite email is sent automatically.
 - `crm_workflows` for onboarding-created workflow drafts only. Draft workflows remain review-gated and do not send externally.
 - `crm_ai_recommendations` for launch-readiness recommendations generated from missing or pending real setup state.
+- `crm_service_menu_uploads` for onboarding service/product menu metadata, private storage path, and pending analysis/review state.
 
 ## Trial Paths
 
@@ -44,7 +46,7 @@ Onboarding supports two 14-day trial paths:
 - SynaptiReach-Managed Trial: full software access with hard free caps for managed AI, email, SMS, contacts, workflows, and agents. A Stripe card is required before the trial starts. The selected paid plan controls post-trial renewal only; higher managed tiers do not expand trial exposure. Managed SMS is optional and approval-based, and readiness requires Twilio/carrier fee approval plus the SynaptiReach $20 setup fee approval.
 - BYOK Trial: full software access while the customer connects their own Gemini/OpenAI/OpenRouter, Resend, Twilio, and Ayrshare accounts as needed. The customer pays providers directly. SynaptiReach has no managed AI/email/SMS credit exposure. A Stripe card is still required before the trial starts, and optional self-imposed caps can be saved.
 
-Stripe Checkout remains the only card collection path. Onboarding and checkout-request records keep `checkout_required` / `checkout_created` state only. Trial start/end timestamps are left empty until Stripe webhook confirmation supplies them.
+Stripe Checkout remains the only card collection path. Onboarding-originated subscription checkout now returns to `/onboarding?checkout=success&session_id={CHECKOUT_SESSION_ID}&step=billing` or `/onboarding?checkout=cancelled&step=billing`; Settings-originated checkout still returns to Settings. Onboarding records checkout submission as `pending_webhook`/submitted state and shows "Stripe checkout submitted. Waiting for webhook confirmation." Trial start/end timestamps and active/trialing/subscribed states are left empty until Stripe webhook confirmation supplies them.
 
 Current managed trial caps are centralized in `lib/billing/plans.ts`: 300 AI credits, 250 emails, 0 SMS by default, 25 SMS after approval/payment, 250 contacts, 10 active workflows, 25 agent runs, 2 invited staff users, 5 campaign drafts, 1 CSV import, and 10 onboarding files / 25 MB total if file storage is enabled.
 
@@ -58,9 +60,12 @@ Launch readiness is calculated from saved onboarding and CRM state:
 - business profile completeness
 - plan selection
 - explicit billing state
+- legal/company review acknowledgement
 - Supabase auth email verification state
 - AI provider setup
 - email and SMS integration review
+- calendar setup review
+- optional service/product menu upload/review
 - lead import or starter lead setup
 - staff setup or solo selection
 - automation safety acknowledgement
@@ -97,7 +102,7 @@ Onboarding Help/DFY selections create `crm_service_requests` rows with `metadata
 - Onboarding does not auto-charge outside Stripe Checkout.
 - Onboarding does not auto-send customer email, SMS, or social messages.
 - Normal users do not receive mock CRM records. CSV/manual lead setup only writes user-provided records.
-- Upload storage remains setup-required until real storage is connected.
+- Service/product menu upload accepts PDF, PNG, JPG/JPEG, and WEBP. Uploads require a Supabase Storage bucket named `onboarding-files`; when stored, extraction remains `pending_analysis` / `needs_review` until AI or admin review actually parses it.
 
 ## Schema Compatibility
 
@@ -118,6 +123,24 @@ ALTER TABLE public.onboarding_sessions ADD COLUMN IF NOT EXISTS metadata jsonb D
 ```
 
 The schema ends with `notify pgrst, 'reload schema';` so Supabase/PostgREST refreshes column metadata after the migration is applied.
+
+The schema also includes `crm_service_menu_uploads` for onboarding menu files. The table stores only metadata, storage bucket/path, analysis state, extraction state, optional structured knowledge, and review metadata. Files live in Supabase Storage under the `onboarding-files` bucket.
+
+## Stabilization Pass Notes - 2026-05-27
+
+- Subscription checkout accepts `source=onboarding` / `return_to=onboarding` and returns hosted Stripe Checkout to onboarding billing instead of Settings.
+- Billing no longer offers "Save and continue later" on the required billing step.
+- Plain Save persists progress without marking incomplete required steps complete; Continue validates, saves, then unlocks the next step.
+- Future step navigation is locked to the first incomplete required step; readiness jumps cannot bypass locked steps.
+- Legal/company review now has an explicit acknowledgement, and Tax ID last 4 is labeled optional.
+- Email and SMS require reviewed setup choices instead of full Resend/Twilio connection unless the user chooses setup now.
+- Local Connector was removed from AI mode.
+- Brand voice has editable starter copy.
+- Calendar setup choices are saved and do not block launch unless marked required.
+- Staff presets map to real permissions: leads, pipeline, tasks, calendar, communications, marketing, workflow, settings_read, and admin.
+- Workflow draft options were expanded and remain draft/review-gated.
+- Help/DFY appears earlier after Business.
+- Service/product menu uploads save metadata and create a review recommendation without faking extraction success.
 
 ## Fix Pass Notes - 2026-05-27
 

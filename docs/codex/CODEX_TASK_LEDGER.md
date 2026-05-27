@@ -645,3 +645,17 @@ Files changed:
 Build result:
 Tests run:
 Next recommended task:
+
+### 2026-05-27 - SynaptiReach Onboarding Stabilization Pass
+
+Date: 2026-05-27
+Model: Codex
+Prompt/Goal: Execute `docs/codex/synaptireach_onboarding_stabilization_codex_prompt.md` exactly without redesigning onboarding or breaking CRM usability work.
+Completed: Updated subscription checkout origin handling so onboarding returns to `/onboarding?checkout=success&session_id={CHECKOUT_SESSION_ID}&step=billing` while Settings keeps its Settings return path; onboarding now records checkout submission as pending webhook state without marking paid/subscribed/trialing. Removed required-step "Save and continue later" billing path, added pending/confirmed billing status copy and refresh action, and preserved Stripe webhook ownership. Tightened step locking so Save does not mark incomplete steps complete and Continue validates before advancing. Added legal/company review checkbox, email/SMS reviewed choices, calendar setup choices, starter brand voice, staff permission presets, marketing strategy dropdown, expanded review-gated workflow draft options, earlier Help/DFY, service/product menu upload metadata route/table, and Settings billing notice for onboarding-originated pending checkout. Updated onboarding, architecture, decisions, knowledge-map, schema, ledger, and final checklist docs.
+Skipped: No onboarding redesign from scratch; no fake Stripe/webhook success; no fake provider readiness; no fake service menu extraction; no changes to OwnerFocusPanel/sidebar/dashboard usability routes.
+Partial: Service/product menu upload requires an `onboarding-files` Supabase Storage bucket and the new `crm_service_menu_uploads` table applied in production. Authenticated browser walkthrough and real Stripe Checkout/webhook lifecycle remain manual/external.
+Blocked: None at code level before build verification.
+Files changed: `app/onboarding/page.tsx`, `app/api/billing/subscription/checkout/route.ts`, `lib/billing/stripe.ts`, `lib/onboarding/server.ts`, `app/api/onboarding/upload/route.ts`, `app/dashboard/settings/page.tsx`, `supabase/user_crm_full_completion_schema.sql`, `docs/onboarding.md`, `docs/architecture.md`, `docs/decisions.md`, `docs/knowledge-map.md`, `docs/codex/CODEX_TASK_LEDGER.md`, `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`.
+Build result: Passed. `npm.cmd run build` completed successfully and generated 151/151 static pages. Two earlier attempts timed out before process exit; the final longer run completed.
+Tests run: `npm.cmd run build`; local production route smoke returned 200 for `/trial`, `/signup?trial=managed`, `/signup?trial=byok`, `/onboarding`, `/dashboard`, `/dashboard/settings`, and `/dashboard/workflow`. `npx.cmd tsc --noEmit --pretty false --ignoreDeprecations 6.0` still reports pre-existing project-wide TypeScript issues outside this pass plus no remaining new upload/onboarding-server issue after fixes.
+Next recommended task: Apply SQL/storage bucket in Supabase, then complete authenticated managed/BYOK Stripe return and webhook manual tests.

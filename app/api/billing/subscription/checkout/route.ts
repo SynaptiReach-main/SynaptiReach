@@ -16,6 +16,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Select a valid SynaptiReach subscription plan." }, { status: 400 });
     }
     const requestedTrialPath = body.trialPath || body.trial_path || null;
+    const checkoutOrigin = body.source === "onboarding" || body.return_to === "onboarding" || body.returnTo === "onboarding" ? "onboarding" : "settings";
     if (requestedTrialPath && requestedTrialPath !== plan.billingMode) {
       return NextResponse.json(
         { success: false, error: "Selected post-trial plan must match the chosen trial path." },
@@ -114,6 +115,7 @@ export async function POST(request: Request) {
         stripe_price_env: plan.stripePriceEnv,
         stripe_configured: getStripeBillingStatus().configured,
         source: "subscription_checkout_request",
+        checkout_origin: checkoutOrigin,
         payment_state_note:
           "Checkout creation does not mark a paid, subscribed, or trialing state. Stripe webhook confirmation owns trial and subscription state.",
       },
@@ -136,6 +138,7 @@ export async function POST(request: Request) {
       workspaceId,
       companyId,
       userId,
+      source: checkoutOrigin,
     });
 
     const { data: updated, error: updateError } = await supabase
@@ -146,6 +149,8 @@ export async function POST(request: Request) {
         metadata: {
           ...(billingAccount.metadata || {}),
           stripe_session_id: stripeSession.success ? stripeSession.sessionId : null,
+          checkout_origin: checkoutOrigin,
+          checkout_submitted_at: stripeSession.success ? new Date().toISOString() : billingAccount.metadata?.checkout_submitted_at || null,
           setup_required: Boolean(stripeSession.setupRequired),
           setup_error: stripeSession.success ? null : stripeSession.error,
           updated_at: new Date().toISOString(),
@@ -167,7 +172,7 @@ export async function POST(request: Request) {
       type: "billing",
       priority: stripeSession.success ? "normal" : "high",
       status: "unread",
-      href: "/dashboard/settings#billing",
+      href: checkoutOrigin === "onboarding" ? "/onboarding?step=billing" : "/dashboard/settings#billing",
       metadata: { source: "subscription_checkout", plan_slug: plan.slug },
     });
 

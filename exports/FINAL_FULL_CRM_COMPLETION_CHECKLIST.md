@@ -1876,3 +1876,35 @@ Reminder: the Resend API key was previously pasted into chat during setup. Rotat
   - Provider test buttons appear and show safe setup/readiness result
   - Complete Onboarding works only when required checklist is complete
   - Mobile and desktop layouts have no card/text overflow
+
+## SynaptiReach Onboarding Stabilization Pass - 2026-05-27
+
+- [x] Stripe subscription checkout supports onboarding origin return URLs:
+  - `/onboarding?checkout=success&session_id={CHECKOUT_SESSION_ID}&step=billing`
+  - `/onboarding?checkout=cancelled&step=billing`
+  - Settings checkout return behavior remains separate.
+- [x] Billing step reflects submitted/pending webhook state without marking paid/subscribed/trialing before Stripe webhook confirmation.
+- [x] Removed "Save and continue later" from required billing step.
+- [x] Save/resume no longer marks incomplete required steps complete.
+- [x] Continue validates required fields before unlocking the next step.
+- [x] Future step clicking and readiness jumps cannot bypass locked steps.
+- [x] Legal/company review has an explicit acknowledgement.
+- [x] Tax ID last 4 is labeled optional.
+- [x] Email/SMS can be reviewed/acknowledged without requiring Resend/Twilio connection unless setup-now is selected.
+- [x] Local Connector removed from onboarding AI mode.
+- [x] Brand voice has editable starter/example copy.
+- [x] Calendar setup is included and saved.
+- [x] Provider test buttons remain server-side readiness checks and do not send customer-facing actions.
+- [x] Lead CSV accepted format is documented in the onboarding UI.
+- [x] Staff permission presets map to real permissions including `admin`.
+- [x] Marketing starter strategy dropdown added.
+- [x] Workflow draft options expanded and remain draft/review-gated.
+- [x] Help/DFY appears earlier and keeps free guidance vs paid DFY distinction.
+- [x] Service/product menu upload route and `crm_service_menu_uploads` schema added with `pending_analysis` / `needs_review`.
+- [x] `npm.cmd run build` passed with 151/151 static pages.
+- [x] Local production smoke returned 200 for `/trial`, `/signup?trial=managed`, `/signup?trial=byok`, `/onboarding`, `/dashboard`, `/dashboard/settings`, and `/dashboard/workflow`.
+- [ ] Apply `crm_service_menu_uploads` SQL and create the `onboarding-files` Supabase Storage bucket in production.
+- [ ] Run authenticated managed signup -> onboarding -> billing -> Stripe -> onboarding billing return.
+- [ ] Run authenticated BYOK signup -> onboarding -> billing -> Stripe -> onboarding billing return.
+- [ ] Verify signed Stripe webhook confirmation changes billing to eligible/completed state.
+- [ ] Verify Complete Onboarding / Submit onboarding for review with production auth and webhook state.

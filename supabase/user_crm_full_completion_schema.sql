@@ -689,6 +689,24 @@ create table if not exists public.crm_csv_imports (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.crm_service_menu_uploads (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid null,
+  company_id uuid null,
+  user_id uuid null,
+  file_name text not null,
+  content_type text not null,
+  size_bytes bigint not null default 0,
+  storage_bucket text not null default 'onboarding-files',
+  storage_path text not null,
+  analysis_state text not null default 'pending_analysis',
+  extraction_state text not null default 'needs_review',
+  structured_knowledge jsonb not null default '[]'::jsonb,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.crm_service_catalog (
   id uuid primary key default gen_random_uuid(),
   service_type text not null,
@@ -861,6 +879,8 @@ create index if not exists idx_crm_credit_pack_purchases_workspace_status on pub
 create unique index if not exists idx_crm_billing_events_stripe_event_id on public.crm_billing_events(stripe_event_id);
 create index if not exists idx_crm_billing_events_workspace_created on public.crm_billing_events(workspace_id, created_at desc);
 create index if not exists idx_crm_csv_imports_workspace_created on public.crm_csv_imports(workspace_id, created_at desc);
+create index if not exists idx_crm_service_menu_uploads_workspace_created on public.crm_service_menu_uploads(workspace_id, created_at desc);
+create index if not exists idx_crm_service_menu_uploads_analysis_state on public.crm_service_menu_uploads(analysis_state, extraction_state);
 create index if not exists idx_crm_service_catalog_active_type on public.crm_service_catalog(active, service_type);
 create index if not exists idx_crm_service_requests_workspace_status on public.crm_service_requests(workspace_id, status, requested_at desc);
 create index if not exists idx_crm_service_orders_workspace_status on public.crm_service_orders(workspace_id, status, created_at desc);
@@ -916,6 +936,10 @@ for each row execute function public.set_updated_at();
 
 drop trigger if exists set_crm_credit_pack_purchases_updated_at on public.crm_credit_pack_purchases;
 create trigger set_crm_credit_pack_purchases_updated_at before update on public.crm_credit_pack_purchases
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_crm_service_menu_uploads_updated_at on public.crm_service_menu_uploads;
+create trigger set_crm_service_menu_uploads_updated_at before update on public.crm_service_menu_uploads
 for each row execute function public.set_updated_at();
 
 -- RLS/auth note:

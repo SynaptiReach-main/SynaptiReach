@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -60,11 +59,14 @@ type WizardData = {
     preferredCta: string;
     salesProcess: string;
     brandVoice: string;
+    legalReviewed: boolean;
   };
   plan: {
     planSlug: string;
     trialPath: "managed" | "byok" | "";
-    billingIntent: "start_trial" | "checkout_now" | "continue_later" | "checkout_started";
+    billingIntent: "start_trial" | "checkout_now" | "checkout_started";
+    checkoutSessionId: string;
+    checkoutReturnState: "success" | "cancelled" | "";
     stripeCardAcknowledged: boolean;
     autoRenewAcknowledged: boolean;
     managedCapsAcknowledged: boolean;
@@ -85,7 +87,7 @@ type WizardData = {
     };
   };
   ai: {
-    mode: "managed" | "byok" | "local" | "";
+    mode: "managed" | "byok" | "";
     provider: string;
     model: string;
     openaiKey: string;
@@ -100,16 +102,21 @@ type WizardData = {
   };
   integrations: {
     emailMode: "managed" | "byok" | "skip" | "";
+    emailReviewChoice: "setup_now" | "managed_later" | "byok_later" | "not_using" | "";
+    emailReviewed: boolean;
     senderEmail: string;
     resendApiKey: string;
     smsMode: "managed" | "byok" | "skip" | "";
+    smsReviewChoice: "setup_now" | "managed_later" | "byok_later" | "not_using" | "";
+    smsReviewed: boolean;
     twilioAccountSid: string;
     twilioAuthToken: string;
     twilioFromNumber: string;
     socialMode: "connect" | "skip" | "";
     socialChannels: string[];
     ayrshareApiKey: string;
-    calendarMode: "connect" | "skip" | "";
+    calendarMode: "google_later" | "internal_only" | "help" | "";
+    calendarRequiredForLaunch: boolean;
   };
   crmSetup: {
     pipelineStages: string;
@@ -136,6 +143,7 @@ type WizardData = {
   marketing: {
     goals: string[];
     channels: string[];
+    strategy: string;
     firstCampaignIdea: string;
     notificationPreferences: string[];
   };
@@ -159,7 +167,15 @@ type WizardData = {
     smsComplianceAck: boolean;
     noAutoSendAck: boolean;
   };
+  serviceMenu: {
+    files: Array<{ id?: string; file_name?: string; storage_path?: string; analysis_state?: string; extraction_state?: string }>;
+    notAvailable: boolean;
+    notes: string;
+  };
 };
+
+const brandVoiceStarter =
+  "Friendly, professional, and helpful. Keep messages clear, confident, and action-oriented without sounding pushy. Explain next steps simply and focus on helping customers solve their problem quickly.";
 
 const initialData: WizardData = {
   businessType: "",
@@ -187,12 +203,15 @@ const initialData: WizardData = {
     mainOffer: "",
     preferredCta: "Book a consultation",
     salesProcess: "",
-    brandVoice: "",
+    brandVoice: brandVoiceStarter,
+    legalReviewed: false,
   },
   plan: {
     planSlug: "growth-managed",
     trialPath: "managed",
     billingIntent: "start_trial",
+    checkoutSessionId: "",
+    checkoutReturnState: "",
     stripeCardAcknowledged: false,
     autoRenewAcknowledged: false,
     managedCapsAcknowledged: false,
@@ -220,7 +239,7 @@ const initialData: WizardData = {
     geminiKey: "",
     openrouterKey: "",
     anthropicKey: "",
-    brandVoice: "",
+    brandVoice: brandVoiceStarter,
     tone: "professional",
     assistantBehavior: "Draft helpful, concise recommendations and explain why each action matters.",
     intelligencePreference: "balanced",
@@ -228,9 +247,13 @@ const initialData: WizardData = {
   },
   integrations: {
     emailMode: "",
+    emailReviewChoice: "",
+    emailReviewed: false,
     senderEmail: "",
     resendApiKey: "",
     smsMode: "",
+    smsReviewChoice: "",
+    smsReviewed: false,
     twilioAccountSid: "",
     twilioAuthToken: "",
     twilioFromNumber: "",
@@ -238,6 +261,7 @@ const initialData: WizardData = {
     socialChannels: [],
     ayrshareApiKey: "",
     calendarMode: "",
+    calendarRequiredForLaunch: false,
   },
   crmSetup: {
     pipelineStages: "New, Qualified, Proposal, Negotiation, Won, Lost",
@@ -264,6 +288,7 @@ const initialData: WizardData = {
   marketing: {
     goals: ["lead_nurture"],
     channels: ["email"],
+    strategy: "service_appointment_funnel",
     firstCampaignIdea: "",
     notificationPreferences: ["task_due", "new_lead", "billing_setup"],
   },
@@ -287,12 +312,18 @@ const initialData: WizardData = {
     smsComplianceAck: false,
     noAutoSendAck: false,
   },
+  serviceMenu: {
+    files: [],
+    notAvailable: false,
+    notes: "",
+  },
 };
 
 const steps = [
   { id: "welcome", label: "Welcome", icon: Rocket },
   { id: "owner", label: "Owner", icon: Users },
   { id: "profile", label: "Business", icon: Building2 },
+  { id: "help", label: "Help", icon: HeartHandshake },
   { id: "sales", label: "Sales Setup", icon: BriefcaseBusiness },
   { id: "plan", label: "Trial Path", icon: CreditCard },
   { id: "billing", label: "Billing", icon: Lock },
@@ -303,7 +334,6 @@ const steps = [
   { id: "marketing", label: "Marketing", icon: Megaphone },
   { id: "workflows", label: "Workflows", icon: Workflow },
   { id: "safety", label: "Safety", icon: ShieldCheck },
-  { id: "help", label: "Help", icon: HeartHandshake },
   { id: "launch", label: "Launch", icon: Gauge },
 ];
 
@@ -322,6 +352,8 @@ const readinessStepMap: Record<string, string> = {
   ai: "ai",
   email: "integrations",
   sms: "integrations",
+  calendar: "integrations",
+  service_menu: "profile",
   lead_setup: "leads",
   staff: "staff",
   marketing: "marketing",
@@ -358,6 +390,49 @@ const postTrialFitChecks = [
   ["Active workflows", `${MANAGED_TRIAL_CAPS.activeWorkflows} during managed trial`, "Existing workflow drafts are kept. Future activation/runs are capped by the post-trial plan."],
   ["Agent runs", `${MANAGED_TRIAL_CAPS.agentRuns} during managed trial`, "Agent activity hard-stops at the applicable cap; rule-based recommendations still work."],
   ["Email/SMS", `${MANAGED_TRIAL_CAPS.emails} managed emails and SMS approval required`, "Managed sends stop at trial caps or provider approval boundaries. BYOK sends depend on your provider account."],
+];
+
+const staffPermissionPresets: Record<string, string[]> = {
+  "Owner/Admin": ["leads", "pipeline", "tasks", "calendar", "communications", "marketing", "workflow", "settings_read", "admin"],
+  "Sales Rep": ["leads", "pipeline", "tasks", "calendar", "communications"],
+  "Appointment Setter": ["leads", "tasks", "calendar", "communications"],
+  "Marketing Manager": ["leads", "communications", "marketing", "workflow"],
+  "Support/Communications": ["leads", "tasks", "communications"],
+  "Read-only Analyst": ["leads", "pipeline", "tasks", "calendar", "communications", "marketing", "settings_read"],
+};
+
+const marketingStrategies = [
+  ["service_appointment_funnel", "Service appointment funnel"],
+  ["free_estimate_funnel", "Free estimate funnel"],
+  ["consultation_funnel", "Consultation funnel"],
+  ["lead_magnet_funnel", "Lead magnet funnel"],
+  ["review_reputation_campaign", "Review/reputation campaign"],
+  ["reengagement_campaign", "Re-engagement campaign"],
+  ["new_customer_onboarding", "New customer onboarding campaign"],
+];
+
+const workflowOptions = [
+  ["new_lead_followup", "New lead follow-up", "Prepares fast first-touch follow-up for new inquiries.", "lead_created", "New lead has not been contacted.", "Review-gated task and draft message."],
+  ["stale_deal_followup", "Stale deal follow-up", "Flags opportunities that may need owner attention.", "deal_stage_stale", "Deal has not moved stages in the expected window.", "Internal task to review the deal."],
+  ["appointment_reminder", "Appointment reminder", "Prepares reminder tasks around upcoming appointments.", "appointment_upcoming", "Reminder setup is allowed.", "Internal reminder; external sends stay gated."],
+  ["opened_not_clicked", "Opened-not-clicked campaign follow-up", "Surfaces warm campaign engagement for follow-up.", "campaign_open_no_click", "Lead opened but did not click.", "Follow-up task or draft message."],
+  ["missed_response", "Unread inbound response", "Keeps inbound replies from being missed.", "communication_unread", "Inbound response remains unread.", "High-priority follow-up task."],
+  ["review_request", "Post-service review request", "Prepares a review ask after service completion.", "service_completed", "Customer reaches the post-service stage.", "Review request draft."],
+  ["missed_call_followup", "Missed call follow-up", "Captures phone leads that did not become conversations.", "missed_call", "Missed call has no follow-up.", "Callback task and draft message."],
+  ["quote_sent_followup", "Quote sent follow-up", "Keeps quoted opportunities moving.", "quote_sent", "No response after quote review window.", "Quote follow-up task."],
+  ["estimate_reminder", "Estimate reminder", "Prepares internal reminders for estimate-related work.", "estimate_pending", "Estimate is pending near the appointment window.", "Estimate reminder task."],
+  ["no_show_recovery", "No-show recovery", "Helps recover missed appointments.", "appointment_no_show", "Appointment is marked no-show.", "Reschedule task or draft."],
+  ["completed_appointment_review", "Review request after completed appointment", "Prepares review asks after completed appointments.", "appointment_completed", "Appointment is completed.", "Review request draft."],
+  ["referral_request_won", "Referral request after converted/won customer", "Creates a reviewable referral ask after conversion.", "deal_won", "Customer converts and timing is appropriate.", "Referral request task."],
+  ["payment_checkpoint_reminder", "Payment/checkpoint reminder", "Flags payment or milestone follow-up.", "payment_checkpoint_due", "Payment or project checkpoint is approaching.", "Billing checkpoint task."],
+  ["cold_lead_reactivation", "Cold lead reactivation", "Prepares safe re-engagement for older leads.", "lead_cold", "Cold lead is inactive beyond the selected window.", "Reactivation task or campaign idea."],
+  ["high_intent_inquiry_alert", "High-intent website inquiry alert", "Alerts the team to urgent website inquiries.", "website_inquiry_high_intent", "Inquiry includes high-intent signals.", "High-priority owner alert."],
+  ["new_lead_owner_assignment", "New lead owner assignment", "Prepares owner assignment suggestions.", "lead_created", "New lead has no owner.", "Owner assignment task."],
+  ["trial_usage_cap_warning", "Trial usage/cap warning", "Warns owners before managed trial caps are reached.", "usage_cap_threshold", "Trial usage approaches a cap.", "Billing and usage review task."],
+  ["campaign_reply_triage", "Campaign reply triage", "Routes campaign replies for review.", "campaign_reply_received", "Campaign reply arrives.", "Reply triage task."],
+  ["upsell_cross_sell_followup", "Upsell/cross-sell follow-up", "Prepares expansion opportunities for existing customers.", "customer_eligible_for_offer", "Customer is eligible for a relevant next service.", "Offer review task."],
+  ["dormant_customer_winback", "Dormant customer winback", "Prepares dormant customer reactivation.", "customer_dormant", "Past customer has no recent activity.", "Winback task or campaign idea."],
+  ["vip_lead_escalation", "VIP/high-value lead escalation", "Highlights high-value leads for fast owner review.", "lead_value_high", "Lead is VIP or above value threshold.", "Owner escalation task."],
 ];
 
 const industries = [
@@ -445,10 +520,11 @@ function mergePayload(payload: any): WizardData {
       usageCaps: { ...initialData.plan.usageCaps, ...(payload?.plan?.usageCaps || {}) },
       managedSms: { ...initialData.plan.managedSms, ...(payload?.plan?.managedSms || {}) },
     },
-    ai: { ...initialData.ai, ...(payload?.ai || {}), openaiKey: "", geminiKey: "", openrouterKey: "", anthropicKey: "" },
+    ai: { ...initialData.ai, ...(payload?.ai || {}), mode: payload?.ai?.mode === "local" ? "" : payload?.ai?.mode || initialData.ai.mode, openaiKey: "", geminiKey: "", openrouterKey: "", anthropicKey: "" },
     integrations: {
       ...initialData.integrations,
       ...(payload?.integrations || {}),
+      calendarMode: payload?.integrations?.calendarMode === "connect" ? "google_later" : payload?.integrations?.calendarMode === "skip" ? "internal_only" : payload?.integrations?.calendarMode || "",
       resendApiKey: "",
       twilioAuthToken: "",
       twilioAccountSid: "",
@@ -469,6 +545,7 @@ function mergePayload(payload: any): WizardData {
     workflows: { ...initialData.workflows, ...(payload?.workflows || {}) },
     help: { ...initialData.help, ...(payload?.help || {}) },
     automation: { ...initialData.automation, ...(payload?.automation || {}) },
+    serviceMenu: { ...initialData.serviceMenu, ...(payload?.serviceMenu || {}) },
   };
 }
 
@@ -503,6 +580,12 @@ function StatusPill({ status }: { status: string }) {
   return <span className={`shrink-0 rounded-full border px-2 py-1 text-[11px] font-bold uppercase ${styles}`}>{status === "skipped" ? "intentionally skipped" : status}</span>;
 }
 
+function maxUnlockedFor(completed: string[]) {
+  const completedSet = new Set(completed);
+  const firstIncomplete = steps.findIndex((item) => !completedSet.has(item.id));
+  return firstIncomplete === -1 ? steps.length - 1 : firstIncomplete;
+}
+
 export default function OnboardingPage() {
   const router = useRouter();
   const [activeStep, setActiveStep] = useState(0);
@@ -521,16 +604,16 @@ export default function OnboardingPage() {
   const [csvRows, setCsvRows] = useState<Record<string, string>[]>([]);
   const [csvFileName, setCsvFileName] = useState("");
   const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [menuUploading, setMenuUploading] = useState(false);
 
   const step = steps[activeStep];
   const selectedPlan = useMemo(
     () => SUBSCRIPTION_PLANS.find((plan) => plan.slug === data.plan.planSlug),
     [data.plan.planSlug]
   );
-  const maxUnlockedStep = Math.min(
-    steps.length - 1,
-    Math.max(activeStep, ...completedSteps.map((id) => stepIndexById[id] ?? 0)) + 1
-  );
+  const completedSet = useMemo(() => new Set(completedSteps), [completedSteps]);
+  const firstIncompleteIndex = steps.findIndex((item) => !completedSet.has(item.id));
+  const maxUnlockedStep = firstIncompleteIndex === -1 ? steps.length - 1 : firstIncompleteIndex;
   const progressPercent = Math.round((completedSteps.length / steps.length) * 100);
 
   useEffect(() => {
@@ -559,8 +642,41 @@ export default function OnboardingPage() {
         return;
       }
 
+      const params = new URLSearchParams(window.location.search);
+      const checkoutReturn = params.get("checkout");
+      const checkoutSessionId = params.get("session_id") || "";
+      const requestedStep = params.get("step");
       if (result.payload) {
-        setData(mergePayload(result.payload));
+        const merged = mergePayload(result.payload);
+        if (checkoutReturn === "success" && checkoutSessionId) {
+          merged.plan = {
+            ...merged.plan,
+            billingIntent: "checkout_started",
+            checkoutSessionId,
+            checkoutReturnState: "success",
+          };
+          await fetch("/api/onboarding/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+            body: JSON.stringify({
+              payload: {
+                ...merged,
+                __onboardingProgress: {
+                  ...(result.session?.metadata || result.payload?.__onboardingProgress || {}),
+                  current_step: "billing",
+                },
+              },
+              currentStep: "billing",
+              completedSteps: result.session?.metadata?.completed_steps || result.payload?.__onboardingProgress?.completed_steps || [],
+              skippedSteps: result.session?.metadata?.skipped_steps || result.payload?.__onboardingProgress?.skipped_steps || {},
+            }),
+          }).then(() => undefined).catch(() => undefined);
+          setMessage("Stripe checkout submitted. Waiting for webhook confirmation.");
+        } else if (checkoutReturn === "cancelled") {
+          merged.plan = { ...merged.plan, checkoutReturnState: "cancelled" };
+          setMessage("Stripe checkout was cancelled. Set up payment method with Stripe to continue onboarding.");
+        }
+        setData(merged);
       } else {
         const storedType = localStorage.getItem("synaptireach_business_type");
         let signup: any = {};
@@ -611,10 +727,10 @@ export default function OnboardingPage() {
       setCompletedSteps(savedCompleted);
       setSkippedSteps(savedProgress.skipped_steps || {});
       const savedStep = savedProgress.current_step;
-      if (savedStep && stepIndexById[savedStep] !== undefined) {
-        const savedIndex = stepIndexById[savedStep];
-        const highestCompleted = Math.max(0, ...savedCompleted.map((id: string) => stepIndexById[id] ?? 0));
-        setActiveStep(Math.min(savedIndex, highestCompleted + 1));
+      const targetStep = checkoutReturn ? "billing" : requestedStep || savedStep;
+      if (targetStep && stepIndexById[targetStep] !== undefined) {
+        const savedIndex = stepIndexById[targetStep];
+        setActiveStep(Math.min(savedIndex, maxUnlockedFor(savedCompleted)));
       }
       setLoading(false);
     }
@@ -667,6 +783,7 @@ export default function OnboardingPage() {
       if (!data.businessProfile.businessName) errors.push("Enter your business name.");
       if (!data.businessProfile.industry) errors.push("Select your industry.");
       if (!data.businessProfile.contactEmail && !data.owner.email) errors.push("Enter a business contact email.");
+      if (!data.businessProfile.legalReviewed) errors.push("Confirm the legal/company information is accurate or intentionally skipped for review.");
     }
     if (stepId === "sales" && !data.crmSetup.pipelineStages.trim()) errors.push("Add at least one pipeline stage.");
     if (stepId === "plan") {
@@ -677,12 +794,19 @@ export default function OnboardingPage() {
       if (data.plan.trialPath === "managed" && !data.plan.managedCapsAcknowledged) errors.push("Acknowledge managed trial hard caps.");
       if (data.plan.trialPath === "byok" && !data.plan.byokProviderCostAcknowledged) errors.push("Acknowledge that BYOK provider costs are paid directly to providers.");
     }
-    if (stepId === "billing" && data.plan.billingIntent !== "checkout_started") {
-      errors.push("Set up payment method with Stripe, or choose Save and continue later knowing trial activation remains blocked.");
+    if (stepId === "billing") {
+      const billingStatus = snapshot?.billing?.status;
+      const submitted = data.plan.billingIntent === "checkout_started" || data.plan.checkoutSessionId || ["pending_webhook", "checkout_created", "checkout_completed", "trialing", "active"].includes(billingStatus);
+      if (!submitted) errors.push("Set up payment method with Stripe before continuing.");
     }
     if (stepId === "ai") {
       if (!data.ai.mode) errors.push("Choose an AI processing mode.");
       if (data.ai.mode === "byok" && !data.ai.provider) errors.push("Choose the BYOK AI provider you plan to use.");
+    }
+    if (stepId === "integrations") {
+      if (!data.integrations.emailReviewChoice) errors.push("Choose how email integration should be handled.");
+      if (!data.integrations.smsReviewChoice) errors.push("Choose how SMS integration should be handled.");
+      if (!data.integrations.calendarMode) errors.push("Choose how calendar setup should be handled.");
     }
     if (stepId === "safety") {
       if (!data.automation.noAutoSendAck) errors.push("Acknowledge that onboarding will not auto-send customer messages or auto-charge outside Stripe Checkout.");
@@ -694,7 +818,11 @@ export default function OnboardingPage() {
   function goToStep(stepId: string) {
     const index = stepIndexById[stepId];
     if (index === undefined) return;
-    setActiveStep(Math.min(index, maxUnlockedStep));
+    if (index > maxUnlockedStep) {
+      setError("Future steps unlock after you complete the current required step with Continue.");
+      return;
+    }
+    setActiveStep(index);
   }
 
   function goToReadiness(check: any) {
@@ -702,20 +830,22 @@ export default function OnboardingPage() {
     goToStep(targetStep);
   }
 
-  async function save(options: { silent?: boolean; complete?: boolean; includeCsv?: boolean } = {}) {
+  async function save(options: { silent?: boolean; complete?: boolean; includeCsv?: boolean; markStepComplete?: boolean; skippedOverride?: Record<string, boolean> } = {}) {
     if (!sessionToken) return null;
     setSaving(true);
     setError("");
     setValidationErrors([]);
     if (!options.silent) setMessage("");
 
-    const nextCompleted = Array.from(new Set([...completedSteps, step.id]));
+    const effectiveSkipped = options.skippedOverride || skippedSteps;
+    const canMarkStepComplete = Boolean(options.markStepComplete || options.complete || effectiveSkipped[step.id]);
+    const nextCompleted = canMarkStepComplete ? Array.from(new Set([...completedSteps, step.id])) : completedSteps;
     const payloadWithProgress = {
       ...data,
       __onboardingProgress: {
         current_step: step.id,
         completed_steps: nextCompleted,
-        skipped_steps: skippedSteps,
+        skipped_steps: effectiveSkipped,
       },
     };
 
@@ -728,7 +858,7 @@ export default function OnboardingPage() {
       body: JSON.stringify({
         payload: payloadWithProgress,
         completedSteps: nextCompleted,
-        skippedSteps,
+        skippedSteps: effectiveSkipped,
         currentStep: step.id,
         complete: Boolean(options.complete),
         leadRows: options.includeCsv ? csvRows : [],
@@ -748,6 +878,7 @@ export default function OnboardingPage() {
     setReadiness(result.readiness || readiness);
     setSnapshot(result.snapshot || snapshot);
     setCompletedSteps(nextCompleted);
+    setSkippedSteps(effectiveSkipped);
     setData((current) => ({
       ...current,
       ai: { ...current.ai, openaiKey: "", geminiKey: "", openrouterKey: "", anthropicKey: "" },
@@ -766,7 +897,7 @@ export default function OnboardingPage() {
       setError("Please finish the required items before continuing.");
       return;
     }
-    const result = await save({ silent: true });
+    const result = await save({ silent: true, markStepComplete: true });
     if (result) setActiveStep((current) => Math.min(current + 1, steps.length - 1));
   }
 
@@ -781,7 +912,10 @@ export default function OnboardingPage() {
       return;
     }
     setSkippedSteps((current) => ({ ...current, [step.id]: true }));
-    next();
+    const nextSkipped = { ...skippedSteps, [step.id]: true };
+    save({ silent: true, markStepComplete: true, skippedOverride: nextSkipped }).then((result) => {
+      if (result) setActiveStep((current) => Math.min(current + 1, steps.length - 1));
+    });
   }
 
   async function handleCsv(file?: File | null) {
@@ -795,6 +929,31 @@ export default function OnboardingPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not parse CSV.");
     }
+  }
+
+  async function handleMenuUpload(file?: File | null) {
+    if (!file) return;
+    setMenuUploading(true);
+    setError("");
+    const form = new FormData();
+    form.set("file", file);
+    const response = await fetch("/api/onboarding/upload", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${sessionToken}` },
+      body: form,
+    });
+    const result = await response.json().catch(() => ({}));
+    setMenuUploading(false);
+    if (!response.ok || !result.success) {
+      setError(result.error || "Service/product menu upload failed.");
+      return;
+    }
+    const fileRecord = result.file || {};
+    updateSection("serviceMenu", {
+      files: [...data.serviceMenu.files, fileRecord],
+      notAvailable: false,
+    });
+    setMessage(result.message || "Service/product menu uploaded for pending analysis.");
   }
 
   async function startCheckout() {
@@ -814,6 +973,8 @@ export default function OnboardingPage() {
         email: snapshot?.settings?.contact_email || data.businessProfile.contactEmail,
         name: data.businessProfile.businessName,
         trialPath: data.plan.trialPath,
+        source: "onboarding",
+        return_to: "onboarding",
         acknowledgements: {
           stripeCardAcknowledged: data.plan.stripeCardAcknowledged,
           autoRenewAcknowledged: data.plan.autoRenewAcknowledged,
@@ -856,6 +1017,22 @@ export default function OnboardingPage() {
     setMessage(testResult.message || `${provider} setup state saved. No customer-facing action was sent.`);
   }
 
+  async function refreshOnboardingState() {
+    if (!sessionToken) return;
+    const response = await fetch("/api/onboarding/save", {
+      headers: { Authorization: `Bearer ${sessionToken}` },
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.success) {
+      setError(result.error || "Could not refresh onboarding status.");
+      return;
+    }
+    setReadiness(result.readiness || readiness);
+    setSnapshot(result.snapshot || snapshot);
+    if (result.payload) setData(mergePayload(result.payload));
+    setMessage("Onboarding status refreshed.");
+  }
+
   async function activate() {
     const result = await save({ complete: true });
     if (result?.session?.completed) {
@@ -865,7 +1042,9 @@ export default function OnboardingPage() {
     if (result) {
       const remaining = (result.readiness?.checks || []).filter((check: any) => check.status !== "complete" && check.status !== "skipped");
       setValidationErrors(remaining.map((check: any) => check.label));
-      setMessage("Setup was saved, but onboarding is blocked until the required checklist is complete. Select a missing readiness item to jump to the relevant step.");
+      setMessage(result.session?.metadata?.submitted_for_review
+        ? "Onboarding was submitted for review. Trial activation remains blocked until Stripe webhook confirmation and any remaining required checks are complete."
+        : "Setup was saved, but onboarding is blocked until the required checklist is complete. Select a missing readiness item to jump to the relevant step.");
     }
   }
 
@@ -1032,7 +1211,7 @@ export default function OnboardingPage() {
               <Field label="Legal company name" optional>
                 <input className={inputClass()} value={data.businessProfile.legalName} onChange={(event) => updateSection("businessProfile", { legalName: event.target.value })} />
               </Field>
-              <Field label="Tax ID last 4" optional>
+              <Field label="Tax ID last 4 (optional)">
                 <input className={inputClass()} value={data.businessProfile.taxIdLast4} maxLength={4} onChange={(event) => updateSection("businessProfile", { taxIdLast4: event.target.value.replace(/\D/g, "").slice(0, 4) })} />
               </Field>
               <Field label="Industry" required>
@@ -1084,6 +1263,34 @@ export default function OnboardingPage() {
                     updateSection("ai", { brandVoice: event.target.value });
                   }} />
                 </Field>
+              </div>
+              <label className="md:col-span-2 flex items-start gap-3 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-4 text-sm text-cyan-50">
+                <input type="checkbox" className="mt-1" checked={data.businessProfile.legalReviewed} onChange={(event) => updateSection("businessProfile", { legalReviewed: event.target.checked })} />
+                <span>I confirm the legal/company information is accurate or intentionally skipped for review.</span>
+              </label>
+              <div className="md:col-span-2 rounded-2xl border border-white/10 bg-black/30 p-4">
+                <div className="mb-2 font-black">Service/product menu upload</div>
+                <p className="mb-3 text-sm text-slate-400">Accepted: PDF, PNG, JPG/JPEG, WEBP. Uploads are stored for pending analysis and review; extraction is not marked successful until available.</p>
+                <label className="flex cursor-pointer flex-wrap items-center gap-3 rounded-xl border border-dashed border-cyan-300/30 bg-cyan-300/5 p-4 text-sm">
+                  {menuUploading ? <Loader2 className="animate-spin text-cyan-200" size={18} /> : <FileUp className="text-cyan-200" size={18} />}
+                  <span>{menuUploading ? "Uploading menu..." : "Upload service/product menu"}</span>
+                  <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => handleMenuUpload(event.target.files?.[0])} />
+                </label>
+                <label className="mt-3 flex items-start gap-3 text-sm text-slate-300">
+                  <input type="checkbox" className="mt-1" checked={data.serviceMenu.notAvailable} onChange={(event) => updateSection("serviceMenu", { notAvailable: event.target.checked })} />
+                  <span>I do not have a service/product menu ready yet.</span>
+                </label>
+                {data.serviceMenu.files.length ? (
+                  <div className="mt-3 space-y-2 text-xs text-slate-300">
+                    {data.serviceMenu.files.map((file, index) => (
+                      <div key={file.id || file.storage_path || index} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                        <span className="break-all font-bold text-white">{file.file_name || file.storage_path || "Uploaded menu"}</span>
+                        <span className="ml-2 text-cyan-100">{file.analysis_state || "pending_analysis"}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                <textarea className={`${inputClass()} mt-3`} rows={2} value={data.serviceMenu.notes} onChange={(event) => updateSection("serviceMenu", { notes: event.target.value })} placeholder="Optional notes for menu review or extraction." />
               </div>
             </div>
           ) : null}
@@ -1215,12 +1422,22 @@ export default function OnboardingPage() {
           {step.id === "billing" ? (
             <div className="space-y-4">
               <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-4 text-sm text-cyan-50/80">
-                Card collection is handled only by hosted Stripe Checkout. SynaptiReach employees never see, receive, or have access to your card number, CVC, or card details.
+                A Stripe payment method is required before trial activation because the trial auto-renews to the selected plan after 14 days unless canceled. Usage caps and credit packs apply. Payment is processed securely by Stripe, and SynaptiReach employees never see, receive, or have access to your card number, CVC, or card details.
               </div>
+              {snapshot?.billing?.status || data.plan.checkoutSessionId ? (
+                <div className="rounded-2xl border border-yellow-300/20 bg-yellow-300/10 p-4 text-sm text-yellow-50/85">
+                  <div className="font-black">
+                    {["trialing", "active", "checkout_completed"].includes(snapshot?.billing?.status) ? "Payment method on file." : "Stripe checkout submitted. Waiting for webhook confirmation."}
+                  </div>
+                  <p className="mt-1 break-all">Billing state: {snapshot?.billing?.status || "pending_webhook"}{data.plan.checkoutSessionId ? ` / Session ${data.plan.checkoutSessionId}` : ""}</p>
+                  <button type="button" onClick={refreshOnboardingState} className="mt-3 rounded-xl border border-yellow-200/30 px-3 py-2 text-xs font-black text-yellow-50">
+                    Refresh/check Stripe status
+                  </button>
+                </div>
+              ) : null}
               {[
                 ["start_trial", "Start 14-day trial through Stripe", "Creates a Stripe Checkout session with a 14-day trial for the selected post-trial plan."],
                 ["checkout_now", "Set up billing now", "Use Stripe Checkout for secure payment setup. No card data touches SynaptiReach."],
-                ["continue_later", "Save and continue later", "Keeps onboarding resumable, but trial access does not start until Stripe Checkout is completed."],
               ].map(([id, label, description]) => (
                 <button
                   key={id}
@@ -1237,7 +1454,7 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={startCheckout}
-                disabled={checkoutBusy || data.plan.billingIntent === "continue_later"}
+                disabled={checkoutBusy}
                 className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-green-300 px-4 py-3 text-sm font-black text-black disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {checkoutBusy ? <Loader2 className="animate-spin" size={16} /> : <CreditCard size={16} />}
@@ -1282,7 +1499,6 @@ export default function OnboardingPage() {
                 {[
                   ["managed", "SynaptiReach Managed", "Use platform-managed AI capacity when available."],
                   ["byok", "Bring Your Own Keys", "Store provider keys encrypted server-side."],
-                  ["local", "Local Connector", "Optional future connector; does not block CRM launch."],
                 ].map(([id, label, description]) => (
                   <button
                     key={id}
@@ -1371,6 +1587,20 @@ export default function OnboardingPage() {
             <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-4">
                 <h2 className="font-black">Email</h2>
+                <select className={inputClass()} value={data.integrations.emailReviewChoice} onChange={(event) => {
+                  const choice = event.target.value as any;
+                  updateSection("integrations", {
+                    emailReviewChoice: choice,
+                    emailReviewed: Boolean(choice),
+                    emailMode: choice === "managed_later" ? "managed" : choice === "byok_later" || choice === "setup_now" ? "byok" : choice === "not_using" ? "skip" : data.integrations.emailMode,
+                  });
+                }}>
+                  <option value="">Email integration reviewed</option>
+                  <option value="setup_now">Set up now</option>
+                  <option value="managed_later">Use SynaptiReach-managed setup later</option>
+                  <option value="byok_later">BYOK setup later</option>
+                  <option value="not_using">Not using this yet</option>
+                </select>
                 <select className={inputClass()} value={data.integrations.emailMode} onChange={(event) => updateSection("integrations", { emailMode: event.target.value as any })}>
                   <option value="">Choose email setup</option>
                   <option value="managed">Managed email, verify domain later</option>
@@ -1385,6 +1615,20 @@ export default function OnboardingPage() {
               </div>
               <div className="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-4">
                 <h2 className="font-black">SMS</h2>
+                <select className={inputClass()} value={data.integrations.smsReviewChoice} onChange={(event) => {
+                  const choice = event.target.value as any;
+                  updateSection("integrations", {
+                    smsReviewChoice: choice,
+                    smsReviewed: Boolean(choice),
+                    smsMode: choice === "managed_later" ? "managed" : choice === "byok_later" || choice === "setup_now" ? "byok" : choice === "not_using" ? "skip" : data.integrations.smsMode,
+                  });
+                }}>
+                  <option value="">SMS integration reviewed</option>
+                  <option value="setup_now">Set up now</option>
+                  <option value="managed_later">Use SynaptiReach-managed setup later</option>
+                  <option value="byok_later">BYOK setup later</option>
+                  <option value="not_using">Not using this yet</option>
+                </select>
                 <select className={inputClass()} value={data.integrations.smsMode} onChange={(event) => updateSection("integrations", { smsMode: event.target.value as any })}>
                   <option value="">Choose SMS setup</option>
                   <option value="managed">Managed SMS, compliance review required</option>
@@ -1418,10 +1662,15 @@ export default function OnboardingPage() {
                 <h2 className="font-black">Calendar</h2>
                 <select className={inputClass()} value={data.integrations.calendarMode} onChange={(event) => updateSection("integrations", { calendarMode: event.target.value as any })}>
                   <option value="">Choose calendar setup</option>
-                  <option value="connect">Prepare Google Calendar connection</option>
-                  <option value="skip">Skip for now</option>
+                  <option value="google_later">Prepare Google Calendar connection</option>
+                  <option value="internal_only">Use internal CRM calendar only</option>
+                  <option value="help">Needs SynaptiReach help setting this up</option>
                 </select>
                 <p className="text-sm text-slate-400">OAuth connection is completed later from provider settings.</p>
+                <label className="flex items-start gap-2 text-sm text-slate-300">
+                  <input type="checkbox" className="mt-1" checked={data.integrations.calendarRequiredForLaunch} onChange={(event) => updateSection("integrations", { calendarRequiredForLaunch: event.target.checked })} />
+                  <span>Calendar connection is required before my launch.</span>
+                </label>
               </div>
             </div>
           ) : null}
@@ -1459,6 +1708,9 @@ export default function OnboardingPage() {
                       Import CSV
                     </button>
                   </div>
+                  <p className="mt-3 text-xs text-slate-400">
+                    Accepted CSV headers include name, email, phone, company, source, status, notes, tags, owner, value, and next_step. A starter lead can satisfy launch readiness without requiring CSV import.
+                  </p>
                   <Field label="CSV mapping notes">
                     <textarea className={`${inputClass()} mt-3`} rows={3} value={data.leads.csvMappingNotes} onChange={(event) => updateSection("leads", { csvMappingNotes: event.target.value })} placeholder="Example: map Customer Name to name, Job Type to tags, Lead Source to source." />
                   </Field>
@@ -1508,8 +1760,22 @@ export default function OnboardingPage() {
                           }}
                         />
                       ))}
+                      <select
+                        className={`${inputClass()} md:col-span-4`}
+                        defaultValue=""
+                        onChange={(event) => {
+                          const permissions = staffPermissionPresets[event.target.value] || [];
+                          const members = [...data.staff.members];
+                          members[index] = { ...members[index], permissions };
+                          updateSection("staff", { members });
+                          event.currentTarget.value = "";
+                        }}
+                      >
+                        <option value="">Apply permission preset</option>
+                        {Object.keys(staffPermissionPresets).map((preset) => <option key={preset} value={preset}>{preset}</option>)}
+                      </select>
                       <div className="md:col-span-4 flex flex-wrap gap-2">
-                        {["leads", "pipeline", "tasks", "calendar", "communications", "marketing", "workflow", "settings_read"].map((permission) => (
+                        {["leads", "pipeline", "tasks", "calendar", "communications", "marketing", "workflow", "settings_read", "admin"].map((permission) => (
                           <label key={permission} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-slate-300">
                             <input
                               type="checkbox"
@@ -1541,6 +1807,11 @@ export default function OnboardingPage() {
 
           {step.id === "marketing" ? (
             <div className="space-y-5">
+              <Field label="Starter campaign strategy">
+                <select className={inputClass()} value={data.marketing.strategy} onChange={(event) => updateSection("marketing", { strategy: event.target.value })}>
+                  {marketingStrategies.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+                </select>
+              </Field>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
                   <div className="mb-3 font-black">Marketing goals</div>
@@ -1577,22 +1848,20 @@ export default function OnboardingPage() {
                 <span>Create recommended workflows as drafts during save. Draft workflows still require review before activation.</span>
               </label>
               <div className="grid gap-3 md:grid-cols-2">
-                {[
-                  ["new_lead_followup", "New lead follow-up"],
-                  ["stale_deal_followup", "Stale deal follow-up"],
-                  ["appointment_reminder", "Appointment reminder"],
-                  ["opened_not_clicked", "Opened-not-clicked campaign follow-up"],
-                  ["missed_response", "Unread inbound response"],
-                  ["review_request", "Post-service review request"],
-                ].map(([id, label]) => (
+                {workflowOptions.map(([id, label, what, trigger, condition, action]) => (
                   <label key={id} className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-slate-300">
                     <input type="checkbox" className="mr-2" checked={data.workflows.recommended.includes(id)} onChange={() => toggleList("workflows", "recommended", id)} />
-                    {label}
+                    <span className="font-black text-white">{label}</span>
+                    <span className="mt-2 block text-xs text-slate-400">What it does: {what}</span>
+                    <span className="mt-1 block text-xs text-slate-400">Trigger: {trigger}</span>
+                    <span className="mt-1 block text-xs text-slate-400">Condition: {condition}</span>
+                    <span className="mt-1 block text-xs text-slate-400">Draft action created: {action}</span>
+                    <span className="mt-1 block text-xs text-cyan-100/80">Why review-gated: External sends, assignments, billing actions, and customer-facing drafts require human approval before anything runs.</span>
                   </label>
                 ))}
               </div>
               <Field label="Workflow notes">
-                <textarea className={inputClass()} rows={3} value={data.workflows.notes} onChange={(event) => updateSection("workflows", { notes: event.target.value })} />
+                <textarea className={inputClass()} rows={3} value={data.workflows.notes} onChange={(event) => updateSection("workflows", { notes: event.target.value })} placeholder="Example: Follow up with new leads within 5 minutes during business hours. Send appointment reminders 24 hours before a scheduled visit. Create review request tasks only after a job is marked complete." />
               </Field>
             </div>
           ) : null}
@@ -1627,7 +1896,7 @@ export default function OnboardingPage() {
                 Guidance is free when you perform the work with SynaptiReach guidance. If SynaptiReach performs setup for you, it becomes a paid DFY service.
               </div>
               <Field label="Help notes">
-                <textarea className={inputClass()} rows={3} value={data.help.notes} onChange={(event) => updateSection("help", { notes: event.target.value })} />
+                <textarea className={inputClass()} rows={3} value={data.help.notes} onChange={(event) => updateSection("help", { notes: event.target.value })} placeholder="Example: I want help importing contacts, setting up Twilio, and building my first workflow. I prefer a 30-minute screen-share walkthrough before launch." />
               </Field>
             </div>
           ) : null}
@@ -1688,11 +1957,9 @@ export default function OnboardingPage() {
                 ))}
               </div>
               <div className="flex flex-wrap gap-3">
-                <Link href="/dashboard/settings" className="rounded-xl border border-cyan-300/20 px-4 py-2 text-sm font-bold text-cyan-50">Open Settings</Link>
-                <Link href="/dashboard/leads" className="rounded-xl border border-cyan-300/20 px-4 py-2 text-sm font-bold text-cyan-50">Open Leads</Link>
                 <button type="button" onClick={activate} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-green-300 px-5 py-2 font-black text-black">
                   <Rocket size={16} />
-                  Complete Onboarding
+                  {["pending_webhook", "checkout_created"].includes(snapshot?.billing?.status) ? "Submit onboarding for review" : "Complete Onboarding"}
                 </button>
               </div>
             </div>
@@ -1761,7 +2028,7 @@ export default function OnboardingPage() {
             <div className="space-y-3 text-sm text-slate-400">
               <p>Built-in help comes first. AI help is used only when it adds value and provider setup allows it.</p>
               <p>Guidance is free when you do the setup with SynaptiReach guidance. Done-for-you setup is paid.</p>
-              <button type="button" onClick={() => setActiveStep(steps.findIndex((item) => item.id === "help"))} className="w-full rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 font-bold text-cyan-50">
+              <button type="button" onClick={() => goToStep("help")} className="w-full rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 font-bold text-cyan-50">
                 View help options
               </button>
             </div>

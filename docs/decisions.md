@@ -27,6 +27,7 @@ Guardrails:
 - BYOK trial stores provider setup and optional self-imposed caps but does not expose SynaptiReach-managed AI/email/SMS credit.
 - Onboarding and checkout-request code must not write active, paid, subscribed, or trialing state. Stripe webhooks own those transitions and trial timestamps.
 - Card data is never collected by SynaptiReach pages; card setup is Stripe Checkout only.
+- Onboarding-originated Checkout returns to the onboarding Billing step and records only `pending_webhook`/submitted state until signed Stripe webhooks confirm subscription/trial state.
 - Email verification, Stripe card setup state, and required trial disclosures gate final onboarding completion.
 - A lower post-trial tier must never delete CRM data automatically; future usage beyond the selected plan cap is restricted until upgrade or eligible capacity is added.
 
@@ -42,6 +43,20 @@ Guardrails:
 - If SynaptiReach performs setup for the user, it is paid DFY work.
 - DFY/help requests store intent only and remain consultation/review-gated before checkout or fulfillment.
 - DFY/help requests from onboarding are stored in `crm_service_requests` with onboarding metadata and no paid order state.
+
+## Onboarding Menu Upload Boundary
+
+Decision: service/product menu uploads in onboarding store file metadata and pending review/extraction state, but do not claim AI extraction success unless parsing actually runs.
+
+Rationale: service menus can improve CRM/AI assistant/campaign drafting knowledge, but incorrect extracted prices or services would be high risk.
+
+Guardrails:
+
+- Accepted formats are PDF, PNG, JPG/JPEG, and WEBP.
+- Files require the `onboarding-files` Supabase Storage bucket.
+- Metadata is stored in `crm_service_menu_uploads` with `pending_analysis` / `needs_review` by default.
+- A review recommendation is created for admin/manual analysis when parsing is unavailable.
+- Structured service/product knowledge must remain tied to the source file and review state.
 
 ## User CRM Portal Usability Presentation Layer
 

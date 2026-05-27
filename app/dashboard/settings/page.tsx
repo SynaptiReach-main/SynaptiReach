@@ -1222,6 +1222,17 @@ export default function SettingsPage() {
                   <div className="mt-4 text-sm text-gray-400">No selected plan record found yet. Complete onboarding or billing setup to store the selected tier.</div>
                 )}
               </div>
+              {billing?.metadata?.checkout_origin === "onboarding" && ["pending_webhook", "checkout_created"].includes(billing?.status) ? (
+                <div className="mt-4 rounded-2xl border border-yellow-400/20 bg-yellow-500/10 p-4 text-sm text-yellow-50/85">
+                  <div className="font-black">Onboarding submitted for billing review</div>
+                  <p className="mt-1">
+                    Stripe checkout was submitted from onboarding. Trial activation remains pending until Stripe webhook confirmation updates the billing account.
+                  </p>
+                  <a href="/onboarding?step=billing" className="mt-3 inline-flex rounded-xl border border-yellow-300/30 px-3 py-2 text-xs font-black text-yellow-50">
+                    Continue onboarding
+                  </a>
+                </div>
+              ) : null}
               <div className="mt-4 flex flex-wrap gap-2">
                 {COMMITMENT_DISCOUNTS.map((item) => (
                   <span key={item.duration} className="rounded-full border border-white/10 bg-black/30 px-3 py-2 text-xs text-gray-300">
