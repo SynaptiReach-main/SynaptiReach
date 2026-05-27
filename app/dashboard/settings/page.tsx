@@ -1298,6 +1298,7 @@ export default function SettingsPage() {
                 creditPackPurchases={creditPackPurchases}
                 billingEvents={billingEvents}
                 serviceRequests={serviceRequests}
+                resendConfigured={Boolean(integrations.resend)}
                 setSelectedMetric={setSelectedMetric}
                 planDisplayName={planDisplayName}
                 billingModeLabel={billingModeLabel}

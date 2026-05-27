@@ -1,5 +1,34 @@
 # Final Full CRM Completion Checklist
 
+## Billing History UX Polish - 2026-05-26
+
+- [x] Read `docs/codex/CODEX_TASK_LEDGER.md`.
+- [x] Read `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`.
+- [x] Kept Billing & Purchase History on `/dashboard/settings`.
+- [x] Made Billing & Purchase History internal groups collapsible/expandable:
+  - Credit pack purchases
+  - Subscription checkout
+  - Stripe webhook events
+  - Service consultation requests
+- [x] Added compact summary tiles for:
+  - total records
+  - latest purchase/payment status
+  - latest webhook status
+  - latest receipt email diagnostic status
+  - latest service consultation count/status
+  - Resend setup state
+- [x] Credit pack purchases expand by default when a recent paid or checkout-created purchase exists.
+- [x] Other history groups are collapsed by default.
+- [x] Added Resend restriction helper: email attempted, but Resend may be limited to verified/test recipients until a sending domain is verified.
+- [x] Added production setup helper: receipt emails require `RESEND_API_KEY` and `RESEND_FROM_EMAIL` in production.
+- [x] Kept temporary no-domain state clear without requiring `synaptireach.com` or hardcoding `receipts@synaptireach.com`.
+- [x] Preserved Stripe webhook/payment fulfillment logic.
+- [x] Did not expose secrets, print secret values, commit `.env.local`, or switch Stripe to live mode.
+- [x] `npm.cmd run build` passed.
+- [ ] Production Vercel currently still needs `RESEND_API_KEY` and `RESEND_FROM_EMAIL` configured before app-level customer receipt delivery can work.
+- [ ] Resend sending-domain verification remains deferred until a real domain is purchased and verified.
+- [ ] Manual browser check remains for collapsed/expanded Billing & Purchase History groups on `/dashboard/settings`.
+
 ## Credit Pack Confirmation Diagnostics - 2026-05-26
 
 - [x] Read `docs/codex/CODEX_TASK_LEDGER.md`.

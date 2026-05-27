@@ -42,6 +42,20 @@ Codex must update this after every pass.
 
 Add new entries below after each Codex pass.
 
+### 2026-05-26 - Billing History UX Polish
+
+Date: 2026-05-26
+Model: Codex
+Prompt/Goal: Polish Billing & Purchase History UX only after local credit-pack checkout, webhook, paid purchase, and email diagnostics were verified.
+Completed: Read `docs/codex/CODEX_TASK_LEDGER.md` and `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`. Kept Billing & Purchase History on `/dashboard/settings` and made its internal groups collapsible for Credit pack purchases, Subscription checkout, Stripe webhook events, and Service consultation requests. Added compact summary tiles for total records, latest paid/purchase status, latest webhook status, latest receipt email diagnostic status, latest service consultation status/count, and Resend setup. Default behavior expands Credit pack purchases when a recent paid or checkout-created purchase exists and keeps other groups collapsed. Added customer-safe Resend diagnostic helpers for test-recipient/domain restrictions and missing production `RESEND_API_KEY` / `RESEND_FROM_EMAIL` setup, without exposing secret values or requiring a SynaptiReach-owned domain yet. Ran `npm.cmd run build`; build passed.
+Skipped: No webhook/payment fulfillment logic changes, no Stripe live-mode changes, no `.env.local` access/commit, and no secret printing.
+Partial: Production receipt email delivery remains deferred until Vercel has `RESEND_API_KEY` and `RESEND_FROM_EMAIL` configured and a real sending domain is purchased/verified.
+Blocked: Resend customer receipt delivery is provider/domain blocked, not an app bug, until production env and domain verification are complete.
+Files changed: `app/dashboard/settings/page.tsx`, `components/settings/BillingPurchaseHistory.tsx`, `docs/codex/CODEX_TASK_LEDGER.md`, `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`
+Build result: `npm.cmd run build` passed.
+Tests run: Required docs reads; `npm.cmd run build`.
+Next recommended task: Browser-check `/dashboard/settings` Billing & Purchase History collapsed/expanded groups and deploy when ready; then re-check production Vercel Resend env before expecting customer receipt delivery.
+
 ### 2026-05-26 - Credit Pack Confirmation Diagnostics Checkpoint
 
 Date: 2026-05-26
