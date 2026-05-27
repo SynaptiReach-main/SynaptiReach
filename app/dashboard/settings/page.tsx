@@ -25,6 +25,7 @@ import { SERVICE_CATALOG } from "@/lib/billing/services";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
 import SimpleMetricModal, { type SimpleMetricDetail } from "@/components/dashboard/SimpleMetricModal";
+import BillingPurchaseHistory from "@/components/settings/BillingPurchaseHistory";
 
 const defaultForm = {
   business_name: "",
@@ -190,6 +191,8 @@ export default function SettingsPage() {
   const [billing, setBilling] = useState<any>(null);
   const [usage, setUsage] = useState<Record<string, number>>({});
   const [creditPackPurchases, setCreditPackPurchases] = useState<any[]>([]);
+  const [billingEvents, setBillingEvents] = useState<any[]>([]);
+  const [serviceRequests, setServiceRequests] = useState<any[]>([]);
   const [staffMembers, setStaffMembers] = useState<any[]>([]);
   const [staffPermissions, setStaffPermissions] = useState<string[]>([]);
   const [staffForm, setStaffForm] = useState<any>(defaultStaffForm);
@@ -248,6 +251,8 @@ export default function SettingsPage() {
       setBilling(data.billing || null);
       setUsage(data.usage || {});
       setCreditPackPurchases(data.creditPackPurchases || []);
+      setBillingEvents(data.billingEvents || []);
+      setServiceRequests(data.serviceRequests || []);
       if (staffData?.success) {
         setStaffMembers(staffData.staff || staffData.data || []);
         setStaffPermissions(staffData.permissions || []);
@@ -1287,12 +1292,16 @@ export default function SettingsPage() {
                     </button>
                   </div>
                 </div>
-                {creditPackPurchases.length > 0 && (
-                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-gray-400">
-                    {creditPackPurchases.length} credit pack intent{creditPackPurchases.length === 1 ? "" : "s"} recorded for review.
-                  </div>
-                )}
               </div>
+              <BillingPurchaseHistory
+                billing={billing}
+                creditPackPurchases={creditPackPurchases}
+                billingEvents={billingEvents}
+                serviceRequests={serviceRequests}
+                setSelectedMetric={setSelectedMetric}
+                planDisplayName={planDisplayName}
+                billingModeLabel={billingModeLabel}
+              />
             </SettingsSection>
             </div>
 

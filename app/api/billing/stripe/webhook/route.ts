@@ -33,6 +33,15 @@ function objectMetadata(object: any) {
   return object?.metadata || object?.subscription_details?.metadata || {};
 }
 
+function maskEmail(email: string | null | undefined) {
+  if (!email || !email.includes("@")) return null;
+  const [name, domain] = email.split("@");
+  const visibleName = name.length <= 2 ? `${name[0] || ""}*` : `${name.slice(0, 2)}***${name.slice(-1)}`;
+  const [domainName, ...domainRest] = domain.split(".");
+  const visibleDomain = domainName.length <= 2 ? `${domainName[0] || ""}*` : `${domainName.slice(0, 2)}***`;
+  return `${visibleName}@${visibleDomain}${domainRest.length ? `.${domainRest.join(".")}` : ""}`;
+}
+
 async function safeInsert(supabase: any, table: string, values: Record<string, any>) {
   await supabase.from(table).insert(values).then(() => undefined).catch(() => undefined);
 }
@@ -126,9 +135,9 @@ async function notifyBillingEvent(supabase: any, purchase: any, title: string, m
   });
 }
 
-async function sendCreditPackConfirmationEmail(supabase: any, purchase: any) {
+async function resolveCreditPackEmailRecipient(supabase: any, purchase: any, stripeObject: any) {
   const metadata = purchase?.metadata || {};
-  if (metadata.credit_pack_confirmation_email_sent) return { skipped: true, reason: "already_sent" };
+  const stripeEmail = stripeObject?.customer_details?.email || stripeObject?.customer_email || null;
 
   const { data: settings } = purchase?.workspace_id
     ? await supabase
@@ -139,38 +148,118 @@ async function sendCreditPackConfirmationEmail(supabase: any, purchase: any) {
         .limit(1)
         .maybeSingle()
     : { data: null };
-  const recipient = settings?.contact_email || metadata.customer_email || null;
-  if (!recipient) return { skipped: true, reason: "missing_recipient" };
+
+  if (settings?.contact_email) {
+    return { email: settings.contact_email, source: "crm_settings.contact_email", settings };
+  }
+
+  if (metadata.customer_email) {
+    return { email: metadata.customer_email, source: "purchase.metadata.customer_email", settings };
+  }
+
+  if (stripeEmail) {
+    return { email: stripeEmail, source: "stripe.checkout.customer_details.email", settings };
+  }
+
+  if (purchase?.user_id) {
+    try {
+      const { data } = await supabase.auth.admin.getUserById(purchase.user_id);
+      if (data?.user?.email) return { email: data.user.email, source: "auth.users.email", settings };
+    } catch {
+      return { email: null, source: "auth.users.email_unavailable", settings };
+    }
+  }
+
+  return { email: null, source: "none", settings };
+}
+
+async function updatePurchaseEmailDiagnostics(supabase: any, purchase: any, diagnostics: Record<string, any>) {
+  const metadata = {
+    ...(purchase?.metadata || {}),
+    ...diagnostics,
+    credit_pack_confirmation_email_last_checked_at: new Date().toISOString(),
+  };
+  await supabase
+    .from("crm_credit_pack_purchases")
+    .update({ metadata })
+    .eq("id", purchase.id)
+    .then(() => undefined)
+    .catch(() => undefined);
+  return metadata;
+}
+
+async function sendCreditPackConfirmationEmail(supabase: any, purchase: any, stripeObject: any) {
+  const metadata = purchase?.metadata || {};
+  if (metadata.credit_pack_confirmation_email_sent) return { skipped: true, reason: "already_sent", sent: true };
+
+  const recipient = await resolveCreditPackEmailRecipient(supabase, purchase, stripeObject);
+  const recipientMasked = maskEmail(recipient.email);
+  const attemptedAt = new Date().toISOString();
+  if (!recipient.email) {
+    await updatePurchaseEmailDiagnostics(supabase, purchase, {
+      credit_pack_confirmation_email_attempted: false,
+      credit_pack_confirmation_email_sent: false,
+      credit_pack_confirmation_email_failed: false,
+      credit_pack_confirmation_email_recipient: null,
+      credit_pack_confirmation_email_recipient_source: recipient.source,
+      credit_pack_confirmation_email_skipped_reason: "missing_recipient",
+      credit_pack_confirmation_email_attempted_at: attemptedAt,
+    });
+    await notifyBillingEvent(
+      supabase,
+      purchase,
+      "Credit pack confirmation email skipped",
+      "Stripe confirmed the credit pack, but no account or contact email was available for the confirmation email.",
+      "normal"
+    );
+    return { skipped: true, reason: "missing_recipient", recipient: null, recipientSource: recipient.source, sent: false };
+  }
 
   const email = await sendSynaptiReachEmail({
-    to: recipient,
+    to: recipient.email,
     subject: `SynaptiReach credit pack confirmed: ${purchase.pack_type}`,
     text: [
       `Credit pack: ${purchase.pack_type}`,
       `Amount: ${purchase.price_cents ? `$${(Number(purchase.price_cents) / 100).toLocaleString()}` : "Not recorded"}`,
       `Quantity: ${purchase.quantity || 1}`,
       `Status: ${purchase.status}`,
-      `Business: ${settings?.business_name || "Not provided"}`,
+      `Business: ${recipient.settings?.business_name || "Not provided"}`,
       `Confirmed: ${new Date().toISOString()}`,
       "",
       "Stripe confirmed this payment. SynaptiReach will reflect credits through your billing and usage records. This email does not include card or payment method details.",
     ].join("\n"),
   });
 
-  await supabase
-    .from("crm_credit_pack_purchases")
-    .update({
-      metadata: {
-        ...metadata,
-        credit_pack_confirmation_email_sent: email.success,
-        credit_pack_confirmation_email_attempted_at: new Date().toISOString(),
-        credit_pack_confirmation_email_setup_required: email.setupRequired,
-        credit_pack_confirmation_email_error: email.error || null,
-      },
-    })
-    .eq("id", purchase.id);
+  await updatePurchaseEmailDiagnostics(supabase, purchase, {
+    credit_pack_confirmation_email_attempted: true,
+    credit_pack_confirmation_email_sent: email.success,
+    credit_pack_confirmation_email_failed: !email.success,
+    credit_pack_confirmation_email_attempted_at: attemptedAt,
+    credit_pack_confirmation_email_recipient: recipientMasked,
+    credit_pack_confirmation_email_recipient_source: recipient.source,
+    credit_pack_confirmation_email_setup_required: email.setupRequired,
+    credit_pack_confirmation_email_error: email.error || null,
+    credit_pack_confirmation_email_resend_id: email.id || null,
+    credit_pack_confirmation_email_skipped_reason: null,
+  });
 
-  return email;
+  if (!email.success) {
+    await notifyBillingEvent(
+      supabase,
+      purchase,
+      "Credit pack confirmation email failed",
+      email.setupRequired ? "Resend is not configured for confirmation email delivery." : "Resend could not deliver the credit pack confirmation email.",
+      "normal"
+    );
+  }
+
+  return {
+    ...email,
+    attempted: true,
+    sent: email.success,
+    recipient: recipientMasked,
+    recipientSource: recipient.source,
+  };
 }
 
 async function updateBillingAccountFromCustomerObject(supabase: any, object: any, event: any) {
@@ -279,7 +368,49 @@ export async function POST(request: Request) {
       .single();
 
     if (eventError) {
-      if (duplicateEvent(eventError)) return NextResponse.json({ success: true, duplicate: true });
+      if (duplicateEvent(eventError)) {
+        let duplicatePurchase: any = null;
+        let duplicateConfirmationEmail: any = null;
+        if (["checkout.session.completed", "payment_intent.succeeded"].includes(event.type)) {
+          duplicatePurchase = await findPurchase(supabase, object);
+          if (duplicatePurchase?.status === "paid" && !duplicatePurchase?.metadata?.credit_pack_confirmation_email_sent) {
+            duplicateConfirmationEmail = await sendCreditPackConfirmationEmail(supabase, duplicatePurchase, object);
+            await supabase
+              .from("crm_billing_events")
+              .update({
+                metadata: {
+                  duplicate_replay_checked_at: new Date().toISOString(),
+                  duplicate_replay_email_repair: true,
+                  purchase_id: duplicatePurchase.id,
+                  purchase_matched: true,
+                  purchase_updated: false,
+                  webhook_signature_verified: true,
+                  confirmation_email: duplicateConfirmationEmail
+                    ? {
+                        attempted: Boolean(duplicateConfirmationEmail.attempted),
+                        sent: Boolean(duplicateConfirmationEmail.sent || duplicateConfirmationEmail.success),
+                        skipped: Boolean(duplicateConfirmationEmail.skipped),
+                        reason: duplicateConfirmationEmail.reason || duplicateConfirmationEmail.error || null,
+                        setup_required: Boolean(duplicateConfirmationEmail.setupRequired),
+                        recipient: duplicateConfirmationEmail.recipient || null,
+                        recipient_source: duplicateConfirmationEmail.recipientSource || null,
+                        resend_message_id: duplicateConfirmationEmail.id || null,
+                      }
+                    : null,
+                },
+              })
+              .eq("stripe_event_id", event.id)
+              .then(() => undefined)
+              .catch(() => undefined);
+          }
+        }
+        return NextResponse.json({
+          success: true,
+          duplicate: true,
+          emailRepairAttempted: Boolean(duplicateConfirmationEmail?.attempted),
+          emailRepairSent: Boolean(duplicateConfirmationEmail?.sent || duplicateConfirmationEmail?.success),
+        });
+      }
       throw eventError;
     }
 
@@ -289,6 +420,7 @@ export async function POST(request: Request) {
 
     let purchase: any = null;
     let processedStatus = "processed";
+    let confirmationEmail: any = null;
 
     if (event.type === "checkout.session.completed") {
       const subscriptionAccount = await updateSubscriptionCheckout(supabase, object, event);
@@ -296,7 +428,7 @@ export async function POST(request: Request) {
       if (purchase) {
         const updated = await updatePurchaseFromStripe(supabase, purchase, "paid", object, event);
         await notifyBillingEvent(supabase, updated, "Credit pack payment completed", `${updated.pack_type} is paid and ready for credit fulfillment.`, "high");
-        await sendCreditPackConfirmationEmail(supabase, updated);
+        confirmationEmail = await sendCreditPackConfirmationEmail(supabase, updated, object);
         purchase = updated;
       } else if (subscriptionAccount) {
         await safeInsert(supabase, "crm_notifications", {
@@ -336,6 +468,9 @@ export async function POST(request: Request) {
           `${updated.pack_type} payment status: ${statusByType[event.type] || "payment_review"}.`,
           event.type === "payment_intent.succeeded" ? "high" : "normal"
         );
+        if (event.type === "payment_intent.succeeded") {
+          confirmationEmail = await sendCreditPackConfirmationEmail(supabase, updated, object);
+        }
         purchase = updated;
       }
     } else if (event.type.startsWith("customer.") || event.type.startsWith("customer.subscription.") || event.type.startsWith("invoice.")) {
@@ -374,6 +509,21 @@ export async function POST(request: Request) {
           ...(eventRow.metadata || {}),
           processed_at: new Date().toISOString(),
           purchase_id: purchase?.id || metadata.purchase_id || null,
+          purchase_matched: Boolean(purchase),
+          purchase_updated: Boolean(purchase),
+          webhook_signature_verified: true,
+          confirmation_email: confirmationEmail
+            ? {
+                attempted: Boolean(confirmationEmail.attempted),
+                sent: Boolean(confirmationEmail.sent || confirmationEmail.success),
+                skipped: Boolean(confirmationEmail.skipped),
+                reason: confirmationEmail.reason || confirmationEmail.error || null,
+                setup_required: Boolean(confirmationEmail.setupRequired),
+                recipient: confirmationEmail.recipient || null,
+                recipient_source: confirmationEmail.recipientSource || null,
+                resend_message_id: confirmationEmail.id || null,
+              }
+            : null,
         },
       })
       .eq("id", eventRow.id);

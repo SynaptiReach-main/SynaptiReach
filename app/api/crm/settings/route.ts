@@ -145,7 +145,7 @@ export async function GET(request: Request) {
 
     if (error) throw error;
 
-    const [connections, billing, usage, creditPacks] = await Promise.all([
+    const [connections, billing, usage, creditPacks, billingEvents, serviceRequests] = await Promise.all([
       applyWorkspaceScope(supabase
         .from("crm_provider_connections")
         .select("id,provider,provider_type,status,key_label,last_verified_at,metadata,created_at,updated_at")
@@ -170,6 +170,18 @@ export async function GET(request: Request) {
         , context)
         .order("created_at", { ascending: false })
         .limit(50),
+      applyWorkspaceScope(supabase
+        .from("crm_billing_events")
+        .select("id,stripe_event_id,event_type,status,resource_type,resource_id,metadata,created_at")
+        , context)
+        .order("created_at", { ascending: false })
+        .limit(50),
+      applyWorkspaceScope(supabase
+        .from("crm_service_requests")
+        .select("id,service_type,item_name,price_cents,recurring,status,requested_at,consultation_required,checkout_session_id,metadata")
+        , context)
+        .order("requested_at", { ascending: false })
+        .limit(50),
     ]);
 
     const usageTotals = (usage.data || []).reduce((totals: Record<string, number>, event: any) => {
@@ -186,6 +198,8 @@ export async function GET(request: Request) {
       billing: billing.data || null,
       usage: usageTotals,
       creditPackPurchases: creditPacks.data || [],
+      billingEvents: billingEvents.data || [],
+      serviceRequests: serviceRequests.data || [],
       integrations: {
         supabase: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY),
         openai: {

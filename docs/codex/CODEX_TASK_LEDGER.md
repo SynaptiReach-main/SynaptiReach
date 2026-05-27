@@ -42,6 +42,20 @@ Codex must update this after every pass.
 
 Add new entries below after each Codex pass.
 
+### 2026-05-26 - Credit Pack Confirmation Diagnostics Checkpoint
+
+Date: 2026-05-26
+Model: Codex
+Prompt/Goal: Fix payment history visibility and credit-pack confirmation email diagnostics after a verified local Stripe webhook paid a credit-pack purchase.
+Completed: Read `docs/codex/CODEX_TASK_LEDGER.md`, `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`, and applicable Stripe/Supabase skill guidance. Inspected the Stripe webhook, Resend helper, Settings API, and Settings UI. Hardened credit-pack confirmation email processing so it resolves recipient from CRM settings, purchase metadata, Stripe checkout customer email, or Supabase Auth email. Added replay-safe purchase metadata diagnostics for confirmation email attempted/sent/failed/skipped, masked recipient, recipient source, setup-required status, safe failure reason, and Resend message id. Added internal billing notifications when the confirmation email is skipped or fails. Updated Stripe billing event metadata with signature-verified, purchase matched/updated, and confirmation email diagnostics. Added duplicate-event repair handling so a signed replay of an already-processed paid checkout can attempt a missed confirmation email once if purchase metadata does not already show it was sent. Added Settings API history data for billing events and service requests. Replaced vague credit-pack intent text with a Billing & Purchase History area showing credit-pack purchases, subscription billing state, Stripe webhook events, and service consultation requests with status, date, amount, safe Stripe reference, webhook confirmation state, and email confirmation state.
+Skipped: No Stripe live-mode changes, no `.env.local` access/commit, no secret printing, and no fake paid/subscribed state.
+Partial: Production webhook verification still needs another signed test after deploy against the correct endpoint `https://synapti-reach.vercel.app/api/billing/stripe/webhook`, with Vercel `STRIPE_WEBHOOK_SECRET` matching that Stripe Dashboard endpoint signing secret. Confirmation email delivery is code-hardened but must be retested with a real signed webhook and Resend provider delivery.
+Blocked: None for code-level diagnostics/history work.
+Files changed: `app/api/billing/stripe/webhook/route.ts`, `app/api/crm/settings/route.ts`, `app/dashboard/settings/page.tsx`, `components/settings/BillingPurchaseHistory.tsx`, `docs/codex/CODEX_TASK_LEDGER.md`, `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`
+Build result: `npm.cmd run build` passed after splitting Billing & Purchase History into a dedicated component.
+Tests run: Required docs reads; static code inspection; `npm.cmd run build`.
+Next recommended task: Run `npm.cmd run build`, then complete a signed local/prod Stripe webhook test and confirm the new purchase metadata/email diagnostics.
+
 ### 2026-05-26 - Settings Manual Review Fixes
 
 Date: 2026-05-26

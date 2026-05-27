@@ -1,5 +1,41 @@
 # Final Full CRM Completion Checklist
 
+## Credit Pack Confirmation Diagnostics - 2026-05-26
+
+- [x] Read `docs/codex/CODEX_TASK_LEDGER.md`.
+- [x] Read `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`.
+- [x] Inspected credit-pack Stripe webhook processing.
+- [x] Inspected app-level Resend confirmation email helper.
+- [x] Confirmed the latest manual local webhook test matched purchase `a6fd17a3-7503-401d-953f-3c4007964dcc` and updated it to `paid` per the user's Supabase check.
+- [x] Added safe credit-pack confirmation email diagnostics to purchase metadata:
+  - attempted
+  - sent
+  - failed
+  - skipped reason
+  - masked recipient used
+  - recipient source
+  - safe failure reason
+  - Resend message id when available
+- [x] Added internal billing notifications when confirmation email is skipped or fails.
+- [x] Added Stripe billing event diagnostics:
+  - event reached app
+  - signature verified
+  - purchase matched
+  - purchase updated
+  - confirmation email state
+- [x] Added duplicate-event repair behavior so a signed replay of an already-processed paid checkout can attempt a missed confirmation email once when purchase metadata does not already show it was sent.
+- [x] Preserved webhook-only paid state. The app still does not mark credit packs paid before verified Stripe webhook confirmation.
+- [x] Added Billing & Purchase History to `/dashboard/settings`.
+- [x] Billing & Purchase History shows credit-pack purchases, subscription billing state, Stripe webhook events, and service consultation requests.
+- [x] Replaced vague credit-pack intent text with useful status/history details.
+- [x] Safe Stripe references are shortened; secrets and payment method details are not shown.
+- [x] Confirmed the correct production Stripe webhook endpoint is `https://synapti-reach.vercel.app/api/billing/stripe/webhook`.
+- [x] Documented that Vercel `STRIPE_WEBHOOK_SECRET` must match the Stripe Dashboard signing secret for the corrected production endpoint.
+- [x] `npm.cmd run build` passed after diagnostics/history changes.
+- [ ] Re-test signed local Stripe webhook after this patch to verify confirmation email attempted/sent diagnostics.
+- [ ] Re-test production webhook after deploy using Stripe test mode against `https://synapti-reach.vercel.app/api/billing/stripe/webhook`.
+- [ ] Rotate the previously pasted Resend API key after testing.
+
 ## Settings Manual Review Fixes - 2026-05-26
 
 - [x] Read `docs/codex/SYNAPTIREACH_SETTINGS_BILLING_UX_GOAL.md`.
@@ -279,7 +315,7 @@
 - [x] Stripe webhook fulfillment remains server-side only and stores Stripe session/payment metadata without exposing keys.
 - [x] Stripe Sandbox/Test mode deployment reminder: configure a Snapshot payload webhook for `/api/billing/stripe/webhook` only. Do not mix thin-payload webhook secrets with snapshot webhook secrets.
 - [x] Selected Stripe snapshot events: `checkout.session.completed`, `checkout.session.expired`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`, `payment_intent.requires_action`, `customer.created`, `customer.updated`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `customer.subscription.trial_will_end`, `invoice.paid`, `invoice.payment_succeeded`, `invoice.payment_failed`, `invoice.payment_action_required`, `invoice.upcoming`, `charge.refunded`, `charge.dispute.created`.
-- [x] Vercel deployment reminder: add `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_SECRET_KEY`, and `STRIPE_WEBHOOK_SECRET`, then redeploy. The production webhook URL should be `https://YOUR-VERCEL-DOMAIN.vercel.app/api/billing/stripe/webhook`.
+- [x] Vercel deployment reminder: add `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_SECRET_KEY`, and `STRIPE_WEBHOOK_SECRET`, then redeploy. The production webhook URL should be `https://synapti-reach.vercel.app/api/billing/stripe/webhook` for the current production alias, and the stored `STRIPE_WEBHOOK_SECRET` must match that exact Stripe Dashboard endpoint.
 - [x] Security reminder: never commit `.env.local`, rotate any leaked Stripe secret key, keep Sandbox/Test mode until checkout and webhook tests pass, and run `supabase/user_crm_full_completion_schema.sql` before billing tests.
 
 ### Stripe Local Test Flow
