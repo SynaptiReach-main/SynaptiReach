@@ -1,31 +1,37 @@
 import { createClient } from "@supabase/supabase-js";
 
-const url =
-"https://qjqyxdayqzismlaxofes.supabase.co";
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const email = process.env.CRM_TEST_USER_EMAIL;
+const password = process.env.CRM_TEST_USER_PASSWORD;
 
-const serviceKey =
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqcXl4ZGF5cXppc21sYXhvZmVzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjE0NDA4MCwiZXhwIjoyMDkxNzIwMDgwfQ.XdufpIcawDFm8GoHYtJ4YyeDCdqolPud5ZF00YZCGnA";
+const missing = [
+  ["NEXT_PUBLIC_SUPABASE_URL", url],
+  ["SUPABASE_SERVICE_ROLE_KEY", serviceKey],
+  ["CRM_TEST_USER_EMAIL", email],
+  ["CRM_TEST_USER_PASSWORD", password],
+]
+  .filter(([, value]) => !value)
+  .map(([name]) => name);
 
-const supabase =
-createClient(url, serviceKey);
+if (missing.length) {
+  console.error(`Missing required env vars: ${missing.join(", ")}`);
+  process.exit(1);
+}
 
-const email =
-"demo@synaptireach.com";
+const supabase = createClient(url, serviceKey, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
 
-const password =
-"SynaptiReach123!";
-
-const { error } =
-await supabase.auth.admin.createUser({
-email,
-password,
-email_confirm: true,
+const { data, error } = await supabase.auth.admin.createUser({
+  email,
+  password,
+  email_confirm: true,
 });
 
 if (error) {
-console.error(error);
-} else {
-console.log("USER CREATED:");
-console.log("Email:", email);
-console.log("Password:", password);
+  console.error(error.message);
+  process.exit(1);
 }
+
+console.log(`Created test user ${data.user?.id || "(id unavailable)"} for ${email}.`);

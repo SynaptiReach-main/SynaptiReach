@@ -1,5 +1,29 @@
 # Final Full CRM Completion Checklist
 
+## Final User CRM Readiness Audit - 2026-05-27
+
+- [x] Read `docs/codex/CODEX_TASK_LEDGER.md`.
+- [x] Read `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`.
+- [x] Read `docs/knowledge-map.md`, `docs/architecture.md`, and `docs/decisions.md`.
+- [x] Continued from the current working tree without restarting completed work.
+- [x] Verified `.env.local` is not tracked by git.
+- [x] Ran a redacted committed-secret scan.
+- [x] Removed a hardcoded Supabase service-role key and demo password from `create-test-user.mjs`; the utility now requires env vars and no longer prints passwords.
+- [x] Tightened Settings API Resend readiness so customer receipt email readiness requires both `RESEND_API_KEY` and `RESEND_FROM_EMAIL`.
+- [x] Verified `npm.cmd run build` passes and generates 150/150 static pages.
+- [x] Verified `/dashboard/settings` returns HTTP 200 in local production smoke.
+- [x] Verified `/api/crm/settings` returns HTTP 200 and exposes credit-pack purchase, billing-event, and service-request history arrays used by Billing & Purchase History.
+- [x] Verified the production webhook route exists in the build at `/api/billing/stripe/webhook`.
+- [x] Verified unsigned local `POST /api/billing/stripe/webhook` is rejected with HTTP 400.
+- [x] Verified checkout-created credit-pack records are created as pending/checkout states and are only marked `paid` in signed Stripe webhook processing paths.
+- [x] Verified Billing & Purchase History copy explains pending webhook confirmation and does not claim credits are applied before webhook confirmation.
+- [x] Verified Resend temporary sender/domain limitation is documented in the UI/checklist: `SynaptiReach <onboarding@resend.dev>` is test-only until a real sending domain is verified.
+- [x] Preserved no live-mode Stripe changes, no auto-send behavior, and no fake paid/subscribed state.
+- [ ] Rotate the Supabase service-role key and demo credentials that were previously present in tracked `create-test-user.mjs`.
+- [ ] Run a full production Stripe test-mode checkout and confirm the production webhook updates the record through `https://synapti-reach.vercel.app/api/billing/stripe/webhook`.
+- [ ] Purchase and verify a real Resend sending domain before treating customer receipt email delivery as launch-ready.
+- [ ] Browser automation was not available in this session because the Browser plugin's required Node REPL control tool was not exposed; local HTTP smoke and source-level checks were used instead.
+
 ## Billing History UX Polish - 2026-05-26
 
 - [x] Read `docs/codex/CODEX_TASK_LEDGER.md`.
@@ -25,9 +49,9 @@
 - [x] Preserved Stripe webhook/payment fulfillment logic.
 - [x] Did not expose secrets, print secret values, commit `.env.local`, or switch Stripe to live mode.
 - [x] `npm.cmd run build` passed.
-- [ ] Production Vercel currently still needs `RESEND_API_KEY` and `RESEND_FROM_EMAIL` configured before app-level customer receipt delivery can work.
+- [x] Production Vercel now has `RESEND_API_KEY` and `RESEND_FROM_EMAIL` configured per the latest user-provided env verification.
 - [ ] Resend sending-domain verification remains deferred until a real domain is purchased and verified.
-- [ ] Manual browser check remains for collapsed/expanded Billing & Purchase History groups on `/dashboard/settings`.
+- [x] Billing & Purchase History collapsed/expanded behavior has been browser-verified per the latest user-provided status.
 
 ## Credit Pack Confirmation Diagnostics - 2026-05-26
 

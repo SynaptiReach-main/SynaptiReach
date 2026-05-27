@@ -221,7 +221,7 @@ export async function GET(request: Request) {
           status: process.env.OPENROUTER_API_KEY ? "configured" : "missing",
           model: aiProviders.openrouter_model,
         },
-        resend: Boolean(process.env.RESEND_API_KEY),
+        resend: Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL),
         twilio: Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN),
         ayrshare: Boolean(process.env.AYRSHARE_API_KEY),
         vercelCron: Boolean(process.env.CRON_SECRET || process.env.VERCEL),
