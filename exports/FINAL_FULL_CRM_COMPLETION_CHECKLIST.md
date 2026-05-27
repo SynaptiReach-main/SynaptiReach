@@ -1,5 +1,50 @@
 # Final Full CRM Completion Checklist
 
+## User CRM Portal Usability Pass - 2026-05-27
+
+- [x] Read `docs/codex/USER_CRM_PORTAL_USABILITY_GOAL.md`.
+- [x] Read `docs/codex/CODEX_TASK_LEDGER.md`.
+- [x] Read `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`.
+- [x] Read `docs/knowledge-map.md`, `docs/architecture.md`, and `docs/decisions.md`.
+- [x] Continued from the current working tree without restarting completed work.
+- [x] Did not redo onboarding.
+- [x] Did not redo billing, webhook, payment history, local AI, CRM Intelligence data flow, simulation bootstrap, public pages, or Settings billing work.
+- [x] Audited dashboard pages before editing:
+  - `/dashboard`
+  - `/dashboard/leads`
+  - `/dashboard/pipeline`
+  - `/dashboard/tasks`
+  - `/dashboard/calendar`
+  - `/dashboard/communications`
+  - `/dashboard/marketing`
+  - `/dashboard/workflow`
+  - `/dashboard/analytics`
+  - `/dashboard/ai_assistant`
+  - `/dashboard/settings`
+- [x] Audited shared dashboard layout/sidebar/header.
+- [x] Audited shared Business Intelligence panel and Settings billing history component.
+- [x] Added shared owner-focus panel component at `components/dashboard/OwnerFocusPanel.tsx`.
+- [x] Added owner-focus summaries to all scoped dashboard pages using existing real page counts/status where available.
+- [x] Kept owner-focus panels presentation-only; no database writes or state ownership changes were added.
+- [x] Grouped sidebar navigation into Start, Customers, Growth, Work, and Review.
+- [x] Preserved existing dashboard routes and hrefs.
+- [x] Renamed the sidebar workflow label to `Automations` while preserving `/dashboard/workflow`.
+- [x] Replaced static topbar `AI Online` / `Synced` labels with safer non-fake `Review gated` / `Real records` labels.
+- [x] Clarified shared intelligence cards with visible `Why it matters` and `Suggested next step` blocks.
+- [x] Changed AI Assistant built-in intelligence source label from underscored internal wording to customer-facing text.
+- [x] Preserved review-gated email, SMS, social, workflow, and billing safety behavior.
+- [x] Did not introduce fake data, fake users, fake billing states, fake analytics, fake prospects, fake service orders, fake revenue, or simulated CRM records for normal users.
+- [x] Did not expose secrets, commit `.env.local`, switch Stripe to live mode, auto-send email/SMS/social, or auto-charge outside Stripe Checkout.
+- [x] Updated `docs/knowledge-map.md`, `docs/architecture.md`, and `docs/decisions.md`.
+- [x] Created/updated Obsidian note `User CRM Portal Usability.md`.
+- [x] Checked/updated Obsidian `SynaptiReach MOC.md` with `[[User CRM Portal Usability]]`.
+- [x] `npm.cmd run build` passed and generated 150/150 static pages.
+- [x] Local production smoke returned HTTP 200 for all scoped dashboard routes.
+- [ ] Authenticated desktop browser visual review remains required.
+- [ ] Authenticated mobile browser visual review remains required.
+- [ ] Manual click-through remains required for owner-focus panel links, grouped sidebar navigation, intelligence modal details, and each page's primary create/review actions.
+- [ ] In-app Browser automation was unavailable because tool discovery exposed no Browser tools in this session.
+
 ## First-run Onboarding Prompt Pack Pass - 2026-05-27
 
 - [x] Read `docs/codex/CODEX_TASK_LEDGER.md`.

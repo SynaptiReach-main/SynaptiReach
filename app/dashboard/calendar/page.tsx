@@ -5,6 +5,7 @@ import { Bell, CalendarDays, CheckCircle2, Edit2, Loader2, MessageSquare, Plus, 
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
 import SimpleMetricModal, { type SimpleMetricDetail } from "@/components/dashboard/SimpleMetricModal";
+import OwnerFocusPanel from "@/components/dashboard/OwnerFocusPanel";
 
 const emptyAppointment = { id: "", title: "", starts_at: "", ends_at: "", location: "", notes: "", status: "scheduled", lead_id: "", deal_id: "" };
 
@@ -238,6 +239,32 @@ export default function CalendarPage() {
 
       {error && <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>}
       {success && <div className="mb-6 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4 text-sm text-cyan-100">{success}</div>}
+
+      <OwnerFocusPanel
+        items={[
+          {
+            label: "Upcoming",
+            value: upcomingAppointments.length,
+            detail: "Use upcoming appointments to prepare notes and create internal reminders before the meeting.",
+            action: "Review schedule",
+            tone: upcomingAppointments.length > 0 ? "cyan" : "neutral",
+          },
+          {
+            label: "Booking intent",
+            value: appointmentIntentSuggestions.length,
+            detail: "Recent communications that mention scheduling are suggestions only until you review and save them.",
+            action: "Review appointment drafts",
+            tone: appointmentIntentSuggestions.length > 0 ? "yellow" : "green",
+          },
+          {
+            label: "Calendar setup",
+            detail: "Internal appointments work now. External calendar sync remains setup-required until connected in Settings.",
+            href: "/dashboard/settings#providers",
+            action: "Check integrations",
+            tone: "neutral",
+          },
+        ]}
+      />
 
       <MiniBrainInsightPanel
         title="Appointment Intelligence"

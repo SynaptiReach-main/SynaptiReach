@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 import LeadCsvImportModal from "@/components/leads/LeadCsvImportModal";
+import OwnerFocusPanel from "@/components/dashboard/OwnerFocusPanel";
 
 function formatDate(value?: string) {
   if (!value) return "";
@@ -297,6 +298,34 @@ export default function DashboardPage() {
           {data.schemaWarnings[0]}
         </div>
       )}
+
+      <OwnerFocusPanel
+        items={[
+          {
+            label: "Follow-up pressure",
+            value: overdueTasks.length + staleDeals.length + followups.length,
+            detail: "Start with overdue tasks, stale deals, and leads that have gone quiet.",
+            href: "/dashboard/tasks",
+            action: "Open follow-up work",
+            tone: overdueTasks.length + staleDeals.length + followups.length > 0 ? "yellow" : "cyan",
+          },
+          {
+            label: "Customer flow",
+            value: metrics.leads.total || 0,
+            detail: "Leads, deals, campaigns, and communications are grouped below so owners can scan before drilling in.",
+            href: "/dashboard/leads",
+            action: "Review customer records",
+            tone: "cyan",
+          },
+          {
+            label: "Safety mode",
+            detail: "Recommended actions stay review-gated. External email, SMS, social posts, and payments still require explicit confirmation.",
+            href: "/dashboard/settings",
+            action: "Review settings",
+            tone: "green",
+          },
+        ]}
+      />
 
       <MiniBrainInsightPanel
         title="Executive Business Intelligence"

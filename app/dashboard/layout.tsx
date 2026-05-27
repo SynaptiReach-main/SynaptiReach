@@ -36,58 +36,71 @@ const navItems = [
     label: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+    group: "Start",
   },
   {
     label: "Leads",
     href: "/dashboard/leads",
     icon: Users,
+    group: "Customers",
   },
   {
     label: "Pipeline",
     href: "/dashboard/pipeline",
     icon: KanbanSquare,
+    group: "Customers",
   },
   {
     label: "Marketing",
     href: "/dashboard/marketing",
     icon: Megaphone,
+    group: "Growth",
   },
   {
     label: "AI Assistant",
     href: "/dashboard/ai_assistant",
     icon: Bot,
+    group: "Growth",
   },
   {
-    label: "Workflow/Automation",
+    label: "Automations",
     href: "/dashboard/workflow",
     icon: Workflow,
+    group: "Growth",
   },
   {
     label: "Communications",
     href: "/dashboard/communications",
     icon: MessageSquare,
+    group: "Work",
   },
   {
     label: "Tasks",
     href: "/dashboard/tasks",
     icon: ListTodo,
+    group: "Work",
   },
   {
     label: "Calendar",
     href: "/dashboard/calendar",
     icon: CalendarDays,
+    group: "Work",
   },
   {
     label: "Analytics",
     href: "/dashboard/analytics",
     icon: BarChart3,
+    group: "Review",
   },
   {
     label: "Settings",
     href: "/dashboard/settings",
     icon: Settings,
+    group: "Review",
   },
 ];
+
+const navGroups = ["Start", "Customers", "Growth", "Work", "Review"];
 
 type Workspace = {
   name: string;
@@ -377,35 +390,49 @@ export default function DashboardLayout({
         </div>
 
         {/* NAVIGATION */}
-        <nav className="space-y-2 flex-1">
+        <nav className="flex-1 space-y-4 overflow-y-auto pr-1">
 
-          {navItems.map((item) => {
-            const Icon = item.icon;
-
-            const active =
-              pathname === item.href;
+          {navGroups.map((group) => {
+            const groupedItems = navItems.filter((item) => item.group === group);
+            if (!groupedItems.length) return null;
 
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 border ${
-                  active
-                    ? "bg-cyan-500/10 border-cyan-400/40 text-cyan-200 shadow-lg shadow-cyan-500/10"
-                    : "border-transparent text-gray-500 hover:text-white hover:bg-white/5"
-                } ${sidebarOpen ? "justify-start" : "justify-center"}`}
-                title={item.label}
-                onClick={() => window.innerWidth < 1024 && updateSidebar(false)}
-              >
-                <Icon size={18} />
-
+              <div key={group} className="space-y-2">
                 {sidebarOpen && (
-                <span className="text-sm font-medium">
-                  {item.label}
-                </span>
+                  <div className="px-4 text-[10px] font-black uppercase tracking-[0.18em] text-gray-600">
+                    {group}
+                  </div>
                 )}
+                {groupedItems.map((item) => {
+                  const Icon = item.icon;
 
-              </Link>
+                  const active =
+                    pathname === item.href;
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 border ${
+                        active
+                          ? "bg-cyan-500/10 border-cyan-400/40 text-cyan-200 shadow-lg shadow-cyan-500/10"
+                          : "border-transparent text-gray-500 hover:text-white hover:bg-white/5"
+                      } ${sidebarOpen ? "justify-start" : "justify-center"}`}
+                      title={item.label}
+                      onClick={() => window.innerWidth < 1024 && updateSidebar(false)}
+                    >
+                      <Icon size={18} />
+
+                      {sidebarOpen && (
+                      <span className="text-sm font-medium">
+                        {item.label}
+                      </span>
+                      )}
+
+                    </Link>
+                  );
+                })}
+              </div>
             );
           })}
 
@@ -556,11 +583,11 @@ export default function DashboardLayout({
             <div className="hidden sm:flex items-center gap-3">
 
             <div className="px-4 py-2 rounded-xl border border-cyan-500/20 bg-cyan-500/10 text-cyan-300 text-sm font-semibold">
-              AI Online
+              Review gated
             </div>
 
             <div className="px-4 py-2 rounded-xl border border-green-500/20 bg-green-500/10 text-green-300 text-sm font-semibold">
-              Synced
+              Real records
             </div>
 
             </div>

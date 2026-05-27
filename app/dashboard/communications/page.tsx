@@ -6,6 +6,7 @@ import { aiClient } from "@/src/ai/aiClient";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
 import SimpleMetricModal, { type SimpleMetricDetail } from "@/components/dashboard/SimpleMetricModal";
+import OwnerFocusPanel from "@/components/dashboard/OwnerFocusPanel";
 
 const channels = ["all", "email", "sms", "social", "call", "note", "internal"];
 const statuses = ["all", "draft", "scheduled", "sent", "failed", "received"];
@@ -346,6 +347,32 @@ export default function CommunicationsPage() {
           {error}
         </div>
       )}
+
+      <OwnerFocusPanel
+        items={[
+          {
+            label: "Needs review",
+            value: stats.failed + stats.scheduled,
+            detail: "Failed and scheduled outbound records deserve a manual check before any resend or confirmation.",
+            action: "Filter by status",
+            tone: stats.failed > 0 ? "yellow" : "cyan",
+          },
+          {
+            label: "Conversation chains",
+            value: conversations.length,
+            detail: "Grouped conversations make it easier to scan the latest customer context before drafting a reply.",
+            action: "Open a chain",
+            tone: "neutral",
+          },
+          {
+            label: "Send safety",
+            detail: "Saving a communication creates a record or draft. Email and SMS sends still require Confirm Send and provider setup.",
+            href: "/dashboard/settings#providers",
+            action: "Review send setup",
+            tone: "green",
+          },
+        ]}
+      />
 
       <MiniBrainInsightPanel
         title="Communication Intelligence"

@@ -16,6 +16,7 @@ import {
   Workflow,
 } from "lucide-react";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
+import OwnerFocusPanel from "@/components/dashboard/OwnerFocusPanel";
 
 type RangeKey = "7d" | "30d" | "90d" | "all";
 
@@ -399,6 +400,35 @@ export default function AnalyticsPage() {
           Some analytics tables are not available yet. Apply the CRM migrations listed in the testing checklist.
         </div>
       )}
+
+      <OwnerFocusPanel
+        items={[
+          {
+            label: "Date range",
+            value: rangeLabels[range],
+            detail: "The cards and charts below are filtered to this range, so compare trends after choosing the period you care about.",
+            action: "Adjust range above",
+            tone: "neutral",
+          },
+          {
+            label: "Data readiness",
+            value: analytics.hasData ? "Ready" : "Empty",
+            detail: analytics.hasData
+              ? "Analytics are built from real CRM records across leads, deals, campaigns, communications, tasks, appointments, and workflows."
+              : "Analytics stay empty until real CRM records exist.",
+            href: analytics.hasData ? "/dashboard/analytics" : "/dashboard/leads",
+            action: analytics.hasData ? "Review details" : "Add real records",
+            tone: analytics.hasData ? "green" : "yellow",
+          },
+          {
+            label: "Owner decision",
+            detail: "Use analytics for direction, then open the related page before changing campaigns, follow-ups, or billing decisions.",
+            href: "/dashboard",
+            action: "Return to dashboard",
+            tone: "cyan",
+          },
+        ]}
+      />
 
       <MiniBrainInsightPanel
         title="Analytics Intelligence"

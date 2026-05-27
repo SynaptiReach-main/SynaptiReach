@@ -395,10 +395,10 @@ export default function MiniBrainInsightPanel({
               <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <div className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">
-                    Domain helpers
+                    Focus helpers
                   </div>
                   <div className="mt-1 text-sm text-gray-400">
-                    Structured scorecards and summaries generated from deterministic CRM intelligence.
+                    Short scorecards that explain the business reason and the safest next step.
                   </div>
                 </div>
                 <div className="text-xs text-emerald-100/70">No external AI call</div>
@@ -418,7 +418,16 @@ export default function MiniBrainInsightPanel({
                       </span>
                     </div>
                     <div className="mt-2 line-clamp-2 text-xs text-gray-400">{card.summary}</div>
-                    <div className="mt-3 text-xs font-bold text-emerald-100">Why this matters</div>
+                    <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
+                      <div className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-200">Why it matters</div>
+                      <div className="mt-1 line-clamp-2 text-xs text-gray-300">
+                        {(card.reasoning || [card.summary]).slice(0, 2).join(" ")}
+                      </div>
+                    </div>
+                    <div className="mt-2 rounded-xl border border-cyan-400/15 bg-cyan-500/[0.04] p-3">
+                      <div className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200">Suggested next step</div>
+                      <div className="mt-1 line-clamp-2 text-xs text-gray-300">{card.recommendedAction}</div>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -448,10 +457,17 @@ export default function MiniBrainInsightPanel({
               <div className="mt-3 font-bold text-white">{item.title}</div>
               <div className="mt-1 text-sm text-gray-400">{item.summary}</div>
               {(item.reasoning || []).length > 0 && (
-                <div className="mt-3 border-t border-white/10 pt-3 text-xs text-gray-500">
-                  {(item.reasoning || []).slice(0, 2).join(" ")}
+                <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                  <div className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200">Why it matters</div>
+                  <div className="mt-1 text-xs text-gray-400">
+                    {(item.reasoning || []).slice(0, 2).join(" ")}
+                  </div>
                 </div>
               )}
+              <div className="mt-3 rounded-xl border border-emerald-400/15 bg-emerald-500/[0.04] p-3">
+                <div className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-200">Suggested next step</div>
+                <div className="mt-1 text-xs text-gray-300">{item.recommendedAction || "Review the related CRM record before acting."}</div>
+              </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <a href={hrefForInsight(item)} className="inline-flex rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-bold text-cyan-100">
                   Review safely

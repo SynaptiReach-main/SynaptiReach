@@ -26,6 +26,7 @@ import SocialCampaignModal from "@/components/marketing/modals/SocialCampaignMod
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
 import SimpleMetricModal, { type SimpleMetricDetail } from "@/components/dashboard/SimpleMetricModal";
+import OwnerFocusPanel from "@/components/dashboard/OwnerFocusPanel";
 
 export default function MarketingPage() {
   const [
@@ -662,7 +663,7 @@ export default function MarketingPage() {
               </h1>
 
               <p className="text-gray-500 mt-1">
-                AI-powered multi-channel marketing automation
+                Review-gated email, SMS, and social campaigns from real CRM records
               </p>
 
             </div>
@@ -824,6 +825,32 @@ export default function MarketingPage() {
         </div>
 
       </section>
+
+      <OwnerFocusPanel
+        items={[
+          {
+            label: "Active work",
+            value: campaigns.filter((campaign) => campaign.status === "active" || campaign.status === "processing").length,
+            detail: "Active and processing campaigns are the first place to check delivery and engagement movement.",
+            action: "Review campaign library",
+            tone: "cyan",
+          },
+          {
+            label: "Recommendations",
+            value: recommendations.length,
+            detail: "Marketing recommendations explain what changed and keep campaign actions review-gated.",
+            action: "Open recommendations",
+            tone: recommendations.length > 0 ? "yellow" : "green",
+          },
+          {
+            label: "Engagement",
+            value: campaignTotals.clicked,
+            detail: "Clicks are grouped with opens and conversions so owners can scan performance before editing a campaign.",
+            action: "Review performance",
+            tone: "neutral",
+          },
+        ]}
+      />
 
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 

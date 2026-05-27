@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
+import OwnerFocusPanel from "@/components/dashboard/OwnerFocusPanel";
 
 function formatDate(value?: string) {
   if (!value) return "";
@@ -529,6 +530,32 @@ export default function WorkflowPage() {
           {lastRunMessage}
         </div>
       )}
+
+      <OwnerFocusPanel
+        items={[
+          {
+            label: "Drafts to review",
+            value: draftWorkflows,
+            detail: "Draft workflows are safe to inspect before any activation or test run.",
+            action: "Review saved workflows",
+            tone: draftWorkflows > 0 ? "yellow" : "neutral",
+          },
+          {
+            label: "Failed runs",
+            value: failedRuns,
+            detail: "Failed workflow runs should be checked before adding more automation.",
+            action: "Open run signals",
+            tone: failedRuns > 0 ? "yellow" : "green",
+          },
+          {
+            label: "Safety",
+            detail: "Workflow templates create drafts. External email, SMS, and social actions are not sent automatically.",
+            href: "/dashboard/settings",
+            action: "Review automation policy",
+            tone: "green",
+          },
+        ]}
+      />
 
       <MiniBrainInsightPanel
         title="Workflow Intelligence"

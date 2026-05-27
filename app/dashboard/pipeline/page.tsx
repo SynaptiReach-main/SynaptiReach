@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Archive, BriefcaseBusiness, ChevronLeft, ChevronRight, DollarSign, Edit2, Loader2, Plus, Save, Search, X } from "lucide-react";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
+import OwnerFocusPanel from "@/components/dashboard/OwnerFocusPanel";
 
 const stages = ["new", "qualified", "proposal", "negotiation", "won", "lost"];
 const emptyDeal = { id: "", lead_id: "", title: "", company: "", value: 0, stage: "new", probability: 0, expected_close_date: "", notes: "" };
@@ -299,6 +300,32 @@ export default function PipelinePage() {
       </section>
 
       {error && <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>}
+
+      <OwnerFocusPanel
+        items={[
+          {
+            label: "Open value",
+            value: money(totals.value),
+            detail: "Use this as the owner-level view of active opportunity value before opening individual deals.",
+            action: "Review pipeline flow",
+            tone: "cyan",
+          },
+          {
+            label: "Stale deals",
+            value: totals.stale,
+            detail: "Stale deals are opportunities that may need a follow-up task, updated close date, or stage change.",
+            action: "Check stale cards",
+            tone: totals.stale > 0 ? "yellow" : "green",
+          },
+          {
+            label: "Forecast",
+            value: money(totals.weighted),
+            detail: "Weighted value uses saved probabilities, so changing a deal updates the forecast without fake revenue.",
+            action: "Keep probabilities realistic",
+            tone: "neutral",
+          },
+        ]}
+      />
 
       <MiniBrainInsightPanel
         title="Pipeline Intelligence"

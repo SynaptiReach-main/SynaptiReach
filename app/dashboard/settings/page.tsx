@@ -26,6 +26,7 @@ import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPan
 import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
 import SimpleMetricModal, { type SimpleMetricDetail } from "@/components/dashboard/SimpleMetricModal";
 import BillingPurchaseHistory from "@/components/settings/BillingPurchaseHistory";
+import OwnerFocusPanel from "@/components/dashboard/OwnerFocusPanel";
 
 const defaultForm = {
   business_name: "",
@@ -868,6 +869,35 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
+
+          <OwnerFocusPanel
+            items={[
+              {
+                label: "Business profile",
+                value: form.business_name ? "Saved" : "Needed",
+                detail: "Business identity and sender defaults make CRM drafts, reminders, and settings easier to trust.",
+                href: "/dashboard/settings#profile",
+                action: "Review profile",
+                tone: form.business_name ? "green" : "yellow",
+              },
+              {
+                label: "Integrations",
+                value: `${integrationCards.filter((item) => item.configured).length}/${integrationCards.length}`,
+                detail: "Provider cards show configured, setup-required, and future-ready services without exposing keys.",
+                href: "/dashboard/settings#providers",
+                action: "Open integration status",
+                tone: "cyan",
+              },
+              {
+                label: "Billing",
+                value: stripeReady ? "Ready" : "Setup required",
+                detail: "Billing setup stays Stripe-owned. Settings can resume setup without creating fake paid states.",
+                href: "/dashboard/settings#billing",
+                action: "Review billing",
+                tone: stripeReady ? "green" : "yellow",
+              },
+            ]}
+          />
 
           <SettingsSection
             title="Setup & Usage Intelligence"

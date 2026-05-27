@@ -5,6 +5,7 @@ import { AlertTriangle, Bot, CheckCircle2, Clock, Loader2, Plus, Save, Search, T
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
 import SimpleMetricModal, { type SimpleMetricDetail } from "@/components/dashboard/SimpleMetricModal";
+import OwnerFocusPanel from "@/components/dashboard/OwnerFocusPanel";
 
 const emptyTask = {
   id: "",
@@ -336,6 +337,32 @@ export default function TasksPage() {
 
       {error && <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>}
       {success && <div className="mb-6 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4 text-sm text-cyan-100">{success}</div>}
+
+      <OwnerFocusPanel
+        items={[
+          {
+            label: "Do first",
+            value: metrics.overdue,
+            detail: "Overdue work is shown first because it is the clearest operational risk for a business owner.",
+            action: "Filter overdue tasks",
+            tone: metrics.overdue > 0 ? "yellow" : "green",
+          },
+          {
+            label: "High priority",
+            value: metrics.high,
+            detail: "High-priority tasks should be assigned or completed before lower-risk follow-up work.",
+            action: "Review priority chips",
+            tone: metrics.high > 0 ? "cyan" : "neutral",
+          },
+          {
+            label: "Recommendations",
+            value: taskRecommendations.length,
+            detail: "AI task recommendations create reviewable task drafts only after you approve them.",
+            action: "Run task review",
+            tone: "green",
+          },
+        ]}
+      />
 
       <MiniBrainInsightPanel
         title="Task Intelligence"

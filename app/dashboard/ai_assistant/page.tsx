@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Bot, Brain, Loader2, Send, Sparkles, Zap } from "lucide-react";
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 import SimpleMetricModal, { type SimpleMetricDetail } from "@/components/dashboard/SimpleMetricModal";
+import OwnerFocusPanel from "@/components/dashboard/OwnerFocusPanel";
 
 const prompts = [
   "What should I do next?",
@@ -146,6 +147,33 @@ export default function AIAssistantPage() {
       </section>
 
       {error && <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>}
+
+      <OwnerFocusPanel
+        items={[
+          {
+            label: "Built-in layer",
+            value: "Active",
+            detail: "CRM Intelligence runs from saved workspace records before external providers are used.",
+            action: "Review readiness",
+            tone: "green",
+          },
+          {
+            label: "Provider setup",
+            value: agentData?.provider_errors?.length ? "Needs review" : "Ready",
+            detail: "External AI can enhance answers only when providers are configured; secrets are managed from Settings.",
+            href: "/dashboard/settings#providers",
+            action: "Open provider setup",
+            tone: agentData?.provider_errors?.length ? "yellow" : "cyan",
+          },
+          {
+            label: "Action safety",
+            detail: "Assistant suggestions are review-gated and can create drafts or internal records only after approval.",
+            href: "/dashboard/settings",
+            action: "Review automation policy",
+            tone: "neutral",
+          },
+        ]}
+      />
 
       <MiniBrainInsightPanel
         title="AI Command Center Intelligence"
@@ -353,7 +381,7 @@ export default function AIAssistantPage() {
                 <div key={item.id || item.title} className="rounded-2xl border border-white/10 bg-black/30 p-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2 py-1 text-xs font-bold text-cyan-100">
-                      {item.source === "mini_brain" ? "built_in_intelligence" : item.source || "built_in_intelligence"}
+                      {item.source === "mini_brain" ? "Built-in Intelligence" : item.source || "Built-in Intelligence"}
                     </span>
                     <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-xs text-gray-400">
                       {item.priority || "medium"} / {Math.round(Number(item.confidence || 0) * 100)}%

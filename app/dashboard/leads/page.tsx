@@ -22,6 +22,7 @@ import {
 import MiniBrainInsightPanel from "@/components/intelligence/MiniBrainInsightPanel";
 import LeadCsvImportModal from "@/components/leads/LeadCsvImportModal";
 import QueryRecordFocus from "@/components/dashboard/QueryRecordFocus";
+import OwnerFocusPanel from "@/components/dashboard/OwnerFocusPanel";
 
 const statuses = ["new", "contacted", "qualified", "nurture", "converted", "lost"];
 const statusColors: Record<string, string> = {
@@ -494,6 +495,31 @@ export default function LeadsPage() {
           {error}
         </div>
       )}
+
+      <OwnerFocusPanel
+        items={[
+          {
+            label: "Highest intent",
+            value: metrics.hot,
+            detail: "Hot leads should be reviewed first because they are most likely to need a timely response.",
+            action: "Filter or sort by score",
+            tone: metrics.hot > 0 ? "yellow" : "cyan",
+          },
+          {
+            label: "Starter records",
+            value: metrics.total,
+            detail: "Create a lead manually or import a real CSV when the list is empty. Test data belongs only in test workspaces.",
+            action: "Create or import leads",
+            tone: "cyan",
+          },
+          {
+            label: "Next safe step",
+            detail: "Select a lead to see contact history, linked work, notes, and review-gated recommendations before acting.",
+            action: "Open a lead profile",
+            tone: "green",
+          },
+        ]}
+      />
 
       <MiniBrainInsightPanel
         title="Lead Intelligence"
