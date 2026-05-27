@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { importLeadRows } from "@/lib/crm/importLeadsCsv";
 import { friendlySupabaseError } from "@/lib/crm/supabaseAdmin";
+import { getWorkspaceContext } from "@/lib/auth/getWorkspaceContext";
 
 export async function POST(req: Request) {
   try {
@@ -21,7 +22,13 @@ export async function POST(req: Request) {
       );
     }
 
-    const result = await importLeadRows(rows, body.workspace_id || body.workspaceId || null);
+    const context = await getWorkspaceContext(req);
+    const result = await importLeadRows(rows, body.workspace_id || body.workspaceId || context.workspaceId || null, {
+      companyId: body.company_id || body.companyId || context.companyId || null,
+      userId: context.userId || body.user_id || body.userId || null,
+      fileName: body.file_name || body.fileName || null,
+      source: "crm_leads_import",
+    });
 
     return NextResponse.json({
       success: true,

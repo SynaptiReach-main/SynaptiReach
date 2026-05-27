@@ -126,17 +126,30 @@ function mapRow(raw: ImportRow) {
   };
 }
 
-export async function importLeadRows(rows: ImportRow[], workspaceId?: string | null) {
+export async function importLeadRows(
+  rows: ImportRow[],
+  workspaceId?: string | null,
+  options: {
+    companyId?: string | null;
+    userId?: string | null;
+    fileName?: string | null;
+    source?: string | null;
+  } = {}
+) {
   const supabase = createSupabaseAdmin();
   const errors: Array<{ row: number; reason: string }> = [];
   const imported: any[] = [];
   let duplicateCount = 0;
   let validCount = 0;
 
-  const { data: existingRows, error: existingError } = await supabase
+  let existingQuery = supabase
     .from("leads")
     .select("id,email,phone")
     .eq("archived", false);
+
+  if (workspaceId) existingQuery = existingQuery.eq("workspace_id", workspaceId);
+
+  const { data: existingRows, error: existingError } = await existingQuery;
 
   if (existingError) throw existingError;
 
@@ -177,6 +190,8 @@ export async function importLeadRows(rows: ImportRow[], workspaceId?: string | n
 
     const insertPayload: Record<string, any> = {
       workspace_id: workspaceId || null,
+      company_id: options.companyId || null,
+      user_id: options.userId || null,
       name: lead.name,
       email: lead.email,
       phone: lead.phone,
@@ -187,7 +202,10 @@ export async function importLeadRows(rows: ImportRow[], workspaceId?: string | n
       notes: lead.notes,
       last_interaction: lead.last_interaction,
       imported: true,
-      metadata: lead.metadata,
+      metadata: {
+        ...lead.metadata,
+        import_source: options.source || lead.metadata.import_source,
+      },
     };
 
     if (lead.created_at) {
@@ -224,6 +242,8 @@ export async function importLeadRows(rows: ImportRow[], workspaceId?: string | n
   if (imported.length > 0) {
     await supabase.from("marketing_events").insert({
       workspace_id: workspaceId || null,
+      company_id: options.companyId || null,
+      user_id: options.userId || null,
       type: "crm_import",
       event_type: "crm_import",
       action: "lead_csv_imported",
@@ -239,6 +259,8 @@ export async function importLeadRows(rows: ImportRow[], workspaceId?: string | n
 
     await supabase.from("crm_ai_recommendations").insert({
       workspace_id: workspaceId || null,
+      company_id: options.companyId || null,
+      user_id: options.userId || null,
       type: "lead_import_review",
       title: "Review newly imported leads",
       description:
@@ -252,6 +274,28 @@ export async function importLeadRows(rows: ImportRow[], workspaceId?: string | n
       },
     });
   }
+
+  await supabase
+    .from("crm_csv_imports")
+    .insert({
+      workspace_id: workspaceId || null,
+      company_id: options.companyId || null,
+      user_id: options.userId || null,
+      source: options.source || "leads_csv",
+      file_name: options.fileName || null,
+      total_rows: rows.length,
+      valid_rows: validCount,
+      imported_rows: imported.length,
+      skipped_rows: errors.length,
+      duplicate_rows: duplicateCount,
+      errors: errors.slice(0, 50),
+      metadata: {
+        source: options.source || "leads_csv",
+        imported_lead_ids: imported.map((item) => item.id).slice(0, 100),
+      },
+    })
+    .then(() => undefined)
+    .catch(() => undefined);
 
   return {
     total_rows: rows.length,

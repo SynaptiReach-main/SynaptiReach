@@ -425,6 +425,16 @@ alter table if exists public.workspaces add column if not exists usage_caps json
 alter table if exists public.workspaces add column if not exists is_test_workspace boolean not null default false;
 alter table if exists public.workspaces add column if not exists simulation_enabled boolean not null default false;
 alter table if exists public.workspaces add column if not exists simulation_profile text null;
+alter table if exists public.workspaces add column if not exists updated_at timestamptz not null default now();
+
+alter table if exists public.workspace_members add column if not exists status text not null default 'active';
+alter table if exists public.workspace_members add column if not exists metadata jsonb not null default '{}'::jsonb;
+alter table if exists public.workspace_members add column if not exists updated_at timestamptz not null default now();
+
+alter table if exists public.onboarding_sessions add column if not exists payload jsonb not null default '{}'::jsonb;
+alter table if exists public.onboarding_sessions add column if not exists completed boolean not null default false;
+alter table if exists public.onboarding_sessions add column if not exists metadata jsonb not null default '{}'::jsonb;
+alter table if exists public.onboarding_sessions add column if not exists updated_at timestamptz not null default now();
 
 alter table if exists public.leads add column if not exists user_id uuid null;
 alter table if exists public.leads add column if not exists company_id uuid null;

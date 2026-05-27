@@ -1,5 +1,118 @@
 # Final Full CRM Completion Checklist
 
+## First-run Onboarding Prompt Pack Pass - 2026-05-27
+
+- [x] Read `docs/codex/CODEX_TASK_LEDGER.md`.
+- [x] Read `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`.
+- [x] Read `docs/knowledge-map.md`, `docs/architecture.md`, and `docs/decisions.md`.
+- [x] Continued from the current working tree without restarting completed User CRM work.
+- [x] Searched for onboarding prompt files in `docs/codex`, `docs/onboarding`, `docs/synaptireach-onboarding-prompts`, `exports`, and files with onboarding/prompt/master names.
+- [x] Confirmed no dedicated onboarding prompt pack exists in the repo; used onboarding guidance from `docs/codex_synaptireach_prompt_reading_roadmap.md` and `docs/codex_synaptireach_global_goal_runbook.md`.
+- [x] Inspected the current onboarding implementation:
+  - `app/onboarding`
+  - `app/onboarding/select`
+  - `app/api/onboarding/*`
+  - billing/subscription checkout flow
+  - provider connection save path
+  - business profile/settings save path
+  - CSV import flow
+  - staff invite/staff permission flow
+  - launch readiness/intelligence setup references
+- [x] Replaced placeholder onboarding save/integration/upload behavior with authenticated real-state APIs.
+- [x] Added shared onboarding server helper at `lib/onboarding/server.ts`.
+- [x] Onboarding save/resume now writes real state through existing structures where possible:
+  - `workspaces`
+  - `workspace_members`
+  - `onboarding_sessions`
+  - `crm_settings`
+  - `crm_billing_accounts`
+  - `crm_provider_connections`
+  - `leads`
+  - `crm_csv_imports`
+  - `crm_staff`
+- [x] Added polished multi-step `/onboarding` wizard:
+  - welcome/business type
+  - business profile
+  - plan/trial selection
+  - billing setup or continue-later state
+  - AI processing mode/provider setup
+  - email/SMS/social/calendar integration setup
+  - lead CSV import or manual starter lead setup
+  - staff setup
+  - automation safety preferences
+  - launch readiness review and activation
+- [x] Onboarding does not mark paid/subscribed states unless Stripe confirms them.
+- [x] Billing setup stores plan intent and setup-required/checkout-required state only.
+- [x] Stripe Checkout handoff uses existing `/api/billing/subscription/checkout`.
+- [x] Provider secrets are encrypted server-side and cleared from client state after save.
+- [x] Onboarding makes incomplete, skipped, and pending setup explicit in launch readiness.
+- [x] Launch readiness uses saved onboarding state, provider connection rows, billing state, business profile completeness, lead setup/import state, staff setup, and safety preferences.
+- [x] CSV import is now workspace-scoped when a workspace is known and records `crm_csv_imports`.
+- [x] Upload endpoint no longer returns a mock file URL; it fails setup-required until real storage is connected.
+- [x] Added repo documentation in `docs/onboarding.md`.
+- [x] Updated `docs/knowledge-map.md`, `docs/architecture.md`, and `docs/decisions.md`.
+- [x] First `npm.cmd run build` compiled successfully but timed out during static page generation at 180 seconds.
+- [x] Second `npm.cmd run build` passed and generated 150/150 static pages.
+- [x] Local smoke returned HTTP 200 for `/onboarding`.
+- [x] Local smoke returned HTTP 200 for `/onboarding/select`.
+- [x] Unauthenticated `GET /api/onboarding/save` returned HTTP 401.
+- [x] `POST /api/onboarding/upload` returned setup-required HTTP 501.
+- [ ] Authenticated browser walkthrough remains required.
+- [ ] Live Supabase row verification remains required for a real onboarding save.
+- [ ] Stripe Checkout redirect from the Billing step remains to be tested with an authenticated session in test mode.
+- [ ] Provider key save/readiness needs live verification with test credentials.
+- [ ] Real CSV import through onboarding needs live verification with user-owned CSV data.
+- [x] Created/updated Obsidian note `SynaptiReach Onboarding.md` in the SynaptiReach project vault.
+- [x] Checked/updated `SynaptiReach MOC.md` with `[[SynaptiReach Onboarding]]`.
+
+## First-run Onboarding Final Verification Pass - 2026-05-27
+
+- [x] Read `docs/codex/CODEX_TASK_LEDGER.md`.
+- [x] Read `docs/onboarding.md`.
+- [x] Read `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`.
+- [x] Continued only the onboarding pass from the current working tree.
+- [x] Did not start the User CRM portal usability pass.
+- [x] Inspected current onboarding changes in:
+  - `app/api/onboarding/*`
+  - `app/onboarding/*`
+  - `app/api/crm/leads/import/route.ts`
+  - `lib/crm/importLeadsCsv.ts`
+  - `lib/onboarding/server.ts`
+  - onboarding-related docs
+- [x] Verified onboarding uses real authenticated state and real database writes through existing structures.
+- [x] Verified onboarding writes plan/billing intent only and does not create fake paid/subscribed state.
+- [x] Verified Stripe Checkout remains the handoff for billing setup.
+- [x] Verified provider secrets are sanitized from saved onboarding payloads, encrypted server-side before provider-connection storage, omitted from readiness snapshots, and cleared from client state after save.
+- [x] Verified `.env.local` is not tracked.
+- [x] Verified CSV import still validates empty imports and the 5,000-row limit.
+- [x] Verified CSV duplicate checks are workspace-scoped when a workspace is available and retain prior global behavior when no workspace scope is available.
+- [x] Verified existing CRM lead import still calls the shared importer and now passes workspace/company/user context when available.
+- [x] Added idempotent schema compatibility repairs for older tables:
+  - `workspace_members.status`
+  - `workspace_members.metadata`
+  - `workspace_members.updated_at`
+  - `onboarding_sessions.payload`
+  - `onboarding_sessions.completed`
+  - `onboarding_sessions.metadata`
+  - `onboarding_sessions.updated_at`
+  - `workspaces.updated_at`
+- [x] Tightened `/api/onboarding/integrations` so unauthenticated shared-save failures return HTTP 401 instead of a 200 wrapper.
+- [x] Verified onboarding connects to `/dashboard`, `/dashboard/settings`, and `/dashboard/leads`.
+- [x] Updated `docs/onboarding.md`.
+- [x] `npm.cmd run build` passed and generated 150/150 static pages.
+- [x] Local production smoke returned HTTP 200 for `/onboarding`.
+- [x] Local production smoke returned HTTP 200 for `/onboarding/select`.
+- [x] Unauthenticated `GET /api/onboarding/save` returned HTTP 401.
+- [x] Unauthenticated `POST /api/onboarding/integrations` returned HTTP 401.
+- [x] `POST /api/onboarding/upload` returned setup-required HTTP 501.
+- [x] Updated Obsidian `SynaptiReach Onboarding.md` with final verification status.
+- [ ] Authenticated browser walkthrough remains required.
+- [ ] Live Supabase row verification remains required for real onboarding save/resume.
+- [ ] Stripe Checkout redirect from onboarding Billing step remains to be tested with an authenticated session in test mode.
+- [ ] Provider key save/readiness needs live verification with test credentials.
+- [ ] Real CSV import through onboarding needs live verification with user-owned CSV data.
+- [ ] Onboarding is not committed/clean yet; do not start the User CRM usability pass until this onboarding work is committed and the worktree is clean.
+
 ## Final User CRM Readiness Audit - 2026-05-27
 
 - [x] Read `docs/codex/CODEX_TASK_LEDGER.md`.

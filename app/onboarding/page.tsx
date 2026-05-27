@@ -1,811 +1,1033 @@
-export {};
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  Bot,
+  Building2,
+  Check,
+  CheckCircle2,
+  CreditCard,
+  FileUp,
+  Gauge,
+  Loader2,
+  Lock,
+  Mail,
+  Rocket,
+  ShieldCheck,
+  Upload,
+  UserPlus,
+  Users,
+  Wand2,
+} from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
+import { SUBSCRIPTION_PLANS } from "@/lib/billing/plans";
 
-const INDUSTRIES = [
-  "Accounting","Advertising Agency","Appliance Repair","Architecture",
-  "Auto Detailing","Automotive Repair","Bakery","Barbershop","Beauty Salon",
-  "Bookkeeping","Business Consulting","Car Wash","Carpet Cleaning","Catering",
-  "Chiropractic","Cleaning Services","Construction","Contractor","Dental",
-  "Digital Marketing","Electrician","Event Planning","Financial Services",
-  "Fitness Gym","Flooring","Food Truck","Graphic Design","HVAC",
-  "Home Inspection","Home Security","Insurance","Interior Design","IT Services",
-  "Junk Removal","Landscaping","Law Firm","Locksmith","Logistics",
-  "Massage Therapy","Medical Spa","Moving Company","Painting","Pest Control",
-  "Pet Grooming","Photography","Physical Therapy","Plumbing","Pool Services",
-  "Pressure Washing","Real Estate","Recruitment Agency","Remodeling","Restaurant",
-  "Roofing","Security Services","Solar","Tattoo Studio","Tax Services",
-  "Tree Services","Veterinary","Video Production","Web Design","Wedding Services",
-  "Window Cleaning","Yoga Studio","Other"
-];
-
-const INTEGRATIONS = [
-  "Google Calendar","Google Contacts","Stripe","QuickBooks","Zapier",
-  "Slack","Twilio SMS","Mailchimp","HubSpot","Salesforce","Facebook Ads",
-  "Google Ads","Instagram","WhatsApp Business","Shopify","WooCommerce",
-  "Square","PayPal","DocuSign","Calendly"
-];
-
-const SERVICES_LIST = [
-  "AI Lead Follow-Up","SMS Campaigns","Email Campaigns","Auto-Scheduling",
-  "Pipeline Management","Revenue Forecasting","Customer Segmentation",
-  "Reputation Management","Review Automation","Quote Generation",
-  "Invoice Automation","Appointment Reminders","Missed Call Text-Back",
-  "Abandoned Lead Recovery","Monthly ROI Reports"
-];
-
-const MONTHS = [
-  "January","February","March","April","May","June",
-  "July","August","September","October","November","December"
-];
-
-type FormState = {
-  plan: string;
-  trialChoice: string;
-  twilioAuthorization: string;
-  businessName: string;
-  address: string;
-  employees: string;
-  industry: string;
-  monthlyRevenue: string;
-  monthlyProfit: string;
-  yearlyRevenue: string;
-  yearlyProfit: string;
-  customerLTV: string;
-  roiTarget: string;
-  peakMonths: string[];
-  slowMonths: string[];
-  responseTime: string;
-  aiPersonality: string;
-  logo: File | null;
-  products: string;
-  promotedProducts: string;
-  apiStrategy: string;
-  openaiKey: string;
-  claudeKey: string;
-  geminiKey: string;
-  integrations: string[];
-  adBudget: string;
-  services: string[];
-  uploadedFiles: File[];
-  csvFile: File | null;
+type WizardData = {
+  businessType: string;
+  businessProfile: {
+    businessName: string;
+    industry: string;
+    website: string;
+    contactEmail: string;
+    phone: string;
+    address: string;
+    timezone: string;
+    teamSize: string;
+    productsServices: string;
+    audience: string;
+  };
+  plan: {
+    planSlug: string;
+    billingIntent: "start_trial" | "checkout_now" | "continue_later" | "checkout_started";
+  };
+  ai: {
+    mode: "managed" | "byok" | "local" | "";
+    provider: string;
+    model: string;
+    openaiKey: string;
+    geminiKey: string;
+    openrouterKey: string;
+    anthropicKey: string;
+    brandVoice: string;
+    tone: string;
+  };
+  integrations: {
+    emailMode: "managed" | "byok" | "skip" | "";
+    senderEmail: string;
+    resendApiKey: string;
+    smsMode: "managed" | "byok" | "skip" | "";
+    twilioAccountSid: string;
+    twilioAuthToken: string;
+    twilioFromNumber: string;
+    socialMode: "connect" | "skip" | "";
+    socialChannels: string[];
+    ayrshareApiKey: string;
+    calendarMode: "connect" | "skip" | "";
+  };
+  leads: {
+    setupMode: "csv" | "manual" | "skip" | "";
+    starterLead: {
+      name: string;
+      email: string;
+      phone: string;
+      company: string;
+      notes: string;
+    };
+  };
+  staff: {
+    setupMode: "invite" | "solo" | "";
+    members: Array<{ name: string; email: string; phone: string; title: string }>;
+  };
+  automation: {
+    requireApproval: boolean;
+    allowAutoAssign: boolean;
+    quietHoursEnabled: boolean;
+    quietHoursStart: string;
+    quietHoursEnd: string;
+    smsComplianceAck: boolean;
+    noAutoSendAck: boolean;
+  };
 };
 
-const initialForm: FormState = {
-  plan: "",
-  trialChoice: "keep_trial",
-  twilioAuthorization: "",
-  businessName: "",
-  address: "",
-  employees: "",
-  industry: "",
-  monthlyRevenue: "",
-  monthlyProfit: "",
-  yearlyRevenue: "",
-  yearlyProfit: "",
-  customerLTV: "",
-  roiTarget: "",
-  peakMonths: [],
-  slowMonths: [],
-  responseTime: "",
-  aiPersonality: "",
-  logo: null,
-  products: "",
-  promotedProducts: "",
-  apiStrategy: "",
-  openaiKey: "",
-  claudeKey: "",
-  geminiKey: "",
-  integrations: [],
-  adBudget: "",
-  services: [],
-  uploadedFiles: [],
-  csvFile: null,
+const initialData: WizardData = {
+  businessType: "",
+  businessProfile: {
+    businessName: "",
+    industry: "",
+    website: "",
+    contactEmail: "",
+    phone: "",
+    address: "",
+    timezone: "America/Chicago",
+    teamSize: "",
+    productsServices: "",
+    audience: "",
+  },
+  plan: {
+    planSlug: "growth-managed",
+    billingIntent: "continue_later",
+  },
+  ai: {
+    mode: "",
+    provider: "",
+    model: "",
+    openaiKey: "",
+    geminiKey: "",
+    openrouterKey: "",
+    anthropicKey: "",
+    brandVoice: "",
+    tone: "professional",
+  },
+  integrations: {
+    emailMode: "",
+    senderEmail: "",
+    resendApiKey: "",
+    smsMode: "",
+    twilioAccountSid: "",
+    twilioAuthToken: "",
+    twilioFromNumber: "",
+    socialMode: "",
+    socialChannels: [],
+    ayrshareApiKey: "",
+    calendarMode: "",
+  },
+  leads: {
+    setupMode: "",
+    starterLead: {
+      name: "",
+      email: "",
+      phone: "",
+      company: "",
+      notes: "",
+    },
+  },
+  staff: {
+    setupMode: "",
+    members: [{ name: "", email: "", phone: "", title: "" }],
+  },
+  automation: {
+    requireApproval: true,
+    allowAutoAssign: false,
+    quietHoursEnabled: true,
+    quietHoursStart: "20:00",
+    quietHoursEnd: "08:00",
+    smsComplianceAck: false,
+    noAutoSendAck: false,
+  },
 };
 
-const STEP_TITLES: Record<number, string> = {
-  1: "Plan & Authorization",
-  2: "Business Intelligence",
-  3: "Aura & AI Personality",
-  4: "Revenue & Growth Data",
-  5: "Services & Integrations",
-  6: "AI Engine Setup",
-  7: "Review & Build",
-};
+const steps = [
+  { id: "welcome", label: "Welcome", icon: Rocket },
+  { id: "profile", label: "Profile", icon: Building2 },
+  { id: "plan", label: "Plan", icon: CreditCard },
+  { id: "billing", label: "Billing", icon: Lock },
+  { id: "ai", label: "AI Mode", icon: Bot },
+  { id: "integrations", label: "Integrations", icon: Mail },
+  { id: "leads", label: "Leads", icon: Upload },
+  { id: "staff", label: "Staff", icon: UserPlus },
+  { id: "safety", label: "Safety", icon: ShieldCheck },
+  { id: "launch", label: "Launch", icon: Gauge },
+];
 
-const progressMap: Record<number, number> = {
-  1: 14, 2: 28, 3: 42, 4: 57, 5: 71, 6: 85, 7: 100,
-};
+const businessTypes = [
+  ["service", "Service business", "Appointments, estimates, follow-up, reviews, and recurring work."],
+  ["professional", "Professional services", "Pipeline, consultations, documents, billing checkpoints, and client communication."],
+  ["local", "Local business", "Lead capture, reputation, repeat visits, offers, and customer messaging."],
+  ["hybrid", "Hybrid operation", "Sales pipeline, projects, customer support, campaigns, and automation."],
+];
 
-function InputField({
-  label, value, onChange, placeholder = "", type = "text", required = false
-}: {
-  label: string; value: string; onChange: (v: string) => void;
-  placeholder?: string; type?: string; required?: boolean;
-}) {
+const industries = [
+  "HVAC",
+  "Roofing",
+  "Plumbing",
+  "Electrical",
+  "Healthcare",
+  "Dental",
+  "Legal",
+  "Real Estate",
+  "Insurance",
+  "Financial Services",
+  "Agency",
+  "Marketing",
+  "Consulting",
+  "Ecommerce",
+  "Restaurant",
+  "Fitness",
+  "Automotive",
+  "Home Services",
+  "Other",
+];
+
+function parseCsvLine(line: string) {
+  const cells: string[] = [];
+  let current = "";
+  let quoted = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    const next = line[index + 1];
+
+    if (char === '"' && quoted && next === '"') {
+      current += '"';
+      index += 1;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (char === "," && !quoted) {
+      cells.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  cells.push(current.trim());
+  return cells;
+}
+
+function parseCsv(text: string) {
+  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n").map((line) => line.trim()).filter(Boolean);
+  if (lines.length < 2) throw new Error("CSV must include a header row and at least one lead row.");
+  const headers = parseCsvLine(lines[0]);
+  return lines.slice(1).map((line) => {
+    const cells = parseCsvLine(line);
+    return headers.reduce((row: Record<string, string>, header, index) => {
+      row[header] = cells[index] || "";
+      return row;
+    }, {});
+  });
+}
+
+function textValue(value: any) {
+  return typeof value === "string" ? value : "";
+}
+
+function mergePayload(payload: any): WizardData {
+  return {
+    ...initialData,
+    ...(payload || {}),
+    businessProfile: { ...initialData.businessProfile, ...(payload?.businessProfile || {}) },
+    plan: { ...initialData.plan, ...(payload?.plan || {}) },
+    ai: { ...initialData.ai, ...(payload?.ai || {}), openaiKey: "", geminiKey: "", openrouterKey: "", anthropicKey: "" },
+    integrations: {
+      ...initialData.integrations,
+      ...(payload?.integrations || {}),
+      resendApiKey: "",
+      twilioAuthToken: "",
+      twilioAccountSid: "",
+      ayrshareApiKey: "",
+    },
+    leads: {
+      ...initialData.leads,
+      ...(payload?.leads || {}),
+      starterLead: { ...initialData.leads.starterLead, ...(payload?.leads?.starterLead || {}) },
+    },
+    staff: {
+      ...initialData.staff,
+      ...(payload?.staff || {}),
+      members: Array.isArray(payload?.staff?.members) && payload.staff.members.length > 0 ? payload.staff.members : initialData.staff.members,
+    },
+    automation: { ...initialData.automation, ...(payload?.automation || {}) },
+  };
+}
+
+function inputClass() {
+  return "w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/70";
+}
+
+function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
   return (
-    <div>
-      <label className="block mb-2 text-sm font-bold text-gray-300">
-        {label}{required && <span className="text-cyan-400 ml-1">*</span>}
-      </label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400/60 transition-colors"
-      />
-    </div>
+    <label className="block">
+      <span className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-cyan-100/60">{label}</span>
+      {children}
+      {hint ? <span className="mt-1 block text-xs text-slate-400">{hint}</span> : null}
+    </label>
   );
 }
 
-function MonthToggle({
-  label, selected, onChange
-}: { label: string; selected: string[]; onChange: (v: string[]) => void }) {
-  const toggle = (m: string) =>
-    onChange(selected.includes(m) ? selected.filter((x) => x !== m) : [...selected, m]);
-  return (
-    <div>
-      <label className="block mb-3 text-sm font-bold text-gray-300">{label}</label>
-      <div className="grid grid-cols-4 gap-2">
-        {MONTHS.map((m) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => toggle(m)}
-            className={`py-2 px-1 rounded-lg text-xs font-bold transition-all ${
-              selected.includes(m)
-                ? "bg-gradient-to-r from-cyan-400 to-green-400 text-black"
-                : "bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10"
-            }`}
-          >
-            {m.slice(0, 3)}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
+function StatusPill({ status }: { status: string }) {
+  const styles =
+    status === "complete"
+      ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
+      : status === "pending"
+        ? "border-yellow-300/30 bg-yellow-300/10 text-yellow-100"
+        : status === "skipped"
+          ? "border-white/15 bg-white/5 text-slate-300"
+          : "border-red-300/25 bg-red-500/10 text-red-100";
 
-function CheckGrid({
-  label, items, selected, onChange
-}: { label: string; items: string[]; selected: string[]; onChange: (v: string[]) => void }) {
-  const toggle = (item: string) =>
-    onChange(selected.includes(item) ? selected.filter((x) => x !== item) : [...selected, item]);
-  return (
-    <div>
-      <label className="block mb-3 text-sm font-bold text-gray-300">{label}</label>
-      <div className="grid grid-cols-2 gap-2">
-        {items.map((item) => (
-          <button
-            key={item}
-            type="button"
-            onClick={() => toggle(item)}
-            className={`py-2 px-3 rounded-xl text-sm font-medium text-left transition-all ${
-              selected.includes(item)
-                ? "bg-cyan-400/15 border border-cyan-400/60 text-cyan-300"
-                : "bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10"
-            }`}
-          >
-            {selected.includes(item) && <span className="mr-1 text-cyan-400">✓</span>}
-            {item}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+  return <span className={`rounded-full border px-2 py-1 text-[11px] font-bold uppercase ${styles}`}>{status}</span>;
 }
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [industrySearch, setIndustrySearch] = useState("");
-  const [industryOpen, setIndustryOpen] = useState(false);
-  const industryRef = useRef<HTMLDivElement>(null);
-  const [form, setForm] = useState<FormState>(initialForm);
+  const [activeStep, setActiveStep] = useState(0);
+  const [data, setData] = useState<WizardData>(initialData);
+  const [sessionToken, setSessionToken] = useState("");
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [readiness, setReadiness] = useState<any>(null);
+  const [snapshot, setSnapshot] = useState<any>({});
+  const [completedSteps, setCompletedSteps] = useState<string[]>([]);
+  const [skippedSteps, setSkippedSteps] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [csvRows, setCsvRows] = useState<Record<string, string>[]>([]);
+  const [csvFileName, setCsvFileName] = useState("");
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session?.user) router.push("/signup");
-    });
-  }, [router]);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (industryRef.current && !industryRef.current.contains(e.target as Node)) {
-        setIndustryOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  const progress = progressMap[step];
-
-  function set(field: keyof FormState, value: unknown) {
-    setForm((prev) => ({ ...prev, [field]: value }));
-    setErrors((prev) => { const errs = { ...prev }; delete errs[field]; return errs; });
-  }
-
-  function validateStep(): boolean {
-    const errs: Record<string, string> = {};
-    if (step === 1) {
-      if (!form.plan) errs.plan = "Please select a plan.";
-      if (!form.twilioAuthorization.trim()) errs.twilioAuthorization = "Authorization required.";
-    }
-    if (step === 2) {
-      if (!form.businessName.trim()) errs.businessName = "Business name is required.";
-      if (!form.industry) errs.industry = "Please select an industry.";
-    }
-    if (step === 3) {
-      if (!form.aiPersonality) errs.aiPersonality = "Please select an AI personality.";
-    }
-    if (step === 4) {
-      if (!form.monthlyRevenue.trim()) errs.monthlyRevenue = "Monthly revenue is required.";
-    }
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  }
-
-  function next() {
-    if (validateStep()) setStep((s) => Math.min(s + 1, 7));
-  }
-  function back() { setStep((s) => Math.max(s - 1, 1)); }
-
-  async function buildWorkspace() {
-    if (!validateStep()) return;
-    setLoading(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) { alert("Unauthorized"); setLoading(false); return; }
-
-      const res = await fetch("/api/onboarding/complete", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          ...form,
-          uploadedFiles: form.uploadedFiles.map((f) => f.name),
-          csvFile: form.csvFile?.name || null,
-          logo: form.logo?.name || null,
-        }),
-      });
-
-      const data = await res.json();
-      if (!data.success) { alert(data.error || "Build failed. Please try again."); setLoading(false); return; }
-      router.push(data.redirect || "/dashboard");
-    } catch {
-      alert("Network error. Please check your connection.");
-      setLoading(false);
-    }
-  }
-
-  const filteredIndustries = INDUSTRIES.filter((i) =>
-    i.toLowerCase().includes(industrySearch.toLowerCase())
+  const step = steps[activeStep];
+  const selectedPlan = useMemo(
+    () => SUBSCRIPTION_PLANS.find((plan) => plan.slug === data.plan.planSlug),
+    [data.plan.planSlug]
   );
 
-  function personalityCard(
-    value: string, title: string, desc: string, quote: string
-  ) {
-    const selected = form.aiPersonality === value;
-    return (
-      <div
-        key={value}
-        className={`rounded-2xl border p-5 transition-all duration-200 cursor-pointer ${
-          selected ? "border-cyan-400 bg-cyan-400/10 shadow-lg shadow-cyan-500/10" : "border-white/10 hover:border-white/20"
-        }`}
-        onClick={() => set("aiPersonality", value)}
-      >
-        <div className="flex items-start justify-between">
-          <h3 className="text-xl font-black">{title}</h3>
-          {selected && (
-            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-400 to-green-400 flex items-center justify-center text-black text-xs font-black">✓</div>
-          )}
-        </div>
-        <p className="text-gray-400 mt-2 text-sm">{desc}</p>
-        <p className="text-cyan-400 mt-3 text-sm italic border-l-2 border-cyan-400/40 pl-3">{quote}</p>
-      </div>
-    );
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      setError("");
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.user) {
+        router.push("/signup");
+        return;
+      }
+
+      setSessionToken(session.access_token);
+
+      const response = await fetch("/api/onboarding/save", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        setError(result.error || "Could not load onboarding state.");
+        setLoading(false);
+        return;
+      }
+
+      if (result.payload) {
+        setData(mergePayload(result.payload));
+      } else {
+        const storedType = localStorage.getItem("synaptireach_business_type");
+        if (storedType) setData((current) => ({ ...current, businessType: storedType }));
+      }
+      setWorkspaceId(result.workspace?.id || null);
+      setReadiness(result.readiness || null);
+      setSnapshot(result.snapshot || {});
+      setCompletedSteps(result.session?.metadata?.completed_steps || []);
+      setSkippedSteps(result.session?.metadata?.skipped_steps || {});
+      setLoading(false);
+    }
+
+    load();
+  }, [router]);
+
+  function updateSection<K extends keyof WizardData>(section: K, patch: Partial<WizardData[K]>) {
+    setData((current) => ({
+      ...current,
+      [section]: {
+        ...(current[section] as any),
+        ...patch,
+      },
+    }));
   }
 
-  function ReviewRow({ label, value }: { label: string; value: string }) {
+  function updateNested<K extends keyof WizardData, T extends keyof WizardData[K]>(section: K, key: T, value: WizardData[K][T]) {
+    setData((current) => ({
+      ...current,
+      [section]: {
+        ...(current[section] as any),
+        [key]: value,
+      },
+    }));
+  }
+
+  async function save(options: { silent?: boolean; complete?: boolean; includeCsv?: boolean } = {}) {
+    if (!sessionToken) return null;
+    setSaving(true);
+    setError("");
+    if (!options.silent) setMessage("");
+
+    const nextCompleted = Array.from(new Set([...completedSteps, step.id]));
+
+    const response = await fetch(options.complete ? "/api/onboarding/complete" : "/api/onboarding/save", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${sessionToken}`,
+      },
+      body: JSON.stringify({
+        payload: data,
+        completedSteps: nextCompleted,
+        skippedSteps,
+        currentStep: step.id,
+        complete: Boolean(options.complete),
+        leadRows: options.includeCsv ? csvRows : [],
+        importFileName: options.includeCsv ? csvFileName : null,
+      }),
+    });
+
+    const result = await response.json();
+    setSaving(false);
+
+    if (!response.ok || !result.success) {
+      setError(result.error || "Onboarding save failed.");
+      return null;
+    }
+
+    setWorkspaceId(result.workspace?.id || workspaceId);
+    setReadiness(result.readiness || readiness);
+    setSnapshot(result.snapshot || snapshot);
+    setCompletedSteps(nextCompleted);
+    setData((current) => ({
+      ...current,
+      ai: { ...current.ai, openaiKey: "", geminiKey: "", openrouterKey: "", anthropicKey: "" },
+      integrations: { ...current.integrations, resendApiKey: "", twilioAuthToken: "", twilioAccountSid: "", ayrshareApiKey: "" },
+    }));
+    if (!options.silent) {
+      setMessage(options.includeCsv && result.importResult ? `Saved. Imported ${result.importResult.imported_count} lead record(s).` : "Onboarding progress saved.");
+    }
+    return result;
+  }
+
+  async function next() {
+    const result = await save({ silent: true });
+    if (result) setActiveStep((current) => Math.min(current + 1, steps.length - 1));
+  }
+
+  function back() {
+    setActiveStep((current) => Math.max(current - 1, 0));
+  }
+
+  function skipCurrent() {
+    setSkippedSteps((current) => ({ ...current, [step.id]: true }));
+    next();
+  }
+
+  async function handleCsv(file?: File | null) {
+    try {
+      if (!file) return;
+      const rows = parseCsv(await file.text());
+      setCsvRows(rows);
+      setCsvFileName(file.name);
+      updateNested("leads", "setupMode", "csv");
+      setMessage(`${rows.length} CSV row(s) ready to import. Use Import CSV to write them to the CRM.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not parse CSV.");
+    }
+  }
+
+  async function startCheckout() {
+    const saved = await save({ silent: true });
+    if (!saved) return;
+    setCheckoutBusy(true);
+    setError("");
+    const response = await fetch("/api/billing/subscription/checkout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${sessionToken}`,
+      },
+      body: JSON.stringify({
+        plan: data.plan.planSlug,
+        workspace_id: saved.workspace?.id || workspaceId,
+        email: snapshot?.settings?.contact_email || data.businessProfile.contactEmail,
+        name: data.businessProfile.businessName,
+      }),
+    });
+    const result = await response.json();
+    setCheckoutBusy(false);
+
+    if (result.checkoutUrl) {
+      updateSection("plan", { billingIntent: "checkout_started" });
+      window.location.href = result.checkoutUrl;
+      return;
+    }
+
+    setReadiness(result.readiness || readiness);
+    setError(result.error || "Checkout is not ready yet. Billing can be completed later from Settings.");
+  }
+
+  async function activate() {
+    const result = await save({ complete: true });
+    if (result) router.push("/dashboard");
+  }
+
+  if (loading) {
     return (
-      <div className="flex justify-between py-2 border-b border-white/5">
-        <span className="text-gray-500 text-sm">{label}</span>
-        <span className="text-white text-sm font-medium text-right max-w-xs truncate">{value || "—"}</span>
-      </div>
+      <main className="flex min-h-screen items-center justify-center bg-black text-white">
+        <div className="flex items-center gap-3 rounded-2xl border border-cyan-300/15 bg-white/[0.04] px-5 py-4">
+          <Loader2 className="animate-spin text-cyan-200" size={18} />
+          Loading onboarding state
+        </div>
+      </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-black text-white px-4 py-12">
-      {loading && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center">
-          <div className="w-16 h-16 rounded-full border-4 border-cyan-400/20 border-t-cyan-400 animate-spin mb-6" />
-          <p className="text-xl font-black text-cyan-400">Building Your Workspace</p>
-          <p className="text-gray-500 mt-2 text-sm">Initializing AI core systems…</p>
-        </div>
-      )}
+    <main className="min-h-screen bg-black px-4 py-8 text-white">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(34,211,238,0.14),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(74,222,128,0.10),transparent_30%)]" />
 
-      <div className="max-w-3xl mx-auto">
+      <div className="relative mx-auto grid max-w-7xl gap-5 lg:grid-cols-[280px_1fr_320px]">
+        <aside className="rounded-2xl border border-cyan-300/15 bg-slate-950/75 p-4 backdrop-blur-xl">
+          <div className="mb-5">
+            <div className="text-2xl font-black tracking-tight">
+              Synapti<span className="bg-gradient-to-r from-cyan-300 to-green-300 bg-clip-text text-transparent">Reach</span>
+            </div>
+            <p className="mt-1 text-xs text-slate-400">First-run CRM workspace setup</p>
+          </div>
 
-        <div className="mb-10">
-          <div className="flex justify-between items-start mb-4">
+          <div className="space-y-1">
+            {steps.map((item, index) => {
+              const Icon = item.icon;
+              const active = index === activeStep;
+              const done = completedSteps.includes(item.id);
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setActiveStep(index)}
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm transition ${
+                    active ? "border border-cyan-300/30 bg-cyan-300/10 text-cyan-50" : "text-slate-400 hover:bg-white/[0.04] hover:text-white"
+                  }`}
+                >
+                  <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${done ? "bg-cyan-300/15 text-cyan-100" : "bg-white/[0.04]"}`}>
+                    {done ? <Check size={16} /> : <Icon size={16} />}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-5 rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-slate-400">
+            Save/resume is backed by the real workspace onboarding session. Secrets are stored server-side only when submitted.
+          </div>
+        </aside>
+
+        <section className="rounded-2xl border border-cyan-300/15 bg-slate-950/75 p-5 backdrop-blur-xl md:p-6">
+          <div className="mb-5 flex flex-col gap-3 border-b border-white/10 pb-5 md:flex-row md:items-start md:justify-between">
             <div>
-              <h1 className="text-3xl font-black tracking-tight">SynaptiReach Core Architect</h1>
-              <p className="text-gray-500 mt-1 text-sm">
-                Step {step} of 7 — {STEP_TITLES[step]}
+              <div className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-200/70">Step {activeStep + 1} of {steps.length}</div>
+              <h1 className="mt-2 text-2xl font-black md:text-3xl">{step.label}</h1>
+              <p className="mt-1 text-sm text-slate-400">
+                Prepare the CRM with real workspace state. Anything skipped remains visible as pending setup.
               </p>
             </div>
-            <div className="text-right">
-              <div className="text-cyan-400 text-3xl font-black">{progress}%</div>
-            </div>
+            <button
+              type="button"
+              onClick={() => save()}
+              disabled={saving}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-bold text-cyan-50 disabled:opacity-60"
+            >
+              {saving ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
+              Save
+            </button>
           </div>
 
-          <div className="flex gap-1.5 mb-3">
-            {[1,2,3,4,5,6,7].map((s) => (
-              <div
-                key={s}
-                className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
-                  s < step ? "bg-green-400" : s === step ? "bg-cyan-400" : "bg-white/10"
-                }`}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 md:p-8">
-
-          {step === 1 && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-black">Plan & Authorization</h2>
-
-              <div>
-                <label className="block mb-3 text-sm font-bold text-gray-300">
-                  Select Your Plan <span className="text-cyan-400">*</span>
-                </label>
-                <div className="grid grid-cols-1 gap-3">
-                  {[
-                    { id: "basic_managed", name: "Basic Managed", price: "$49/mo", desc: "500 contacts, 3,000 AI actions, 1 lightweight AI agent" },
-                    { id: "growth_managed", name: "Growth Managed", price: "$99/mo", desc: "2,500 contacts, 12,000 AI actions, 3 AI agents" },
-                    { id: "premium_managed", name: "Premium Managed", price: "$199/mo", desc: "10,000 contacts, 40,000 AI actions, 8 AI agents" },
-                  ].map((plan) => (
-                    <div
-                      key={plan.id}
-                      onClick={() => set("plan", plan.id)}
-                      className={`rounded-2xl border p-4 cursor-pointer transition-all ${
-                        form.plan === plan.id
-                          ? "border-cyan-400 bg-cyan-400/10"
-                          : "border-white/10 hover:border-white/20"
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <span className="font-black">{plan.name}</span>
-                          <p className="text-gray-400 text-sm mt-0.5">{plan.desc}</p>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-cyan-400 font-black">{plan.price}</span>
-                          {form.plan === plan.id && (
-                            <div className="text-green-400 text-xs mt-1">Selected</div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {errors.plan && <p className="text-red-400 text-xs mt-2">{errors.plan}</p>}
-              </div>
-
-              <div>
-                <label className="block mb-3 text-sm font-bold text-gray-300">Trial Preference</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { id: "keep_trial", label: "Start 14-Day Trial" },
-                    { id: "skip_trial", label: "Skip Trial & Activate" },
-                  ].map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => set("trialChoice", opt.id)}
-                      className={`py-3 rounded-xl font-bold text-sm transition-all ${
-                        form.trialChoice === opt.id
-                          ? "bg-gradient-to-r from-cyan-400 to-green-400 text-black"
-                          : "bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10"
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block mb-2 text-sm font-bold text-gray-300">
-                  Twilio A2P Authorization Acknowledgment <span className="text-cyan-400">*</span>
-                </label>
-                <div className="rounded-2xl bg-black/40 border border-white/10 p-4 mb-3 text-xs text-gray-400 leading-relaxed">
-                  By proceeding, you confirm you are authorized to send SMS/MMS messages to your contacts under A2P 10DLC compliance standards. You agree to maintain opt-in records and honor all opt-out requests immediately. Misuse is a violation of TCPA and Twilio's Acceptable Use Policy.
-                </div>
-                <input
-                  type="text"
-                  value={form.twilioAuthorization}
-                  onChange={(e) => set("twilioAuthorization", e.target.value)}
-                  placeholder='Type "I AUTHORIZE" to confirm'
-                  className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400/60 transition-colors"
-                />
-                {errors.twilioAuthorization && (
-                  <p className="text-red-400 text-xs mt-1">{errors.twilioAuthorization}</p>
-                )}
-              </div>
+          {error ? (
+            <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-300/20 bg-red-500/10 p-3 text-sm text-red-100">
+              <AlertTriangle className="mt-0.5 shrink-0" size={16} />
+              <span>{error}</span>
             </div>
-          )}
+          ) : null}
+          {message ? (
+            <div className="mb-5 rounded-xl border border-cyan-300/20 bg-cyan-300/10 p-3 text-sm text-cyan-50">{message}</div>
+          ) : null}
 
-          {step === 2 && (
+          {step.id === "welcome" ? (
             <div className="space-y-5">
-              <h2 className="text-2xl font-black">Business Intelligence</h2>
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
+                <h2 className="text-xl font-black">Choose the operating model</h2>
+                <p className="mt-2 text-sm text-slate-400">
+                  This only tunes setup defaults and readiness guidance. It does not create simulated CRM records.
+                </p>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                {businessTypes.map(([id, label, description]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setData((current) => ({ ...current, businessType: id }))}
+                    className={`rounded-2xl border p-4 text-left transition ${
+                      data.businessType === id ? "border-cyan-300/50 bg-cyan-300/10" : "border-white/10 bg-white/[0.03] hover:border-cyan-300/25"
+                    }`}
+                  >
+                    <div className="font-black">{label}</div>
+                    <p className="mt-2 text-sm text-slate-400">{description}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
-              <InputField
-                label="Business Name" value={form.businessName}
-                onChange={(v) => set("businessName", v)}
-                placeholder="Acme Services LLC" required
-              />
-              {errors.businessName && <p className="text-red-400 text-xs -mt-3">{errors.businessName}</p>}
+          {step.id === "profile" ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="Business name">
+                <input className={inputClass()} value={data.businessProfile.businessName} onChange={(event) => updateSection("businessProfile", { businessName: event.target.value })} />
+              </Field>
+              <Field label="Industry">
+                <select className={inputClass()} value={data.businessProfile.industry} onChange={(event) => updateSection("businessProfile", { industry: event.target.value })}>
+                  <option value="">Select industry</option>
+                  {industries.map((industry) => <option key={industry}>{industry}</option>)}
+                </select>
+              </Field>
+              <Field label="Contact email">
+                <input className={inputClass()} value={data.businessProfile.contactEmail} onChange={(event) => updateSection("businessProfile", { contactEmail: event.target.value })} type="email" />
+              </Field>
+              <Field label="Phone">
+                <input className={inputClass()} value={data.businessProfile.phone} onChange={(event) => updateSection("businessProfile", { phone: event.target.value })} />
+              </Field>
+              <Field label="Website">
+                <input className={inputClass()} value={data.businessProfile.website} onChange={(event) => updateSection("businessProfile", { website: event.target.value })} />
+              </Field>
+              <Field label="Team size">
+                <input className={inputClass()} value={data.businessProfile.teamSize} onChange={(event) => updateSection("businessProfile", { teamSize: event.target.value })} />
+              </Field>
+              <div className="md:col-span-2">
+                <Field label="Address">
+                  <input className={inputClass()} value={data.businessProfile.address} onChange={(event) => updateSection("businessProfile", { address: event.target.value })} />
+                </Field>
+              </div>
+              <div className="md:col-span-2">
+                <Field label="Products and services">
+                  <textarea className={inputClass()} rows={3} value={data.businessProfile.productsServices} onChange={(event) => updateSection("businessProfile", { productsServices: event.target.value })} />
+                </Field>
+              </div>
+              <div className="md:col-span-2">
+                <Field label="Primary audience">
+                  <textarea className={inputClass()} rows={3} value={data.businessProfile.audience} onChange={(event) => updateSection("businessProfile", { audience: event.target.value })} />
+                </Field>
+              </div>
+            </div>
+          ) : null}
 
-              <InputField
-                label="Business Address" value={form.address}
-                onChange={(v) => set("address", v)}
-                placeholder="123 Main St, City, State ZIP"
-              />
-
-              <InputField
-                label="Number of Employees" value={form.employees}
-                onChange={(v) => set("employees", v)}
-                placeholder="e.g. 5" type="number"
-              />
-
-              <div ref={industryRef}>
-                <label className="block mb-2 text-sm font-bold text-gray-300">
-                  Industry <span className="text-cyan-400">*</span>
-                </label>
-                <div
-                  className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white cursor-pointer flex justify-between items-center"
-                  onClick={() => setIndustryOpen(!industryOpen)}
-                >
-                  <span className={form.industry ? "text-white" : "text-gray-600"}>
-                    {form.industry || "Select your industry"}
-                  </span>
-                  <span className="text-gray-500">{industryOpen ? "▲" : "▼"}</span>
-                </div>
-                {industryOpen && (
-                  <div className="absolute z-20 mt-1 w-full max-w-2xl rounded-2xl border border-white/10 bg-black/95 shadow-2xl overflow-hidden">
-                    <div className="p-2 border-b border-white/10">
-                      <input
-                        autoFocus
-                        type="text"
-                        value={industrySearch}
-                        onChange={(e) => setIndustrySearch(e.target.value)}
-                        placeholder="Search industries…"
-                        className="w-full p-2 bg-white/5 rounded-lg text-white text-sm placeholder-gray-600 outline-none"
-                      />
+          {step.id === "plan" ? (
+            <div className="space-y-4">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {SUBSCRIPTION_PLANS.map((plan) => (
+                  <button
+                    key={plan.slug}
+                    type="button"
+                    onClick={() => updateSection("plan", { planSlug: plan.slug })}
+                    className={`rounded-2xl border p-4 text-left transition ${
+                      data.plan.planSlug === plan.slug ? "border-cyan-300/50 bg-cyan-300/10" : "border-white/10 bg-white/[0.03] hover:border-cyan-300/25"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-black">{plan.name}</div>
+                        <div className="mt-1 text-sm font-bold text-cyan-100">{plan.price}</div>
+                      </div>
+                      {plan.popular ? <span className="rounded-full border border-cyan-300/30 px-2 py-1 text-[10px] font-black text-cyan-100">POPULAR</span> : null}
                     </div>
-                    <div className="max-h-56 overflow-y-auto">
-                      {filteredIndustries.map((ind) => (
-                        <div
-                          key={ind}
-                          onClick={() => { set("industry", ind); setIndustryOpen(false); setIndustrySearch(""); }}
-                          className={`px-4 py-2.5 text-sm cursor-pointer transition-colors ${
-                            form.industry === ind
-                              ? "bg-cyan-400/15 text-cyan-300"
-                              : "text-gray-300 hover:bg-white/5"
-                          }`}
-                        >
-                          {ind}
-                        </div>
+                    <p className="mt-2 text-xs text-slate-400">{plan.contacts} contacts, {plan.aiActions} AI actions, {plan.workflowRuns} workflows.</p>
+                  </button>
+                ))}
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                <div className="text-sm font-black">Selected: {selectedPlan?.name || "None"}</div>
+                <p className="mt-1 text-sm text-slate-400">
+                  Onboarding stores this as plan intent. It does not mark the workspace paid or subscribed.
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          {step.id === "billing" ? (
+            <div className="space-y-4">
+              {[
+                ["start_trial", "Start 14-day trial through Stripe", "Creates a Stripe Checkout session when you press Continue to Checkout."],
+                ["checkout_now", "Set up billing now", "Use Stripe Checkout for secure payment setup. No card data touches SynaptiReach."],
+                ["continue_later", "Continue without billing", "Marks billing as setup required so Settings and readiness stay honest."],
+              ].map(([id, label, description]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => updateSection("plan", { billingIntent: id as any })}
+                  className={`w-full rounded-2xl border p-4 text-left transition ${
+                    data.plan.billingIntent === id ? "border-cyan-300/50 bg-cyan-300/10" : "border-white/10 bg-white/[0.03] hover:border-cyan-300/25"
+                  }`}
+                >
+                  <div className="font-black">{label}</div>
+                  <p className="mt-1 text-sm text-slate-400">{description}</p>
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={startCheckout}
+                disabled={checkoutBusy || data.plan.billingIntent === "continue_later"}
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-green-300 px-4 py-3 text-sm font-black text-black disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {checkoutBusy ? <Loader2 className="animate-spin" size={16} /> : <CreditCard size={16} />}
+                Continue to Stripe Checkout
+              </button>
+            </div>
+          ) : null}
+
+          {step.id === "ai" ? (
+            <div className="space-y-4">
+              <div className="grid gap-3 md:grid-cols-3">
+                {[
+                  ["managed", "SynaptiReach Managed", "Use platform-managed AI capacity when available."],
+                  ["byok", "Bring Your Own Keys", "Store provider keys encrypted server-side."],
+                  ["local", "Local Connector", "Optional future connector; does not block CRM launch."],
+                ].map(([id, label, description]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => updateSection("ai", { mode: id as any })}
+                    className={`rounded-2xl border p-4 text-left transition ${
+                      data.ai.mode === id ? "border-cyan-300/50 bg-cyan-300/10" : "border-white/10 bg-white/[0.03] hover:border-cyan-300/25"
+                    }`}
+                  >
+                    <div className="font-black">{label}</div>
+                    <p className="mt-1 text-sm text-slate-400">{description}</p>
+                  </button>
+                ))}
+              </div>
+              {data.ai.mode === "byok" ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="Provider">
+                    <select className={inputClass()} value={data.ai.provider} onChange={(event) => updateSection("ai", { provider: event.target.value })}>
+                      <option value="">Select provider</option>
+                      <option value="openai">OpenAI</option>
+                      <option value="gemini">Gemini</option>
+                      <option value="openrouter">OpenRouter</option>
+                      <option value="anthropic">Anthropic</option>
+                    </select>
+                  </Field>
+                  <Field label="Model">
+                    <input className={inputClass()} value={data.ai.model} onChange={(event) => updateSection("ai", { model: event.target.value })} />
+                  </Field>
+                  <Field label="OpenAI key">
+                    <input className={inputClass()} type="password" value={data.ai.openaiKey} onChange={(event) => updateSection("ai", { openaiKey: event.target.value })} />
+                  </Field>
+                  <Field label="Gemini key">
+                    <input className={inputClass()} type="password" value={data.ai.geminiKey} onChange={(event) => updateSection("ai", { geminiKey: event.target.value })} />
+                  </Field>
+                  <Field label="OpenRouter key">
+                    <input className={inputClass()} type="password" value={data.ai.openrouterKey} onChange={(event) => updateSection("ai", { openrouterKey: event.target.value })} />
+                  </Field>
+                  <Field label="Anthropic key">
+                    <input className={inputClass()} type="password" value={data.ai.anthropicKey} onChange={(event) => updateSection("ai", { anthropicKey: event.target.value })} />
+                  </Field>
+                </div>
+              ) : null}
+              <Field label="Brand voice">
+                <textarea className={inputClass()} rows={3} value={data.ai.brandVoice} onChange={(event) => updateSection("ai", { brandVoice: event.target.value })} />
+              </Field>
+            </div>
+          ) : null}
+
+          {step.id === "integrations" ? (
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-4">
+                <h2 className="font-black">Email</h2>
+                <select className={inputClass()} value={data.integrations.emailMode} onChange={(event) => updateSection("integrations", { emailMode: event.target.value as any })}>
+                  <option value="">Choose email setup</option>
+                  <option value="managed">Managed email, verify domain later</option>
+                  <option value="byok">Use my Resend key</option>
+                  <option value="skip">Skip for now</option>
+                </select>
+                <input className={inputClass()} placeholder="Sender email" value={data.integrations.senderEmail} onChange={(event) => updateSection("integrations", { senderEmail: event.target.value })} />
+                {data.integrations.emailMode === "byok" ? <input className={inputClass()} type="password" placeholder="Resend API key" value={data.integrations.resendApiKey} onChange={(event) => updateSection("integrations", { resendApiKey: event.target.value })} /> : null}
+              </div>
+              <div className="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-4">
+                <h2 className="font-black">SMS</h2>
+                <select className={inputClass()} value={data.integrations.smsMode} onChange={(event) => updateSection("integrations", { smsMode: event.target.value as any })}>
+                  <option value="">Choose SMS setup</option>
+                  <option value="managed">Managed SMS, compliance review required</option>
+                  <option value="byok">Use my Twilio account</option>
+                  <option value="skip">Skip for now</option>
+                </select>
+                {data.integrations.smsMode === "byok" ? (
+                  <>
+                    <input className={inputClass()} placeholder="Twilio Account SID" value={data.integrations.twilioAccountSid} onChange={(event) => updateSection("integrations", { twilioAccountSid: event.target.value })} />
+                    <input className={inputClass()} type="password" placeholder="Twilio Auth Token" value={data.integrations.twilioAuthToken} onChange={(event) => updateSection("integrations", { twilioAuthToken: event.target.value })} />
+                    <input className={inputClass()} placeholder="Twilio From Number" value={data.integrations.twilioFromNumber} onChange={(event) => updateSection("integrations", { twilioFromNumber: event.target.value })} />
+                  </>
+                ) : null}
+              </div>
+              <div className="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-4">
+                <h2 className="font-black">Social</h2>
+                <select className={inputClass()} value={data.integrations.socialMode} onChange={(event) => updateSection("integrations", { socialMode: event.target.value as any })}>
+                  <option value="">Choose social setup</option>
+                  <option value="connect">Prepare social connection</option>
+                  <option value="skip">Skip for now</option>
+                </select>
+                <input className={inputClass()} type="password" placeholder="Ayrshare key, optional" value={data.integrations.ayrshareApiKey} onChange={(event) => updateSection("integrations", { ayrshareApiKey: event.target.value })} />
+              </div>
+              <div className="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-4">
+                <h2 className="font-black">Calendar</h2>
+                <select className={inputClass()} value={data.integrations.calendarMode} onChange={(event) => updateSection("integrations", { calendarMode: event.target.value as any })}>
+                  <option value="">Choose calendar setup</option>
+                  <option value="connect">Prepare Google Calendar connection</option>
+                  <option value="skip">Skip for now</option>
+                </select>
+                <p className="text-sm text-slate-400">OAuth connection is completed later from provider settings.</p>
+              </div>
+            </div>
+          ) : null}
+
+          {step.id === "leads" ? (
+            <div className="space-y-5">
+              <div className="grid gap-3 md:grid-cols-3">
+                {[
+                  ["csv", "Import CSV"],
+                  ["manual", "Create starter lead"],
+                  ["skip", "Start empty"],
+                ].map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => updateNested("leads", "setupMode", id as any)}
+                    className={`rounded-2xl border p-4 text-left font-black ${
+                      data.leads.setupMode === id ? "border-cyan-300/50 bg-cyan-300/10" : "border-white/10 bg-white/[0.03]"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {data.leads.setupMode === "csv" ? (
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-cyan-300/30 bg-cyan-300/5 p-4">
+                    <FileUp className="text-cyan-200" />
+                    <span className="text-sm">{csvFileName || "Choose CSV file"}</span>
+                    <input type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => handleCsv(event.target.files?.[0])} />
+                  </label>
+                  <div className="mt-3 flex items-center justify-between gap-3 text-sm text-slate-400">
+                    <span>{csvRows.length} row(s) parsed</span>
+                    <button type="button" onClick={() => save({ includeCsv: true })} disabled={csvRows.length === 0 || saving} className="rounded-xl bg-gradient-to-r from-cyan-300 to-green-300 px-4 py-2 font-black text-black disabled:opacity-50">
+                      Import CSV
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+              {data.leads.setupMode === "manual" ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {(["name", "email", "phone", "company"] as const).map((key) => (
+                    <Field key={key} label={`Starter lead ${key}`}>
+                      <input className={inputClass()} value={textValue(data.leads.starterLead[key])} onChange={(event) => updateSection("leads", { starterLead: { ...data.leads.starterLead, [key]: event.target.value } })} />
+                    </Field>
+                  ))}
+                  <div className="md:col-span-2">
+                    <Field label="Notes">
+                      <textarea className={inputClass()} rows={3} value={data.leads.starterLead.notes} onChange={(event) => updateSection("leads", { starterLead: { ...data.leads.starterLead, notes: event.target.value } })} />
+                    </Field>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {step.id === "staff" ? (
+            <div className="space-y-5">
+              <div className="grid gap-3 md:grid-cols-2">
+                {[
+                  ["invite", "Invite staff later"],
+                  ["solo", "Solo workspace for now"],
+                ].map(([id, label]) => (
+                  <button key={id} type="button" onClick={() => updateNested("staff", "setupMode", id as any)} className={`rounded-2xl border p-4 text-left font-black ${data.staff.setupMode === id ? "border-cyan-300/50 bg-cyan-300/10" : "border-white/10 bg-white/[0.03]"}`}>{label}</button>
+                ))}
+              </div>
+              {data.staff.setupMode === "invite" ? (
+                <div className="space-y-3">
+                  {data.staff.members.map((member, index) => (
+                    <div key={index} className="grid gap-3 rounded-2xl border border-white/10 bg-black/30 p-4 md:grid-cols-4">
+                      {(["name", "email", "phone", "title"] as const).map((key) => (
+                        <input
+                          key={key}
+                          className={inputClass()}
+                          placeholder={key}
+                          value={member[key]}
+                          onChange={(event) => {
+                            const members = [...data.staff.members];
+                            members[index] = { ...members[index], [key]: event.target.value };
+                            updateSection("staff", { members });
+                          }}
+                        />
                       ))}
                     </div>
-                  </div>
-                )}
-                {errors.industry && <p className="text-red-400 text-xs mt-1">{errors.industry}</p>}
-              </div>
+                  ))}
+                  <button type="button" onClick={() => updateSection("staff", { members: [...data.staff.members, { name: "", email: "", phone: "", title: "" }] })} className="rounded-xl border border-cyan-300/20 px-4 py-2 text-sm font-bold text-cyan-50">
+                    Add another
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
-              <div>
-                <label className="block mb-2 text-sm font-bold text-gray-300">Products & Services Offered</label>
-                <textarea
-                  value={form.products}
-                  onChange={(e) => set("products", e.target.value)}
-                  placeholder="Describe what your business offers…"
-                  rows={3}
-                  className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400/60 transition-colors resize-none"
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2 text-sm font-bold text-gray-300">Top Promoted Products / Services</label>
-                <textarea
-                  value={form.promotedProducts}
-                  onChange={(e) => set("promotedProducts", e.target.value)}
-                  placeholder="What do you most actively sell or upsell?"
-                  rows={2}
-                  className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400/60 transition-colors resize-none"
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2 text-sm font-bold text-gray-300">Upload Business Logo (optional)</label>
-                <label className="flex items-center gap-3 w-full p-3 rounded-xl bg-black/60 border border-white/10 cursor-pointer hover:border-white/20 transition-colors">
-                  <span className="text-cyan-400 text-lg">📁</span>
-                  <span className="text-sm text-gray-400">
-                    {form.logo ? form.logo.name : "Click to upload image"}
-                  </span>
+          {step.id === "safety" ? (
+            <div className="space-y-4">
+              {[
+                ["requireApproval", "Require manual approval before AI sends email, SMS, or social posts."],
+                ["allowAutoAssign", "Allow internal task assignment suggestions and low-risk routing."],
+                ["quietHoursEnabled", "Respect quiet hours for reminders and outreach queues."],
+                ["smsComplianceAck", "I understand SMS requires consent, opt-out handling, and provider compliance review."],
+                ["noAutoSendAck", "I understand onboarding will not auto-send customer messages or auto-charge outside Stripe Checkout."],
+              ].map(([key, label]) => (
+                <label key={key} className="flex items-start gap-3 rounded-2xl border border-white/10 bg-black/30 p-4 text-sm">
                   <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => set("logo", e.target.files?.[0] ?? null)}
+                    type="checkbox"
+                    checked={Boolean((data.automation as any)[key])}
+                    onChange={(event) => updateSection("automation", { [key]: event.target.checked } as any)}
+                    className="mt-1"
                   />
+                  <span>{label}</span>
                 </label>
+              ))}
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Quiet hours start">
+                  <input className={inputClass()} type="time" value={data.automation.quietHoursStart} onChange={(event) => updateSection("automation", { quietHoursStart: event.target.value })} />
+                </Field>
+                <Field label="Quiet hours end">
+                  <input className={inputClass()} type="time" value={data.automation.quietHoursEnd} onChange={(event) => updateSection("automation", { quietHoursEnd: event.target.value })} />
+                </Field>
               </div>
             </div>
-          )}
+          ) : null}
 
-          {step === 3 && (
+          {step.id === "launch" ? (
             <div className="space-y-5">
-              <h2 className="text-2xl font-black">Aura & AI Personality</h2>
-              <p className="text-gray-400 text-sm">
-                Your AI personality defines how SynaptiReach communicates with leads and customers on your behalf.
-              </p>
-
-              <div className="space-y-3">
-                {[
-                  {
-                    value: "executive", title: "Apex Commander",
-                    desc: "Strategic executive AI focused on metrics, performance, and operational efficiency.",
-                    quote: '"Data indicates a 14% conversion gap in your Q2 funnel. Initiating recovery sequence."'
-                  },
-                  {
-                    value: "hustler", title: "Revenue Titan",
-                    desc: "Fast-paced growth AI optimized for aggressive follow-up and revenue acceleration.",
-                    quote: '"Fresh leads hitting the deck. Let\'s get these deals closed and revenue moving."'
-                  },
-                  {
-                    value: "specialist", title: "Precision Operator",
-                    desc: "Analytical AI focused on technical optimization, segmentation, and workflow precision.",
-                    quote: '"Lead metadata analyzed. Deploying targeted follow-up campaign on schedule."'
-                  },
-                  {
-                    value: "advisor", title: "Trusted Advisor",
-                    desc: "Warm, consultative AI that builds relationships and guides customers with empathy.",
-                    quote: '"I noticed you haven\'t heard back from us — I wanted to personally check in."'
-                  },
-                ].map(({ value, title, desc, quote }) => {
-                  const selected = form.aiPersonality === value;
-                  return (
-                    <div
-                      key={value}
-                      className={`rounded-2xl border p-5 transition-all duration-200 cursor-pointer ${
-                        selected ? "border-cyan-400 bg-cyan-400/10 shadow-lg shadow-cyan-500/10" : "border-white/10 hover:border-white/20"
-                      }`}
-                      onClick={() => set("aiPersonality", value)}
-                    >
-                      <div className="flex items-start justify-between">
-                        <h3 className="text-xl font-black">{title}</h3>
-                        {selected && (
-                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-400 to-green-400 flex items-center justify-center text-black text-xs font-black">✓</div>
-                        )}
-                      </div>
-                      <p className="text-gray-400 mt-2 text-sm">{desc}</p>
-                      <p className="text-cyan-400 mt-3 text-sm italic border-l-2 border-cyan-400/40 pl-3">{quote}</p>
+              <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-5">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <div className="text-sm font-bold text-cyan-100/70">Launch readiness</div>
+                    <div className="mt-1 text-5xl font-black">{readiness?.score ?? 0}%</div>
+                  </div>
+                  <Wand2 className="text-cyan-100" size={42} />
+                </div>
+                <p className="mt-3 text-sm text-cyan-50/75">
+                  Pending or skipped items remain available from Settings and CRM setup pages.
+                </p>
+              </div>
+              <div className="space-y-2">
+                {(readiness?.checks || []).map((check: any) => (
+                  <div key={check.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/30 p-3">
+                    <div>
+                      <div className="text-sm font-bold">{check.label}</div>
+                      {check.detail ? <div className="text-xs text-slate-400">{check.detail}</div> : null}
                     </div>
-                  );
-                })}
-              </div>
-
-              {errors.aiPersonality && <p className="text-red-400 text-xs">{errors.aiPersonality}</p>}
-
-              {form.aiPersonality && (
-                <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-                  <div className="text-xs text-gray-500 mb-1">Active Personality</div>
-                  <div className="text-lg font-black text-cyan-400 capitalize">{form.aiPersonality}</div>
-                </div>
-              )}
-
-              <div>
-                <label className="block mb-3 text-sm font-bold text-gray-300">Preferred Response Time</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {["Instant (<1 min)", "Quick (1–5 min)", "Thoughtful (5–15 min)"].map((rt) => (
-                    <button
-                      key={rt}
-                      type="button"
-                      onClick={() => set("responseTime", rt)}
-                      className={`py-2 px-2 rounded-xl text-xs font-bold transition-all ${
-                        form.responseTime === rt
-                          ? "bg-gradient-to-r from-cyan-400 to-green-400 text-black"
-                          : "bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10"
-                      }`}
-                    >
-                      {rt}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {step === 4 && (
-            <div className="space-y-5">
-              <h2 className="text-2xl font-black">Revenue & Growth Data</h2>
-              <p className="text-gray-400 text-sm">
-                This data trains your AI to generate accurate ROI forecasts and performance benchmarks.
-              </p>
-
-              <div className="grid grid-cols-2 gap-4">
-                <InputField label="Monthly Revenue" value={form.monthlyRevenue} onChange={(v) => set("monthlyRevenue", v)} placeholder="$0" required />
-                <InputField label="Monthly Profit" value={form.monthlyProfit} onChange={(v) => set("monthlyProfit", v)} placeholder="$0" />
-                <InputField label="Yearly Revenue" value={form.yearlyRevenue} onChange={(v) => set("yearlyRevenue", v)} placeholder="$0" />
-                <InputField label="Yearly Profit" value={form.yearlyProfit} onChange={(v) => set("yearlyProfit", v)} placeholder="$0" />
-                <InputField label="Avg Customer LTV" value={form.customerLTV} onChange={(v) => set("customerLTV", v)} placeholder="$0" />
-                <InputField label="Monthly Ad Budget" value={form.adBudget} onChange={(v) => set("adBudget", v)} placeholder="$0" />
-              </div>
-              {errors.monthlyRevenue && <p className="text-red-400 text-xs">{errors.monthlyRevenue}</p>}
-
-              <InputField label="ROI Target (%)" value={form.roiTarget} onChange={(v) => set("roiTarget", v)} placeholder="e.g. 300" type="number" />
-
-              <MonthToggle label="Peak Business Months" selected={form.peakMonths} onChange={(v) => set("peakMonths", v)} />
-              <MonthToggle label="Slow Business Months" selected={form.slowMonths} onChange={(v) => set("slowMonths", v)} />
-
-              <div>
-                <label className="block mb-2 text-sm font-bold text-gray-300">Import Existing Contacts (CSV)</label>
-                <label className="flex items-center gap-3 w-full p-3 rounded-xl bg-black/60 border border-white/10 cursor-pointer hover:border-white/20 transition-colors">
-                  <span className="text-cyan-400 text-lg">📊</span>
-                  <span className="text-sm text-gray-400">{form.csvFile ? form.csvFile.name : "Click to upload CSV"}</span>
-                  <input type="file" accept=".csv" className="hidden" onChange={(e) => set("csvFile", e.target.files?.[0] ?? null)} />
-                </label>
-              </div>
-
-              <div>
-                <label className="block mb-2 text-sm font-bold text-gray-300">Upload Supporting Documents (optional)</label>
-                <label className="flex items-center gap-3 w-full p-3 rounded-xl bg-black/60 border border-white/10 cursor-pointer hover:border-white/20 transition-colors">
-                  <span className="text-cyan-400 text-lg">📎</span>
-                  <span className="text-sm text-gray-400">
-                    {form.uploadedFiles.length > 0 ? `${form.uploadedFiles.length} file(s) selected` : "Click to upload files"}
-                  </span>
-                  <input type="file" multiple className="hidden" onChange={(e) => set("uploadedFiles", Array.from(e.target.files || []))} />
-                </label>
-              </div>
-            </div>
-          )}
-
-          {step === 5 && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-black">Services & Integrations</h2>
-
-              <CheckGrid label="AI Services to Activate" items={SERVICES_LIST} selected={form.services} onChange={(v) => set("services", v)} />
-              <CheckGrid label="Platform Integrations" items={INTEGRATIONS} selected={form.integrations} onChange={(v) => set("integrations", v)} />
-
-              <div className="rounded-2xl bg-black/40 border border-white/10 p-4 text-sm text-gray-400">
-                <span className="text-cyan-400 font-bold">{form.services.length} services</span>{" "}
-                and <span className="text-cyan-400 font-bold">{form.integrations.length} integrations</span> selected
-              </div>
-            </div>
-          )}
-
-          {step === 6 && (
-            <div className="space-y-5">
-              <h2 className="text-2xl font-black">AI Engine Setup</h2>
-              <p className="text-gray-400 text-sm">
-                Configure your AI provider strategy. Use shared API or connect your own keys for dedicated capacity.
-              </p>
-
-              <div>
-                <label className="block mb-3 text-sm font-bold text-gray-300">API Strategy</label>
-                <div className="space-y-2">
-                  {[
-                    { id: "shared", label: "Shared API (Included)", desc: "Managed by SynaptiReach — no setup required" },
-                    { id: "own_keys", label: "Your Own API Keys", desc: "Connect OpenAI, Claude, or Gemini keys for dedicated usage" },
-                    { id: "hybrid", label: "Hybrid", desc: "Use your keys when available, fall back to shared" },
-                  ].map((opt) => (
-                    <div
-                      key={opt.id}
-                      onClick={() => set("apiStrategy", opt.id)}
-                      className={`rounded-xl border p-4 cursor-pointer transition-all ${
-                        form.apiStrategy === opt.id ? "border-cyan-400 bg-cyan-400/10" : "border-white/10 hover:border-white/20"
-                      }`}
-                    >
-                      <div className="flex justify-between">
-                        <span className="font-bold text-sm">{opt.label}</span>
-                        {form.apiStrategy === opt.id && <span className="text-cyan-400 text-sm">✓</span>}
-                      </div>
-                      <p className="text-gray-500 text-xs mt-0.5">{opt.desc}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {(form.apiStrategy === "own_keys" || form.apiStrategy === "hybrid") && (
-                <div className="space-y-4 rounded-2xl border border-white/10 bg-black/40 p-4">
-                  <p className="text-xs text-gray-400 mb-2">Keys are encrypted at rest and never exposed in the UI after saving.</p>
-                  <InputField label="OpenAI API Key" value={form.openaiKey} onChange={(v) => set("openaiKey", v)} placeholder="sk-…" type="password" />
-                  <InputField label="Anthropic Claude Key" value={form.claudeKey} onChange={(v) => set("claudeKey", v)} placeholder="sk-ant-…" type="password" />
-                  <InputField label="Google Gemini Key" value={form.geminiKey} onChange={(v) => set("geminiKey", v)} placeholder="AIza…" type="password" />
-                </div>
-              )}
-            </div>
-          )}
-
-          {step === 7 && (
-            <div className="space-y-5">
-              <h2 className="text-2xl font-black">Review & Build</h2>
-              <p className="text-gray-400 text-sm">Confirm your configuration before SynaptiReach initializes your workspace.</p>
-
-              <div className="rounded-2xl border border-white/10 bg-black/40 p-4 space-y-1">
-                {[
-                  ["Plan", form.plan],
-                  ["Trial", form.trialChoice === "keep_trial" ? "14-Day Trial" : "Activate Now"],
-                  ["Business", form.businessName],
-                  ["Industry", form.industry],
-                  ["Employees", form.employees],
-                  ["AI Personality", form.aiPersonality],
-                  ["Response Time", form.responseTime],
-                  ["Monthly Revenue", form.monthlyRevenue],
-                  ["ROI Target", form.roiTarget ? `${form.roiTarget}%` : ""],
-                  ["Services", `${form.services.length} selected`],
-                  ["Integrations", `${form.integrations.length} selected`],
-                  ["API Strategy", form.apiStrategy],
-                  ["Contacts CSV", form.csvFile?.name || "None"],
-                ].map(([label, value]) => (
-                  <div key={label} className="flex justify-between py-2 border-b border-white/5">
-                    <span className="text-gray-500 text-sm">{label}</span>
-                    <span className="text-white text-sm font-medium text-right max-w-xs truncate">{value || "—"}</span>
+                    <StatusPill status={check.status} />
                   </div>
                 ))}
               </div>
-
-              <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/5 p-4 text-sm text-cyan-300">
-                ⚡ Your workspace will be fully initialized with AI models trained on your business data. This typically takes 30–60 seconds.
+              <div className="flex flex-wrap gap-3">
+                <Link href="/dashboard/settings" className="rounded-xl border border-cyan-300/20 px-4 py-2 text-sm font-bold text-cyan-50">Open Settings</Link>
+                <Link href="/dashboard/leads" className="rounded-xl border border-cyan-300/20 px-4 py-2 text-sm font-bold text-cyan-50">Open Leads</Link>
+                <button type="button" onClick={activate} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-green-300 px-5 py-2 font-black text-black">
+                  <Rocket size={16} />
+                  Activate and Enter CRM
+                </button>
               </div>
-
-              <button
-                type="button"
-                onClick={buildWorkspace}
-                disabled={loading}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 text-black font-black text-lg transition-opacity disabled:opacity-50"
-              >
-                {loading ? "Building…" : "⚡ Build My Workspace"}
-              </button>
             </div>
-          )}
+          ) : null}
 
-        </div>
-
-        <div className="flex gap-3 mt-6">
-          {step > 1 && (
-            <button
-              type="button"
-              onClick={back}
-              className="flex-1 py-3 rounded-2xl bg-white/5 border border-white/10 text-gray-300 font-bold hover:bg-white/10 transition-colors"
-            >
-              ← Back
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5">
+            <button type="button" onClick={back} disabled={activeStep === 0} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-bold text-slate-200 disabled:opacity-40">
+              <ArrowLeft size={16} />
+              Back
             </button>
-          )}
-          {step < 7 && (
-            <button
-              type="button"
-              onClick={next}
-              className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 text-black font-black transition-opacity"
-            >
-              Continue →
-            </button>
-          )}
-        </div>
+            <div className="flex gap-3">
+              {step.id !== "launch" ? (
+                <button type="button" onClick={skipCurrent} className="rounded-xl border border-white/10 px-4 py-2 text-sm font-bold text-slate-300">
+                  Skip for now
+                </button>
+              ) : null}
+              {step.id !== "launch" ? (
+                <button type="button" onClick={next} disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-green-300 px-5 py-2 font-black text-black disabled:opacity-60">
+                  {saving ? <Loader2 className="animate-spin" size={16} /> : <ArrowRight size={16} />}
+                  Continue
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </section>
 
+        <aside className="space-y-5">
+          <div className="rounded-2xl border border-cyan-300/15 bg-slate-950/75 p-4 backdrop-blur-xl">
+            <div className="mb-3 flex items-center gap-2 font-black">
+              <Gauge size={18} className="text-cyan-200" />
+              Readiness
+            </div>
+            <div className="text-4xl font-black">{readiness?.score ?? 0}%</div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+              <div className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-green-300" style={{ width: `${readiness?.score ?? 0}%` }} />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-slate-950/75 p-4 backdrop-blur-xl">
+            <div className="mb-3 flex items-center gap-2 font-black">
+              <Users size={18} className="text-cyan-200" />
+              Saved State
+            </div>
+            <div className="space-y-2 text-sm text-slate-400">
+              <div className="flex justify-between gap-3"><span>Workspace</span><span className="truncate text-white">{workspaceId ? "Created" : "Pending"}</span></div>
+              <div className="flex justify-between gap-3"><span>Leads</span><span className="text-white">{snapshot?.leads?.length || 0}</span></div>
+              <div className="flex justify-between gap-3"><span>Staff</span><span className="text-white">{snapshot?.staff?.length || 0}</span></div>
+              <div className="flex justify-between gap-3"><span>Providers</span><span className="text-white">{snapshot?.providerConnections?.length || 0}</span></div>
+              <div className="flex justify-between gap-3"><span>Billing</span><span className="truncate text-white">{snapshot?.billing?.status || "not saved"}</span></div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-yellow-300/20 bg-yellow-300/10 p-4 text-sm text-yellow-50">
+            <div className="mb-2 flex items-center gap-2 font-black">
+              <AlertTriangle size={16} />
+              Manual setup remains explicit
+            </div>
+            Stripe confirmation, verified Resend domains, Twilio compliance, Google OAuth, and social connections stay pending until their providers confirm them.
+          </div>
+        </aside>
       </div>
     </main>
   );
