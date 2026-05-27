@@ -78,3 +78,23 @@ Preserve the SynaptiReach design system:
 - no solid green usage
 - large prominent logo or wordmark styling
 - existing BackgroundSystem grid, glow pulse, and synapse animations
+
+## Obsidian MOC Maintenance
+
+Whenever new SynaptiReach notes, prompts, runbooks, architecture docs, API/security docs, branding docs, or CRM/admin prompts are created or renamed, update:
+
+C:\Users\nikna\Documents\Obsidian Vault\01-Projects\SynaptiReach\SynaptiReach MOC.md
+
+Keep the MOC grouped into:
+
+- SynaptiReach Prompts
+- User CRM Prompts
+- Admin Portal Prompts
+- Branding / API / Environment
+- Codex Runbooks
+- Architecture / Decisions / Code Maps
+- Core Systems
+
+Use Obsidian wiki links and Breadcrumbs-compatible typed relationships.
+
+Do not remove existing links unless the linked file no longer exists or has been renamed.
