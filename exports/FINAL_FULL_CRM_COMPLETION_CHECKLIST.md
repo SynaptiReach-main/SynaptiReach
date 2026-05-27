@@ -1797,3 +1797,82 @@ Reminder: the Resend API key was previously pasted into chat during setup. Rotat
   - launch cohort/admin approval gate if active
   - service/product upload handling and storage limits
   - authenticated browser walkthrough for all v2 onboarding scenarios
+
+## SynaptiReach Onboarding Fix Pass - 2026-05-27
+
+- [x] Fixed schema compatibility for production save failures:
+  - `onboarding_sessions.metadata` is included in the create-table definition.
+  - Safe repair SQL is present: `ALTER TABLE public.onboarding_sessions ADD COLUMN IF NOT EXISTS metadata jsonb DEFAULT '{}'::jsonb;`
+  - `notify pgrst, 'reload schema';` is included to refresh Supabase/PostgREST schema cache after applying SQL.
+  - Server save falls back if the deployed schema cache has not exposed `metadata` or `updated_at` yet.
+- [x] Fixed save/resume mechanics:
+  - every step saves through `/api/onboarding/save`
+  - progress is also mirrored into payload-backed `__onboardingProgress` as a compatibility fallback
+  - leaving and returning restores current step/progress where saved state exists
+  - dashboard prompt fetch now uses the active Supabase bearer token
+  - incomplete workspace users are prompted to continue onboarding
+- [x] Fixed step navigation:
+  - future steps are locked
+  - previous completed/unlocked steps remain available
+  - locked steps explain why they are locked
+  - Continue validates required fields, saves, then advances
+  - Skip for now is disabled on required steps and only works on optional steps
+- [x] Fixed required/optional UI:
+  - required labels show a red asterisk
+  - optional labels show `(optional)`
+  - validation messages explain missing items in plain language
+- [x] Fixed progress/readiness behavior:
+  - progress meter reflects saved/completed steps
+  - readiness uses backend state after save
+  - missing/pending readiness items are clickable and navigate to the relevant onboarding step
+  - skipped status is displayed as `intentionally skipped`
+- [x] Fixed Stripe setup UI and safety:
+  - billing step has “Set up payment method with Stripe”
+  - user-facing copy states SynaptiReach employees never see or access card details
+  - card collection remains hosted Stripe Checkout only
+  - missing Stripe config/price env creates setup-required/missing readiness instead of silent success
+  - trial dates/subscription state remain webhook-owned
+- [x] Fixed completion behavior:
+  - renamed `Activate and Enter CRM` to `Complete Onboarding`
+  - completion calls `/api/onboarding/complete`
+  - completion is blocked until email verification, required workspace fields, provider mode, Stripe webhook-confirmed billing setup, and trial acknowledgements are complete
+  - blocked completion shows remaining readiness items
+- [x] Added safe provider test route:
+  - `POST /api/onboarding/provider-test`
+  - provider checks run server-side
+  - no fake provider success
+  - no campaign/email/SMS/social send
+  - OpenAI remains disabled unless `AI_ENABLE_OPENAI=true`
+- [x] CRM generation/state preservation:
+  - business profile, sales setup, workflow drafts, staff permissions, marketing setup, Help/DFY requests, and launch readiness continue writing real workspace-scoped state
+  - no fake paid/subscribed state
+  - no fake provider success
+  - no fake Stripe success
+- [x] Responsive/layout hardening:
+  - added overflow-safe grid tracks, `min-w-0`, wrapping, and safer status pill/button behavior
+- [x] Build verification:
+  - `npm.cmd run build` passed
+  - Next generated 151/151 static pages
+- [x] Local smoke verification returned 200 for:
+  - `/trial`
+  - `/signup?trial=managed`
+  - `/signup?trial=byok`
+  - `/onboarding`
+  - `/dashboard`
+  - `/dashboard/settings`
+  - `/dashboard/workflow`
+- [ ] Manual scenarios still require authenticated production verification:
+  - Managed trial full onboarding path reaches Stripe setup
+  - BYOK trial full onboarding path reaches Stripe setup
+  - Continue advances step-by-step
+  - Skip for now works only on optional steps
+  - Required fields show red asterisks
+  - Optional fields show `(optional)`
+  - Save persists data
+  - Leaving and returning restores progress
+  - Dashboard prompts incomplete users to continue onboarding
+  - Readiness/progress meters update correctly
+  - Readiness items navigate to relevant onboarding steps
+  - Provider test buttons appear and show safe setup/readiness result
+  - Complete Onboarding works only when required checklist is complete
+  - Mobile and desktop layouts have no card/text overflow

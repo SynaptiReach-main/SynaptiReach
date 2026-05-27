@@ -433,7 +433,7 @@ alter table if exists public.workspace_members add column if not exists updated_
 
 alter table if exists public.onboarding_sessions add column if not exists payload jsonb not null default '{}'::jsonb;
 alter table if exists public.onboarding_sessions add column if not exists completed boolean not null default false;
-alter table if exists public.onboarding_sessions add column if not exists metadata jsonb not null default '{}'::jsonb;
+alter table if exists public.onboarding_sessions add column if not exists metadata jsonb default '{}'::jsonb;
 alter table if exists public.onboarding_sessions add column if not exists updated_at timestamptz not null default now();
 
 alter table if exists public.leads add column if not exists user_id uuid null;
@@ -923,3 +923,5 @@ for each row execute function public.set_updated_at();
 -- credentials for privileged CRM operations. Before direct client table access,
 -- enable RLS and add policies that check final workspace membership, staff role,
 -- and permission records. Do not authorize from user-editable metadata claims.
+
+notify pgrst, 'reload schema';

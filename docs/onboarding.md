@@ -110,3 +110,23 @@ Onboarding Help/DFY selections create `crm_service_requests` rows with `metadata
 - `onboarding_sessions.completed`
 - `onboarding_sessions.metadata`
 - `onboarding_sessions.updated_at`
+
+The schema now explicitly repairs `onboarding_sessions.metadata` with:
+
+```sql
+ALTER TABLE public.onboarding_sessions ADD COLUMN IF NOT EXISTS metadata jsonb DEFAULT '{}'::jsonb;
+```
+
+The schema ends with `notify pgrst, 'reload schema';` so Supabase/PostgREST refreshes column metadata after the migration is applied.
+
+## Fix Pass Notes - 2026-05-27
+
+- Onboarding save is tolerant of stale production schema cache: it writes `metadata`/`updated_at` when available and falls back to payload-backed progress if those columns are not yet visible.
+- Continue validates required fields, saves server-side, and then advances one step.
+- Skip for now is disabled on required steps and records intentional skip state on optional steps.
+- Step navigation is locked for future steps; users can return to completed/unlocked steps.
+- Readiness items are clickable and navigate to the relevant onboarding step.
+- The billing step uses the explicit “Set up payment method with Stripe” action and Stripe-hosted checkout only.
+- The completion button is now “Complete Onboarding” and remains blocked until required readiness gates are complete.
+- Dashboard onboarding prompts fetch with the active Supabase session token and also prompt when a workspace exists but no completed onboarding session exists.
+- Provider test buttons call `POST /api/onboarding/provider-test`, save/read server-side readiness state, and do not send campaigns, email, SMS, or social posts.

@@ -4,7 +4,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { createSupabaseAdmin } from "@/lib/crm/supabaseAdmin";
 import { getAIProviderStatus } from "@/lib/ai/providers";
 import { getStripeBillingStatus } from "@/lib/billing/stripe";
-import { DFY_ASSISTANCE_OPTIONS, getSubscriptionPlan } from "@/lib/billing/plans";
+import { DFY_ASSISTANCE_OPTIONS, getPlanPriceId, getSubscriptionPlan } from "@/lib/billing/plans";
 import { importLeadRows } from "@/lib/crm/importLeadsCsv";
 
 type SaveInput = {
@@ -247,33 +247,50 @@ async function upsertSession(supabase: any, input: any) {
     .maybeSingle();
   if (existingError) throw existingError;
 
-  const values = {
-    workspace_id: input.workspace_id,
-    user_id: input.user_id,
-    payload: input.payload,
-    completed: Boolean(input.completed),
-    metadata: input.metadata,
-    updated_at: new Date().toISOString(),
-  };
-
-  if (existing?.id) {
-    const { data, error } = await supabase
-      .from("onboarding_sessions")
-      .update(values)
-      .eq("id", existing.id)
-      .select("*")
-      .single();
-    if (error) throw error;
-    return data;
+  function valuesFor(options: { metadata: boolean; updatedAt: boolean }) {
+    return {
+      workspace_id: input.workspace_id,
+      user_id: input.user_id,
+      payload: input.payload,
+      completed: Boolean(input.completed),
+      ...(options.metadata ? { metadata: input.metadata } : {}),
+      ...(options.updatedAt ? { updated_at: new Date().toISOString() } : {}),
+    };
   }
 
-  const { data, error } = await supabase
-    .from("onboarding_sessions")
-    .insert(values)
-    .select("*")
-    .single();
-  if (error) throw error;
-  return data;
+  async function writeSession(values: Record<string, any>) {
+    if (existing?.id) {
+      return supabase
+        .from("onboarding_sessions")
+        .update(values)
+        .eq("id", existing.id)
+        .select("*")
+        .single();
+    }
+    return supabase
+      .from("onboarding_sessions")
+      .insert(values)
+      .select("*")
+      .single();
+  }
+
+  const attempts = [
+    valuesFor({ metadata: true, updatedAt: true }),
+    valuesFor({ metadata: false, updatedAt: true }),
+    valuesFor({ metadata: false, updatedAt: false }),
+  ];
+
+  let lastError = null;
+  for (const values of attempts) {
+    const result = await writeSession(values);
+    if (!result.error) return result.data;
+    lastError = result.error;
+    const message = `${result.error.message || ""} ${result.error.details || ""}`;
+    if (!/metadata|updated_at|schema cache|column/i.test(message)) break;
+  }
+
+  if (lastError) throw lastError;
+  throw new Error("Onboarding session save failed.");
 }
 
 async function upsertSettings(supabase: any, workspace: any, user: any, payload: Record<string, any>) {
@@ -391,11 +408,12 @@ async function upsertBilling(supabase: any, workspace: any, user: any, payload: 
   if (!plan) return null;
 
   const billingIntent = payload.plan?.billingIntent || "continue_later";
+  const stripeReady = Boolean(getStripeBillingStatus().configured && getPlanPriceId(plan));
   const status =
     billingIntent === "checkout_started"
       ? "checkout_created"
       : billingIntent === "checkout_now" || billingIntent === "start_trial"
-        ? "checkout_required"
+        ? stripeReady ? "checkout_required" : "setup_required"
         : "setup_required";
 
   const { data: existing, error: existingError } = await supabase
@@ -448,6 +466,7 @@ async function upsertBilling(supabase: any, workspace: any, user: any, payload: 
       billing_intent: billingIntent,
       source: "onboarding",
       stripe_configured: getStripeBillingStatus().configured,
+      stripe_price_configured: Boolean(getPlanPriceId(plan)),
       payment_state_note:
         "Onboarding records plan intent only. Paid or active subscription state must come from Stripe Checkout/webhook confirmation.",
     },
@@ -903,9 +922,11 @@ export function calculateOnboardingReadiness(payload: Record<string, any>, snaps
       id: "billing",
       label: "Stripe card setup state is explicit",
       status:
-        billing.status === "checkout_created" || billing.status === "active"
+        ["trialing", "active", "checkout_completed"].includes(billing.status)
           ? "complete"
-          : billing.status
+          : ["setup_required", "checkout_required"].includes(billing.status)
+            ? "missing"
+            : billing.status
             ? "pending"
             : "missing",
       href: "/dashboard/settings#billing",
@@ -1091,7 +1112,11 @@ export async function saveOnboardingState(request: Request, input: SaveInput) {
   const billingReady = readiness.checks.find((check: any) => check.id === "billing")?.status === "complete";
   const trialAcknowledged = readiness.checks.find((check: any) => check.id === "trial_acknowledgements")?.status === "complete";
   const emailVerified = readiness.checks.find((check: any) => check.id === "email_verification")?.status === "complete";
-  const effectiveComplete = Boolean(input.complete && billingReady && trialAcknowledged && emailVerified);
+  const requiredReady = ["business_profile", "plan", "ai", "automation_safety"].every((id) => {
+    const status = readiness.checks.find((check: any) => check.id === id)?.status;
+    return status === "complete";
+  });
+  const effectiveComplete = Boolean(input.complete && billingReady && trialAcknowledged && emailVerified && requiredReady);
   const session = await upsertSession(supabase, {
     workspace_id: workspace.id,
     user_id: user.id,
@@ -1103,7 +1128,7 @@ export async function saveOnboardingState(request: Request, input: SaveInput) {
       completed_steps: input.completedSteps || [],
       skipped_steps: input.skippedSteps || {},
       readiness_score: readiness.score,
-      completion_blocked_reason: input.complete && !effectiveComplete ? "Email verification, Stripe card setup, and trial acknowledgements are required before onboarding is complete." : null,
+      completion_blocked_reason: input.complete && !effectiveComplete ? "Email verification, required workspace fields, provider mode, Stripe setup confirmation, and trial acknowledgements are required before onboarding is complete." : null,
       completed_at: effectiveComplete ? new Date().toISOString() : null,
     },
   });

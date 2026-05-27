@@ -214,12 +214,22 @@ export default function DashboardLayout({
   useEffect(() => {
     async function loadOnboardingPrompt() {
       try {
-        const response = await fetch("/api/onboarding/save", { cache: "no-store" });
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          setOnboardingPrompt(null);
+          return;
+        }
+        const response = await fetch("/api/onboarding/save", {
+          cache: "no-store",
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
         const data = await response.json();
-        if (response.ok && data.success && data.session && !data.session.completed) {
+        if (response.ok && data.success && ((data.session && !data.session.completed) || (data.workspace && !data.session))) {
           setOnboardingPrompt({
             score: data.readiness?.score || 0,
-            currentStep: data.session?.metadata?.current_step || "setup",
+            currentStep: data.session?.metadata?.current_step || data.payload?.__onboardingProgress?.current_step || "setup",
           });
         } else {
           setOnboardingPrompt(null);

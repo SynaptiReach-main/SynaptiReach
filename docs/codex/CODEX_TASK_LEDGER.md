@@ -618,6 +618,20 @@ Build result: Passed. `npm.cmd run build` completed successfully and generated 1
 Tests run: `npm.cmd run build`; local production HTTP smoke returned 200 for `/trial`, `/pricing`, `/signup?trial=managed`, `/signup?trial=byok`, `/onboarding`, `/dashboard`, `/dashboard/settings`, `/dashboard/leads`, and `/dashboard/workflow`.
 Next recommended task: Build real server-side provider test endpoints and trial cap enforcement, then run an authenticated browser walkthrough and Stripe webhook lifecycle test.
 
+### 2026-05-27 - SynaptiReach Onboarding Fix Pass
+
+Date: 2026-05-27
+Model: Codex
+Prompt/Goal: Fix the existing `/onboarding` implementation end-to-end after production manual testing found Stripe, save/resume, step navigation, validation, readiness, and schema failures.
+Completed: Added safe `onboarding_sessions.metadata` schema repair and PostgREST schema reload notification; hardened onboarding session writes to fall back when production schema cache has not yet exposed `metadata` or `updated_at`; added payload-backed progress fallback; restored current step on return; locked future steps while allowing previous completed steps; added required-step validation, required red asterisks, optional labels, and user-friendly validation messages; disabled skip on required steps; changed completion CTA to “Complete Onboarding”; made readiness items clickable to the right onboarding step; changed progress to saved-step progress; improved overflow-safe layout classes; updated Stripe billing copy and button to “Set up payment method with Stripe”; kept Stripe hosted checkout as the only card path; made billing readiness missing when Stripe setup/price config is missing; blocked final completion until email verification, required workspace fields, provider mode, Stripe webhook-confirmed billing setup, and trial acknowledgements are complete; added `POST /api/onboarding/provider-test` for safe server-side provider readiness checks that do not send external actions; fixed dashboard onboarding prompt fetch to include the Supabase bearer token and prompt incomplete workspace users.
+Skipped: No redesign from scratch; no fake provider success; no fake Stripe success; no fake paid/subscribed/trial state; no trial-cap enforcement middleware in this pass.
+Partial: Full authenticated managed/BYOK browser walkthrough, live Stripe Checkout redirect, signed webhook completion, and provider-key readiness checks still require production credentials/session testing.
+Blocked: Stripe redirect requires configured Stripe subscription price env vars and a valid authenticated session; final completion requires webhook-confirmed billing state and verified email.
+Files changed: `app/onboarding/page.tsx`, `app/dashboard/layout.tsx`, `app/api/onboarding/provider-test/route.ts`, `lib/onboarding/server.ts`, `supabase/user_crm_full_completion_schema.sql`, `docs/onboarding.md`, `docs/codex/CODEX_TASK_LEDGER.md`, `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`.
+Build result: Passed. `npm.cmd run build` generated 151/151 static pages.
+Tests run: `npm.cmd run build`; local production smoke returned 200 for `/trial`, `/signup?trial=managed`, `/signup?trial=byok`, `/onboarding`, `/dashboard`, `/dashboard/settings`, and `/dashboard/workflow`.
+Next recommended task: Apply the Supabase SQL repair in production, verify Stripe price env vars, then manually test the managed and BYOK onboarding flows through hosted Stripe Checkout and webhook return.
+
 ### Template
 
 Date:

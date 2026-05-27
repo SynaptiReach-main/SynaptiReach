@@ -307,6 +307,29 @@ const steps = [
   { id: "launch", label: "Launch", icon: Gauge },
 ];
 
+const stepIndexById = Object.fromEntries(steps.map((item, index) => [item.id, index]));
+const optionalStepIds = new Set(["integrations", "leads", "staff", "marketing", "workflows", "help"]);
+const readinessStepMap: Record<string, string> = {
+  owner: "owner",
+  email_verification: "owner",
+  business_type: "welcome",
+  business_profile: "profile",
+  legal_company: "profile",
+  sales_setup: "sales",
+  plan: "plan",
+  billing: "billing",
+  trial_acknowledgements: "plan",
+  ai: "ai",
+  email: "integrations",
+  sms: "integrations",
+  lead_setup: "leads",
+  staff: "staff",
+  marketing: "marketing",
+  workflow_drafts: "workflows",
+  automation_safety: "safety",
+  help: "help",
+};
+
 const managedTrialCaps = [
   ["AI actions", `${MANAGED_TRIAL_CAPS.aiActions} included`],
   ["Email", `${MANAGED_TRIAL_CAPS.emails} included`],
@@ -450,13 +473,17 @@ function mergePayload(payload: any): WizardData {
 }
 
 function inputClass() {
-  return "w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/70";
+  return "w-full min-w-0 rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/70";
 }
 
-function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
+function Field({ label, children, hint, required, optional }: { label: string; children: ReactNode; hint?: string; required?: boolean; optional?: boolean }) {
   return (
-    <label className="block">
-      <span className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-cyan-100/60">{label}</span>
+    <label className="block min-w-0">
+      <span className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-cyan-100/60">
+        {label}
+        {required ? <span className="ml-1 text-red-300">*</span> : null}
+        {optional ? <span className="ml-1 normal-case tracking-normal text-slate-500">(optional)</span> : null}
+      </span>
       {children}
       {hint ? <span className="mt-1 block text-xs text-slate-400">{hint}</span> : null}
     </label>
@@ -473,7 +500,7 @@ function StatusPill({ status }: { status: string }) {
           ? "border-white/15 bg-white/5 text-slate-300"
           : "border-red-300/25 bg-red-500/10 text-red-100";
 
-  return <span className={`rounded-full border px-2 py-1 text-[11px] font-bold uppercase ${styles}`}>{status}</span>;
+  return <span className={`shrink-0 rounded-full border px-2 py-1 text-[11px] font-bold uppercase ${styles}`}>{status === "skipped" ? "intentionally skipped" : status}</span>;
 }
 
 export default function OnboardingPage() {
@@ -490,6 +517,7 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [csvRows, setCsvRows] = useState<Record<string, string>[]>([]);
   const [csvFileName, setCsvFileName] = useState("");
   const [checkoutBusy, setCheckoutBusy] = useState(false);
@@ -499,7 +527,11 @@ export default function OnboardingPage() {
     () => SUBSCRIPTION_PLANS.find((plan) => plan.slug === data.plan.planSlug),
     [data.plan.planSlug]
   );
-  const progressPercent = Math.round(((activeStep + 1) / steps.length) * 100);
+  const maxUnlockedStep = Math.min(
+    steps.length - 1,
+    Math.max(activeStep, ...completedSteps.map((id) => stepIndexById[id] ?? 0)) + 1
+  );
+  const progressPercent = Math.round((completedSteps.length / steps.length) * 100);
 
   useEffect(() => {
     async function load() {
@@ -574,8 +606,16 @@ export default function OnboardingPage() {
       setWorkspaceId(result.workspace?.id || null);
       setReadiness(result.readiness || null);
       setSnapshot(result.snapshot || {});
-      setCompletedSteps(result.session?.metadata?.completed_steps || []);
-      setSkippedSteps(result.session?.metadata?.skipped_steps || {});
+      const savedProgress = result.session?.metadata || result.payload?.__onboardingProgress || {};
+      const savedCompleted = savedProgress.completed_steps || [];
+      setCompletedSteps(savedCompleted);
+      setSkippedSteps(savedProgress.skipped_steps || {});
+      const savedStep = savedProgress.current_step;
+      if (savedStep && stepIndexById[savedStep] !== undefined) {
+        const savedIndex = stepIndexById[savedStep];
+        const highestCompleted = Math.max(0, ...savedCompleted.map((id: string) => stepIndexById[id] ?? 0));
+        setActiveStep(Math.min(savedIndex, highestCompleted + 1));
+      }
       setLoading(false);
     }
 
@@ -616,13 +656,68 @@ export default function OnboardingPage() {
     });
   }
 
+  function validateStep(stepId = step.id) {
+    const errors: string[] = [];
+    if (stepId === "welcome" && !data.businessType) errors.push("Choose the business type that best matches your workspace.");
+    if (stepId === "owner") {
+      if (!data.owner.email && !data.businessProfile.contactEmail) errors.push("Enter the account owner email.");
+      if (!data.owner.name) errors.push("Enter the account owner name.");
+    }
+    if (stepId === "profile") {
+      if (!data.businessProfile.businessName) errors.push("Enter your business name.");
+      if (!data.businessProfile.industry) errors.push("Select your industry.");
+      if (!data.businessProfile.contactEmail && !data.owner.email) errors.push("Enter a business contact email.");
+    }
+    if (stepId === "sales" && !data.crmSetup.pipelineStages.trim()) errors.push("Add at least one pipeline stage.");
+    if (stepId === "plan") {
+      if (!data.plan.trialPath) errors.push("Choose Managed Trial or BYOK Trial.");
+      if (!data.plan.planSlug) errors.push("Select the post-trial plan.");
+      if (!data.plan.stripeCardAcknowledged) errors.push("Acknowledge that Stripe card setup is required before trial start.");
+      if (!data.plan.autoRenewAcknowledged) errors.push("Acknowledge that the selected plan renews after 14 days unless canceled.");
+      if (data.plan.trialPath === "managed" && !data.plan.managedCapsAcknowledged) errors.push("Acknowledge managed trial hard caps.");
+      if (data.plan.trialPath === "byok" && !data.plan.byokProviderCostAcknowledged) errors.push("Acknowledge that BYOK provider costs are paid directly to providers.");
+    }
+    if (stepId === "billing" && data.plan.billingIntent !== "checkout_started") {
+      errors.push("Set up payment method with Stripe, or choose Save and continue later knowing trial activation remains blocked.");
+    }
+    if (stepId === "ai") {
+      if (!data.ai.mode) errors.push("Choose an AI processing mode.");
+      if (data.ai.mode === "byok" && !data.ai.provider) errors.push("Choose the BYOK AI provider you plan to use.");
+    }
+    if (stepId === "safety") {
+      if (!data.automation.noAutoSendAck) errors.push("Acknowledge that onboarding will not auto-send customer messages or auto-charge outside Stripe Checkout.");
+      if (data.integrations.smsMode !== "skip" && !data.automation.smsComplianceAck) errors.push("Acknowledge SMS consent and compliance requirements.");
+    }
+    return errors;
+  }
+
+  function goToStep(stepId: string) {
+    const index = stepIndexById[stepId];
+    if (index === undefined) return;
+    setActiveStep(Math.min(index, maxUnlockedStep));
+  }
+
+  function goToReadiness(check: any) {
+    const targetStep = readinessStepMap[check.id] || "launch";
+    goToStep(targetStep);
+  }
+
   async function save(options: { silent?: boolean; complete?: boolean; includeCsv?: boolean } = {}) {
     if (!sessionToken) return null;
     setSaving(true);
     setError("");
+    setValidationErrors([]);
     if (!options.silent) setMessage("");
 
     const nextCompleted = Array.from(new Set([...completedSteps, step.id]));
+    const payloadWithProgress = {
+      ...data,
+      __onboardingProgress: {
+        current_step: step.id,
+        completed_steps: nextCompleted,
+        skipped_steps: skippedSteps,
+      },
+    };
 
     const response = await fetch(options.complete ? "/api/onboarding/complete" : "/api/onboarding/save", {
       method: "POST",
@@ -631,7 +726,7 @@ export default function OnboardingPage() {
         Authorization: `Bearer ${sessionToken}`,
       },
       body: JSON.stringify({
-        payload: data,
+        payload: payloadWithProgress,
         completedSteps: nextCompleted,
         skippedSteps,
         currentStep: step.id,
@@ -665,6 +760,12 @@ export default function OnboardingPage() {
   }
 
   async function next() {
+    const errors = validateStep();
+    if (errors.length) {
+      setValidationErrors(errors);
+      setError("Please finish the required items before continuing.");
+      return;
+    }
     const result = await save({ silent: true });
     if (result) setActiveStep((current) => Math.min(current + 1, steps.length - 1));
   }
@@ -674,6 +775,11 @@ export default function OnboardingPage() {
   }
 
   function skipCurrent() {
+    if (!optionalStepIds.has(step.id)) {
+      setValidationErrors([`${step.label} is required before you can continue.`]);
+      setError("This step is required and cannot be skipped.");
+      return;
+    }
     setSkippedSteps((current) => ({ ...current, [step.id]: true }));
     next();
   }
@@ -734,7 +840,20 @@ export default function OnboardingPage() {
   async function saveProviderTest(provider: string) {
     const result = await save({ silent: true });
     if (!result) return;
-    setMessage(`${provider} setup state saved. Live reachability testing is provider-dependent and does not send campaigns, email, SMS, or social posts from onboarding.`);
+    const response = await fetch("/api/onboarding/provider-test", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${sessionToken}`,
+      },
+      body: JSON.stringify({ provider }),
+    });
+    const testResult = await response.json().catch(() => ({}));
+    if (!response.ok || !testResult.success) {
+      setError(testResult.error || `${provider} readiness check failed.`);
+      return;
+    }
+    setMessage(testResult.message || `${provider} setup state saved. No customer-facing action was sent.`);
   }
 
   async function activate() {
@@ -744,7 +863,9 @@ export default function OnboardingPage() {
       return;
     }
     if (result) {
-      setMessage("Setup was saved, but onboarding is still pending required gates such as email verification, Stripe card setup, and billing disclosures. Use the dashboard continue-onboarding prompt if you leave now.");
+      const remaining = (result.readiness?.checks || []).filter((check: any) => check.status !== "complete" && check.status !== "skipped");
+      setValidationErrors(remaining.map((check: any) => check.label));
+      setMessage("Setup was saved, but onboarding is blocked until the required checklist is complete. Select a missing readiness item to jump to the relevant step.");
     }
   }
 
@@ -763,8 +884,8 @@ export default function OnboardingPage() {
     <main className="min-h-screen bg-black px-4 py-8 text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(34,211,238,0.14),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(74,222,128,0.10),transparent_30%)]" />
 
-      <div className="relative mx-auto grid max-w-7xl gap-5 lg:grid-cols-[280px_1fr_320px]">
-        <aside className="rounded-2xl border border-cyan-300/15 bg-slate-950/75 p-4 backdrop-blur-xl">
+      <div className="relative mx-auto grid max-w-7xl min-w-0 gap-5 break-words lg:grid-cols-[280px_minmax(0,1fr)_320px]">
+        <aside className="min-w-0 rounded-2xl border border-cyan-300/15 bg-slate-950/75 p-4 backdrop-blur-xl">
           <div className="mb-5">
             <div className="text-2xl font-black tracking-tight">
               Synapti<span className="bg-gradient-to-r from-cyan-300 to-green-300 bg-clip-text text-transparent">Reach</span>
@@ -780,7 +901,7 @@ export default function OnboardingPage() {
             <div className="h-2 overflow-hidden rounded-full bg-white/10">
               <div className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-green-300" style={{ width: `${progressPercent}%` }} />
             </div>
-            <div className="mt-2 text-[11px] text-slate-500">Step {activeStep + 1} of {steps.length}. Progress saves after every step.</div>
+            <div className="mt-2 text-[11px] text-slate-500">{completedSteps.length} of {steps.length} steps saved. Current step: {step.label}.</div>
           </div>
 
           <div className="space-y-1">
@@ -788,17 +909,25 @@ export default function OnboardingPage() {
               const Icon = item.icon;
               const active = index === activeStep;
               const done = completedSteps.includes(item.id);
+              const locked = index > maxUnlockedStep;
               return (
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => setActiveStep(index)}
+                  onClick={() => {
+                    if (locked) {
+                      setError("Future steps unlock after you complete the current required step.");
+                      return;
+                    }
+                    setActiveStep(index);
+                  }}
                   className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm transition ${
-                    active ? "border border-cyan-300/30 bg-cyan-300/10 text-cyan-50" : "text-slate-400 hover:bg-white/[0.04] hover:text-white"
+                    active ? "border border-cyan-300/30 bg-cyan-300/10 text-cyan-50" : locked ? "cursor-not-allowed text-slate-600" : "text-slate-400 hover:bg-white/[0.04] hover:text-white"
                   }`}
+                  title={locked ? "Locked until previous required steps are complete." : item.label}
                 >
                   <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${done ? "bg-cyan-300/15 text-cyan-100" : "bg-white/[0.04]"}`}>
-                    {done ? <Check size={16} /> : <Icon size={16} />}
+                    {done ? <Check size={16} /> : locked ? <Lock size={16} /> : <Icon size={16} />}
                   </span>
                   <span className="min-w-0 flex-1 truncate">{item.label}</span>
                 </button>
@@ -811,7 +940,7 @@ export default function OnboardingPage() {
           </div>
         </aside>
 
-        <section className="rounded-2xl border border-cyan-300/15 bg-slate-950/75 p-5 backdrop-blur-xl md:p-6">
+        <section className="min-w-0 rounded-2xl border border-cyan-300/15 bg-slate-950/75 p-5 backdrop-blur-xl md:p-6">
           <div className="mb-5 flex flex-col gap-3 border-b border-white/10 pb-5 md:flex-row md:items-start md:justify-between">
             <div>
               <div className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-200/70">Step {activeStep + 1} of {steps.length}</div>
@@ -839,6 +968,14 @@ export default function OnboardingPage() {
           ) : null}
           {message ? (
             <div className="mb-5 rounded-xl border border-cyan-300/20 bg-cyan-300/10 p-3 text-sm text-cyan-50">{message}</div>
+          ) : null}
+          {validationErrors.length ? (
+            <div className="mb-5 rounded-xl border border-red-300/20 bg-red-500/10 p-3 text-sm text-red-100">
+              <div className="mb-2 font-black">Required before continuing</div>
+              <ul className="list-disc space-y-1 pl-5">
+                {validationErrors.map((item) => <li key={item}>{item}</li>)}
+              </ul>
+            </div>
           ) : null}
 
           {step.id === "welcome" ? (
@@ -869,16 +1006,16 @@ export default function OnboardingPage() {
 
           {step.id === "owner" ? (
             <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Owner name">
+              <Field label="Owner name" required>
                 <input className={inputClass()} value={data.owner.name} onChange={(event) => updateSection("owner", { name: event.target.value })} />
               </Field>
-              <Field label="Owner role">
+              <Field label="Owner role" optional>
                 <input className={inputClass()} value={data.owner.role} onChange={(event) => updateSection("owner", { role: event.target.value })} />
               </Field>
-              <Field label="Owner email">
+              <Field label="Owner email" required>
                 <input className={inputClass()} type="email" value={data.owner.email} onChange={(event) => updateSection("owner", { email: event.target.value })} />
               </Field>
-              <Field label="Owner phone">
+              <Field label="Owner phone" optional>
                 <input className={inputClass()} value={data.owner.phone} onChange={(event) => updateSection("owner", { phone: event.target.value })} />
               </Field>
               <div className="md:col-span-2 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-4 text-sm text-cyan-50/80">
@@ -889,59 +1026,59 @@ export default function OnboardingPage() {
 
           {step.id === "profile" ? (
             <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Business name">
+              <Field label="Business name" required>
                 <input className={inputClass()} value={data.businessProfile.businessName} onChange={(event) => updateSection("businessProfile", { businessName: event.target.value })} />
               </Field>
-              <Field label="Legal company name">
+              <Field label="Legal company name" optional>
                 <input className={inputClass()} value={data.businessProfile.legalName} onChange={(event) => updateSection("businessProfile", { legalName: event.target.value })} />
               </Field>
-              <Field label="Tax ID last 4, optional">
+              <Field label="Tax ID last 4" optional>
                 <input className={inputClass()} value={data.businessProfile.taxIdLast4} maxLength={4} onChange={(event) => updateSection("businessProfile", { taxIdLast4: event.target.value.replace(/\D/g, "").slice(0, 4) })} />
               </Field>
-              <Field label="Industry">
+              <Field label="Industry" required>
                 <select className={inputClass()} value={data.businessProfile.industry} onChange={(event) => updateSection("businessProfile", { industry: event.target.value })}>
                   <option value="">Select industry</option>
                   {industries.map((industry) => <option key={industry}>{industry}</option>)}
                 </select>
               </Field>
-              <Field label="Service type">
+              <Field label="Service type" optional>
                 <input className={inputClass()} placeholder="Emergency service, appointment-based, consultative, ecommerce..." value={data.businessProfile.serviceType} onChange={(event) => updateSection("businessProfile", { serviceType: event.target.value })} />
               </Field>
-              <Field label="Contact email">
+              <Field label="Contact email" required>
                 <input className={inputClass()} value={data.businessProfile.contactEmail} onChange={(event) => updateSection("businessProfile", { contactEmail: event.target.value })} type="email" />
               </Field>
-              <Field label="Phone">
+              <Field label="Phone" optional>
                 <input className={inputClass()} value={data.businessProfile.phone} onChange={(event) => updateSection("businessProfile", { phone: event.target.value })} />
               </Field>
-              <Field label="Website">
+              <Field label="Website" optional>
                 <input className={inputClass()} value={data.businessProfile.website} onChange={(event) => updateSection("businessProfile", { website: event.target.value })} />
               </Field>
-              <Field label="Team size">
+              <Field label="Team size" optional>
                 <input className={inputClass()} value={data.businessProfile.teamSize} onChange={(event) => updateSection("businessProfile", { teamSize: event.target.value })} />
               </Field>
               <div className="md:col-span-2">
-                <Field label="Address">
+                <Field label="Address" optional>
                   <input className={inputClass()} value={data.businessProfile.address} onChange={(event) => updateSection("businessProfile", { address: event.target.value })} />
                 </Field>
               </div>
               <div className="md:col-span-2">
-                <Field label="Products and services">
+                <Field label="Products and services" optional>
                   <textarea className={inputClass()} rows={3} value={data.businessProfile.productsServices} onChange={(event) => updateSection("businessProfile", { productsServices: event.target.value })} />
                 </Field>
               </div>
               <div className="md:col-span-2">
-                <Field label="Target customer">
+                <Field label="Target customer" optional>
                   <textarea className={inputClass()} rows={3} value={data.businessProfile.audience} onChange={(event) => updateSection("businessProfile", { audience: event.target.value })} />
                 </Field>
               </div>
-              <Field label="Main offer">
+              <Field label="Main offer" optional>
                 <input className={inputClass()} value={data.businessProfile.mainOffer} onChange={(event) => updateSection("businessProfile", { mainOffer: event.target.value })} />
               </Field>
-              <Field label="Preferred call to action">
+              <Field label="Preferred call to action" optional>
                 <input className={inputClass()} value={data.businessProfile.preferredCta} onChange={(event) => updateSection("businessProfile", { preferredCta: event.target.value })} />
               </Field>
               <div className="md:col-span-2">
-                <Field label="Brand voice">
+                <Field label="Brand voice" optional>
                   <textarea className={inputClass()} rows={3} value={data.businessProfile.brandVoice} onChange={(event) => {
                     updateSection("businessProfile", { brandVoice: event.target.value });
                     updateSection("ai", { brandVoice: event.target.value });
@@ -953,23 +1090,23 @@ export default function OnboardingPage() {
 
           {step.id === "sales" ? (
             <div className="space-y-4">
-              <Field label="Sales process">
+              <Field label="Sales process" optional>
                 <textarea className={inputClass()} rows={4} value={data.crmSetup.salesProcess || data.businessProfile.salesProcess} onChange={(event) => {
                   updateSection("crmSetup", { salesProcess: event.target.value });
                   updateSection("businessProfile", { salesProcess: event.target.value });
                 }} placeholder="Example: new inquiry, call, estimate, proposal, follow-up, won/lost." />
               </Field>
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Pipeline stages">
+                <Field label="Pipeline stages" required>
                   <textarea className={inputClass()} rows={4} value={data.crmSetup.pipelineStages} onChange={(event) => updateSection("crmSetup", { pipelineStages: event.target.value })} />
                 </Field>
-                <Field label="Lead statuses">
+                <Field label="Lead statuses" optional>
                   <textarea className={inputClass()} rows={4} value={data.crmSetup.leadStatuses} onChange={(event) => updateSection("crmSetup", { leadStatuses: event.target.value })} />
                 </Field>
-                <Field label="Lead sources">
+                <Field label="Lead sources" optional>
                   <textarea className={inputClass()} rows={4} value={data.crmSetup.leadSources} onChange={(event) => updateSection("crmSetup", { leadSources: event.target.value })} />
                 </Field>
-                <Field label="Useful lead tags">
+                <Field label="Useful lead tags" optional>
                   <textarea className={inputClass()} rows={4} value={data.crmSetup.leadTags} onChange={(event) => updateSection("crmSetup", { leadTags: event.target.value })} />
                 </Field>
               </div>
@@ -1078,7 +1215,7 @@ export default function OnboardingPage() {
           {step.id === "billing" ? (
             <div className="space-y-4">
               <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-4 text-sm text-cyan-50/80">
-                Card collection is handled only by Stripe Checkout. SynaptiReach never receives card numbers, CVC, Stripe secret keys, or webhook secrets in the browser.
+                Card collection is handled only by hosted Stripe Checkout. SynaptiReach employees never see, receive, or have access to your card number, CVC, or card details.
               </div>
               {[
                 ["start_trial", "Start 14-day trial through Stripe", "Creates a Stripe Checkout session with a 14-day trial for the selected post-trial plan."],
@@ -1104,7 +1241,7 @@ export default function OnboardingPage() {
                 className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-green-300 px-4 py-3 text-sm font-black text-black disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {checkoutBusy ? <Loader2 className="animate-spin" size={16} /> : <CreditCard size={16} />}
-                Continue to Stripe Checkout
+                Set up payment method with Stripe
               </button>
               {data.plan.trialPath === "managed" ? (
                 <div className="rounded-2xl border border-yellow-300/20 bg-yellow-300/10 p-4">
@@ -1541,13 +1678,13 @@ export default function OnboardingPage() {
               </div>
               <div className="space-y-2">
                 {(readiness?.checks || []).map((check: any) => (
-                  <div key={check.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/30 p-3">
-                    <div>
+                  <button key={check.id} type="button" onClick={() => goToReadiness(check)} className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/30 p-3 text-left transition hover:border-cyan-300/25">
+                    <div className="min-w-0">
                       <div className="text-sm font-bold">{check.label}</div>
                       {check.detail ? <div className="text-xs text-slate-400">{check.detail}</div> : null}
                     </div>
                     <StatusPill status={check.status} />
-                  </div>
+                  </button>
                 ))}
               </div>
               <div className="flex flex-wrap gap-3">
@@ -1555,7 +1692,7 @@ export default function OnboardingPage() {
                 <Link href="/dashboard/leads" className="rounded-xl border border-cyan-300/20 px-4 py-2 text-sm font-bold text-cyan-50">Open Leads</Link>
                 <button type="button" onClick={activate} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-green-300 px-5 py-2 font-black text-black">
                   <Rocket size={16} />
-                  Activate and Enter CRM
+                  Complete Onboarding
                 </button>
               </div>
             </div>
@@ -1566,9 +1703,9 @@ export default function OnboardingPage() {
               <ArrowLeft size={16} />
               Back
             </button>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               {step.id !== "launch" ? (
-                <button type="button" onClick={skipCurrent} className="rounded-xl border border-white/10 px-4 py-2 text-sm font-bold text-slate-300">
+                <button type="button" onClick={skipCurrent} disabled={!optionalStepIds.has(step.id)} className="rounded-xl border border-white/10 px-4 py-2 text-sm font-bold text-slate-300 disabled:cursor-not-allowed disabled:opacity-40" title={optionalStepIds.has(step.id) ? "Save this step as intentionally skipped." : "This step is required before continuing."}>
                   Skip for now
                 </button>
               ) : null}
@@ -1582,7 +1719,7 @@ export default function OnboardingPage() {
           </div>
         </section>
 
-        <aside className="space-y-5">
+        <aside className="min-w-0 space-y-5">
           <div className="rounded-2xl border border-cyan-300/15 bg-slate-950/75 p-4 backdrop-blur-xl">
             <div className="mb-3 flex items-center gap-2 font-black">
               <Gauge size={18} className="text-cyan-200" />
