@@ -13,7 +13,7 @@ Codex must update this after every pass.
 
 | Task | Name | Status | Evidence | Remaining Work | Last Updated |
 |---|---|---|---|---|---|
-| 1 | Build/deployment health | Partial | npm.cmd run build passes | Keep verifying each pass | |
+| 1 | Build/deployment health | Partial | npm.cmd run build passes after final User CRM audit on 2026-05-27 | Keep verifying each pass | 2026-05-27 |
 | 2 | Supabase schema/features | Partial | schema ran successfully | feature live-write tests | |
 | 3 | Test user/simulated workspace | Complete | live bootstrap/seed/tick succeeded for `donovan.mike966@gmail.com`; workspace `cc2d162a-33e9-4d0b-8a8f-b9d35f68d4a8`; seed returned rich CRM counts; tick advanced to day 3; browser login/pages verified by user; build passes; controls verify `workspaces.is_test_workspace=true` | Continue monitoring with future browser smoke tests; no Task 3 blocker remains | 2026-05-19 |
 | 4 | Demo/nav/performance | Complete | demo overview removed, nav non-sticky, build passes | monitor | |
@@ -21,7 +21,7 @@ Codex must update this after every pass.
 | 6 | Tiers/caps/BYOK/managed | Partial | central plan metadata includes BYOK/managed tiers, caps, price env names, credit-pack behavior; settings UI shows selected plan/caps | live billing account plan updates and cap enforcement tests | 2026-05-19 |
 | 7 | Services/settings requests | Complete | live service-request writes returned HTTP 200 with inserted IDs; requests stay consultation_requested/review-gated and no payment is faked; internal notification support added | monitor Resend provider delivery | 2026-05-20 |
 | 8 | Public services consultation flow | Complete | services page buttons now say Contact SynaptiReach and explain required 30-minute consultation while preserving pricing | monitor copy/UI | 2026-05-19 |
-| 9 | Contact form/admin handling | Partial | live contact insert returned HTTP 200 with inserted ID; admin page fails closed; Resend failure is safe | provider-side Resend delivery returned emailSent false and needs sender/domain/recipient review | 2026-05-20 |
+| 9 | Contact form/admin handling | Partial | live contact insert returned HTTP 200 with inserted ID; admin page fails closed; Resend failure is safe; production Resend key/from env are present | Resend remains temporary-sender/test-recipient limited until a real sending domain is verified | 2026-05-27 |
 | 10 | Waitlist system | Partial | live waitlist insert returned HTTP 200 with status new; lifecycle route supports new/reviewed/invited/onboarded/declined; admin mutation is secret-protected | provider-side Resend delivery returned emailSent false; full admin lifecycle browser verification remains | 2026-05-20 |
 | 11 | Industry pages/footer dropdown | Complete | dynamic industry pages added for required industries and compact footer solution list updated | monitor route coverage | 2026-05-19 |
 | 12 | Public info pages buildout | Partial | about/blog/careers/privacy/terms/security/support/analytics/ai-agents expanded; button cleanup applied for careers/privacy/support | deeper copy polish and visual review on mobile/desktop | 2026-05-19 |
@@ -36,11 +36,25 @@ Codex must update this after every pass.
 | 21 | Review-gated email/SMS replies | Partial | `POST /api/crm/communications/send` added with confirm=true, Resend/Twilio server-side setup-required behavior, sent/failed logging, notifications, and Confirm Send UI | live Resend/Twilio success-path verification; workspace BYOK provider credential storage | 2026-05-19 |
 | 22 | Notification mark-read | Complete | individual notification clicks mark read optimistically before navigation; mark-all-read is workspace constrained; build and local smoke pass | live persisted count verification in browser | 2026-05-19 |
 | 23 | Contact/support/admin notifications | Partial | contact/waitlist/service requests create notifications; service request internal email support added; admin contact/waitlist pages fail closed unless enabled; admin waitlist action secret route rejects unauthorized PATCH | final admin auth/roles and Resend provider delivery verification | 2026-05-20 |
-| 24 | Final build/tests/docs | Partial | `npm.cmd run build` passes after launch hardening; local changed-page smoke returned 200; Stripe checkout and Supabase live-write probes ran; docs/checklist updated | production deploy/smoke after this patch set, signed webhook replay, Resend/Twilio success-path verification, mobile/browser modal review | 2026-05-20 |
+| 24 | Final build/tests/docs | Partial | `npm.cmd run build` passes; local Settings/API/webhook smoke returned safe results; selected production routes returned 200 per user-provided smoke; docs/checklist updated | production test-mode checkout/webhook confirmation, Resend verified sending domain, Twilio success-path verification, mobile/browser modal review | 2026-05-27 |
 
 ## Pass Log
 
 Add new entries below after each Codex pass.
+
+### 2026-05-27 - Final User CRM Readiness Audit
+
+Date: 2026-05-27
+Model: Codex
+Prompt/Goal: Run a final User CRM portal verification and readiness audit only, continuing from the current working tree without broad new feature scope.
+Completed: Read `docs/codex/CODEX_TASK_LEDGER.md`, `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`, `docs/knowledge-map.md`, `docs/architecture.md`, and `docs/decisions.md`. Verified `.env.local` is not tracked. Ran a redacted committed-secret scan and found a hardcoded Supabase service-role key plus demo password in `create-test-user.mjs`; replaced the utility with env-only inputs and no password printing. Tightened Settings API Resend readiness so Billing & Purchase History only treats Resend as ready when both `RESEND_API_KEY` and `RESEND_FROM_EMAIL` are present. Verified Stripe webhook route is present in the build, rejects unsigned requests with HTTP 400, and only marks credit-pack purchases paid in signed webhook processing paths. Verified Settings API returns billing history arrays for credit-pack purchases, billing events, and service requests. Ran `npm.cmd run build`; build passed and generated 150/150 static pages.
+Skipped: No Stripe live-mode switch, no production checkout creation, no customer email/SMS/social send, no fake paid/subscribed state, and no broad new feature work.
+Partial: In-app browser automation could not be run because the Browser plugin's required Node REPL control tool was not exposed in this session; local production HTTP smoke and source-level wiring checks were used instead.
+Blocked: Rotate the exposed Supabase service-role key and demo credentials because they were present in tracked source before this pass. Production webhook confirmation still needs a full Stripe test-mode checkout against `https://synapti-reach.vercel.app/api/billing/stripe/webhook`. Customer receipt email delivery remains blocked for launch readiness until a real Resend sending domain is purchased and verified.
+Files changed: `app/api/crm/settings/route.ts`, `create-test-user.mjs`, `docs/codex/CODEX_TASK_LEDGER.md`, `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`
+Build result: `npm.cmd run build` passed.
+Tests run: Required docs reads; `.env.local` tracked-file check; redacted secret-pattern scan; source inspection of Settings/Billing History/webhook payment states; `npm.cmd run build`; local production smoke for `/dashboard/settings`, `/api/crm/settings`, and unsigned `POST /api/billing/stripe/webhook`.
+Next recommended task: Rotate the exposed Supabase service-role key/demo credentials, then run one production Stripe test-mode checkout through the configured production webhook endpoint and verify the resulting purchase/webhook/email diagnostics.
 
 ### 2026-05-26 - Billing History UX Polish
 
