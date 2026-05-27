@@ -1638,3 +1638,162 @@ Reminder: the Resend API key was previously pasted into chat during setup. Rotat
   - Resend sender/domain/recipient delivery review
   - Twilio success-path verification with test credentials
   - authenticated browser review of metric modals and CRM Intelligence approve/dismiss interactions
+
+## SynaptiReach Onboarding Master Prompt Pass - 2026-05-27
+
+- [x] Continued from the current working tree without restarting completed User CRM work.
+- [x] Preserved the completed User CRM usability improvements:
+  - OwnerFocusPanel usage
+  - grouped sidebar navigation
+  - `/dashboard/workflow` route preservation
+  - `Review gated` / `Real records` topbar wording
+  - Business Intelligence wording and recommendation panel clarity
+- [x] Expanded `/onboarding` into a real save/resume workspace-generation wizard:
+  - owner details
+  - business profile
+  - legal/company details
+  - industry and service type
+  - target customer
+  - brand voice
+  - main offer
+  - preferred CTA
+  - sales process
+  - pipeline stages
+  - lead statuses, sources, and tags
+  - staff/team setup
+  - staff permissions
+  - provider setup
+  - AI assistant behavior
+  - rule-based intelligence preference
+  - marketing goals and notification preferences
+  - lead import/manual starter setup
+  - workflow recommendations and draft creation
+  - automation safety preferences
+  - billing/trial mode
+  - Stripe setup handoff
+  - post-trial plan
+  - usage caps
+  - managed SMS readiness approvals
+  - Help/DFY preference
+  - launch readiness review
+- [x] Added two explicit trial paths:
+  - SynaptiReach-Managed Trial with fixed hard caps for AI/email/SMS/contacts/workflows/agents.
+  - BYOK Trial with customer-owned provider usage and optional self-imposed caps.
+- [x] Removed free-pick trial tier behavior from the public trial page; post-trial plan selection is separate from fixed trial exposure.
+- [x] Stripe/card safety:
+  - card collection stays Stripe Checkout only
+  - checkout creates `checkout_required` / `checkout_created` state only
+  - paid/subscribed/trialing state remains webhook-owned
+  - trial start/end timestamps are not written before Stripe webhook confirmation
+  - no Stripe live-mode switch was made
+- [x] Save/resume:
+  - partial wizard payload is stored in `onboarding_sessions`
+  - current step, completed steps, skipped steps, and readiness score are stored in metadata
+  - dashboard layout shows a continue-onboarding prompt until completion
+- [x] Signup handoff stores only non-secret onboarding defaults in `localStorage`; the signup password is not persisted there.
+- [x] Real database writes use existing structures where possible:
+  - `workspaces`
+  - `workspace_members`
+  - `onboarding_sessions`
+  - `crm_settings`
+  - `crm_billing_accounts`
+  - `crm_provider_connections`
+  - `leads`
+  - `crm_csv_imports`
+  - `crm_staff`
+  - `crm_staff_permissions`
+  - `crm_workflows`
+  - `crm_ai_recommendations`
+- [x] Provider/security behavior:
+  - provider secrets stay server-side/encrypted
+  - OpenAI remains pending unless `AI_ENABLE_OPENAI=true`
+  - Gemini first / OpenRouter fallback / OpenAI only-if-enabled guidance is preserved
+  - no customer email/SMS/social send is triggered by onboarding
+- [x] Help/DFY pricing included:
+  - Guided Setup Call: Free 30 minutes
+  - Extended Setup Support: $99/hour
+  - Provider Setup Assistance: $149
+  - CRM Import + Cleanup: $199
+  - Campaign Setup Assistance: $249
+  - Workflow Setup Assistance: $249
+  - Full Onboarding Setup: $599
+  - Premium Launch Setup: $999+
+- [x] DFY rule documented: guidance is free when the user performs setup with SynaptiReach guidance; SynaptiReach-performed setup is paid DFY work.
+- [x] Build verification:
+  - `npm.cmd run build` passed.
+  - Next generated 150/150 static pages.
+- [x] Local production HTTP smoke returned 200 for:
+  - `/trial`
+  - `/signup?trial=managed`
+  - `/signup?trial=byok`
+  - `/onboarding`
+  - `/dashboard`
+  - `/dashboard/settings`
+- [ ] Manual/live verification still required:
+  - authenticated browser pass through every onboarding step
+  - save/resume after leaving onboarding mid-flow
+  - Stripe test-mode checkout and signed webhook trial lifecycle
+  - provider connection success/failure states with real BYOK keys
+  - managed SMS Twilio/carrier fee approval and $20 setup fee workflow
+  - CSV import mapping with a real user CSV
+  - staff invite/permission review in Settings
+  - workflow draft review in Automations
+  - launch readiness prompt clearing after required setup completion
+  - Help/DFY request follow-up and any paid service checkout path
+
+## SynaptiReach Onboarding Master Prompt V2 Delta - 2026-05-27
+
+- [x] Read the Obsidian prompt pact:
+  - `C:\Users\nikna\Documents\Obsidian Vault\SynaptiReach\Codex Prompt Pacts\synaptireach_onboarding_master_prompt_v2_updated_from_current_code.md`
+- [x] Updated managed trial caps to the v2 model:
+  - 300 AI credits
+  - 250 emails
+  - 0 SMS by default
+  - 25 SMS after approval/payment
+  - 250 contacts
+  - 10 active workflows
+  - 25 agent runs
+  - 2 invited staff users
+  - 5 campaign drafts
+  - 1 CSV import
+  - 10 onboarding files / 25 MB noted for storage-enabled paths
+- [x] Added post-trial plan-fit guidance:
+  - lower post-trial tiers do not delete CRM data
+  - future usage beyond selected plan caps is restricted until upgrade or eligible capacity is added
+  - selected post-trial plan remains renewal intent, not an expanded trial-cap selector
+- [x] Added email-verification readiness:
+  - Supabase auth email confirmation is included in launch readiness
+  - final onboarding completion is blocked unless email verification, Stripe card setup state, and required trial disclosures are complete
+- [x] Added provider test controls in onboarding:
+  - Gemini
+  - OpenRouter
+  - OpenAI
+  - Resend
+  - Twilio
+  - Ayrshare
+  - Current behavior saves encrypted setup/readiness state and does not send external campaigns, email, SMS, or social posts.
+- [x] Added real Help/DFY persistence:
+  - onboarding Help/DFY selections create `crm_service_requests` rows
+  - records use `metadata.source = onboarding_help`
+  - no paid orders, checkout, fulfillment, or auto-charge state is created
+- [x] Updated checkout metadata with post-trial plan-fit language.
+- [x] Build verification:
+  - `npm.cmd run build` passed.
+  - Next generated 150/150 static pages.
+- [x] Local production HTTP smoke returned 200 for:
+  - `/trial`
+  - `/pricing`
+  - `/signup?trial=managed`
+  - `/signup?trial=byok`
+  - `/onboarding`
+  - `/dashboard`
+  - `/dashboard/settings`
+  - `/dashboard/leads`
+  - `/dashboard/workflow`
+- [ ] Still required from v2 prompt:
+  - custom email verification-code send/check API if Supabase auth confirmation is not enough
+  - real server-side provider reachability test endpoints
+  - managed trial cap hard-stop enforcement across AI/email/SMS/contact/workflow/agent/campaign/import creation paths
+  - launch cohort/admin approval gate if active
+  - service/product upload handling and storage limits
+  - authenticated browser walkthrough for all v2 onboarding scenarios

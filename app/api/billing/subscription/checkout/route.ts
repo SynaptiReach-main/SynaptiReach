@@ -15,6 +15,13 @@ export async function POST(request: Request) {
     if (!plan) {
       return NextResponse.json({ success: false, error: "Select a valid SynaptiReach subscription plan." }, { status: 400 });
     }
+    const requestedTrialPath = body.trialPath || body.trial_path || null;
+    if (requestedTrialPath && requestedTrialPath !== plan.billingMode) {
+      return NextResponse.json(
+        { success: false, error: "Selected post-trial plan must match the chosen trial path." },
+        { status: 400 }
+      );
+    }
     const priceId = getPlanPriceId(plan);
     if (!priceId) {
       return NextResponse.json(
@@ -33,8 +40,7 @@ export async function POST(request: Request) {
     const workspaceId = body.workspace_id || body.workspaceId || context.workspaceId || null;
     const companyId = body.company_id || body.companyId || context.companyId || null;
     const userId = context.userId || body.user_id || body.userId || null;
-    const now = new Date();
-    const trialEndsAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
+    const acknowledgements = body.acknowledgements || {};
 
     let existing = null;
     if (workspaceId || companyId || userId) {
@@ -70,17 +76,46 @@ export async function POST(request: Request) {
       billing_mode: plan.billingMode,
       status: "checkout_required",
       stripe_customer_id: customerId,
-      trial_started_at: existing?.trial_started_at || now.toISOString(),
-      trial_ends_at: existing?.trial_ends_at || trialEndsAt,
+      trial_started_at: existing?.trial_started_at || null,
+      trial_ends_at: existing?.trial_ends_at || null,
       metadata: {
         ...(existing?.metadata || {}),
         selected_plan: plan.name,
         plan_slug: plan.slug,
+        trial_path: plan.billingMode,
         monthly_price_cents: plan.monthlyPriceCents,
         checkout_disclosure: "After the 14-day trial, the selected plan renews automatically unless canceled before the trial ends.",
+        trial_card_required: true,
+        stripe_card_acknowledged: Boolean(acknowledgements.stripeCardAcknowledged),
+        auto_renew_acknowledged: Boolean(acknowledgements.autoRenewAcknowledged),
+        managed_caps_acknowledged: Boolean(acknowledgements.managedCapsAcknowledged),
+        byok_provider_cost_acknowledged: Boolean(acknowledgements.byokProviderCostAcknowledged),
+        usage_caps: body.usageCaps || existing?.metadata?.usage_caps || {},
+        managed_sms_readiness: {
+          requested: Boolean(body.managedSms?.requested || existing?.metadata?.managed_sms_readiness?.requested),
+          carrier_fee_approval: Boolean(body.managedSms?.carrierFeeApproval || existing?.metadata?.managed_sms_readiness?.carrier_fee_approval),
+          setup_fee_approval: Boolean(body.managedSms?.setupFeeApproval || existing?.metadata?.managed_sms_readiness?.setup_fee_approval),
+          synaptireach_setup_fee_cents: 2000,
+          status:
+            (body.managedSms?.requested || existing?.metadata?.managed_sms_readiness?.requested) &&
+            (body.managedSms?.carrierFeeApproval || existing?.metadata?.managed_sms_readiness?.carrier_fee_approval) &&
+            (body.managedSms?.setupFeeApproval || existing?.metadata?.managed_sms_readiness?.setup_fee_approval)
+              ? "approval_ready"
+              : (body.managedSms?.requested || existing?.metadata?.managed_sms_readiness?.requested)
+                ? "approval_required"
+                : "not_requested",
+        },
+        post_trial_plan_fit: {
+          selected_plan: plan.name,
+          selected_tier: plan.tier,
+          downgrade_note:
+            "Trial feature access can be broader than the selected post-trial tier. Existing data is not deleted; future usage beyond the selected plan cap is restricted until upgrade or eligible capacity is added.",
+        },
         stripe_price_env: plan.stripePriceEnv,
         stripe_configured: getStripeBillingStatus().configured,
         source: "subscription_checkout_request",
+        payment_state_note:
+          "Checkout creation does not mark a paid, subscribed, or trialing state. Stripe webhook confirmation owns trial and subscription state.",
       },
     };
 

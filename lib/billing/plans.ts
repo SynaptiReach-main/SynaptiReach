@@ -155,53 +155,97 @@ export const CREDIT_PACKS = [
   "Contact Pack: +5,000 contacts for $29/mo",
 ];
 
+export const MANAGED_TRIAL_CAPS = {
+  aiActions: 300,
+  emails: 250,
+  sms: 0,
+  approvedSms: 25,
+  contacts: 250,
+  activeWorkflows: 10,
+  agentRuns: 25,
+  staff: 2,
+  campaignDrafts: 5,
+  csvImports: 1,
+  onboardingFiles: 10,
+  onboardingFileStorageMb: 25,
+};
+
+export const TRIAL_PATHS = [
+  {
+    id: "managed",
+    name: "SynaptiReach-Managed Trial",
+    description: "Full software access for 14 days with hard free caps for SynaptiReach-managed AI, email, SMS, contacts, workflows, and agents.",
+    cardRequired: true,
+    managedCreditExposure: true,
+    providerCostResponsibility: "SynaptiReach-managed usage stays inside hard trial caps. Credit packs or paid capacity are required after a cap is reached.",
+  },
+  {
+    id: "byok",
+    name: "BYOK Trial",
+    description: "Full software access for 14 days while the customer connects their own AI, email, SMS, and social providers where needed.",
+    cardRequired: true,
+    managedCreditExposure: false,
+    providerCostResponsibility: "Customer pays Gemini/OpenAI/OpenRouter, Resend, Twilio, Ayrshare, or other provider usage directly.",
+  },
+];
+
+export const BYOK_TRIAL_NOTES = [
+  "Connect your own Gemini, OpenAI, OpenRouter, Resend, Twilio, and Ayrshare accounts as needed.",
+  "You pay provider usage directly to those providers.",
+  "SynaptiReach does not expose managed AI, email, or SMS credit during BYOK trial.",
+];
+
+export const DFY_ASSISTANCE_OPTIONS = [
+  { id: "guided_call", name: "Guided Setup Call", price: "Free 30 minutes", paid: false },
+  { id: "extended_support", name: "Extended Setup Support", price: "$99/hour", paid: true },
+  { id: "provider_setup", name: "Provider Setup Assistance", price: "$149", paid: true },
+  { id: "crm_import_cleanup", name: "CRM Import + Cleanup", price: "$199", paid: true },
+  { id: "campaign_setup", name: "Campaign Setup Assistance", price: "$249", paid: true },
+  { id: "workflow_setup", name: "Workflow Setup Assistance", price: "$249", paid: true },
+  { id: "full_onboarding", name: "Full Onboarding Setup", price: "$599", paid: true },
+  { id: "premium_launch", name: "Premium Launch Setup", price: "$999+", paid: true },
+];
+
 export const DFY_PLANS = [
   {
-    name: "DFY Starter Setup",
-    price: "$799 setup + $149/mo managed platform",
-    features: ["CRM setup", "Lead pipeline", "Basic email campaign", "Basic automation", "5,000 AI actions/mo", "2 AI agents", "1 setup call"],
+    name: "Guided Setup Call",
+    price: "Free 30 minutes",
+    features: ["You perform the setup with SynaptiReach guidance", "Screen-share walkthrough", "Trial path and provider setup questions", "No payment or checkout created"],
   },
   {
-    name: "DFY Growth Setup",
-    price: "$1,499 setup + $299/mo managed platform",
+    name: "Launch Setup Help",
+    price: "$99-$249",
     popular: true,
-    features: ["Full funnel build", "CRM + segmentation", "Email + SMS sequence setup", "Workflow setup", "20,000 AI actions/mo", "5 AI agents", "Monthly strategy call"],
+    features: ["Extended Setup Support: $99/hour", "Provider Setup Assistance: $149", "CRM Import + Cleanup: $199", "Campaign or Workflow Setup: $249"],
   },
   {
-    name: "DFY Premium Setup",
-    price: "$2,999 setup + $599/mo managed platform",
-    features: ["Full business system", "Branding + strategy", "Advanced AI agents", "Advanced automation", "Campaign tracking", "60,000 AI actions/mo", "10 AI agents", "Priority support/account management"],
+    name: "Full Onboarding Setup",
+    price: "$599-$999+",
+    features: ["Full Onboarding Setup: $599", "Premium Launch Setup: $999+", "Paid only when SynaptiReach performs setup for you", "Consultation required before fulfillment or checkout"],
   },
 ];
 
 export const TRIAL_PLANS = [
   {
-    name: "Basic Trial",
-    aiActions: "100",
-    emails: "100",
-    sms: "0 managed SMS",
-    contacts: "100",
-    agents: "0",
-    available: true,
-  },
-  {
-    name: "Growth Trial",
-    aiActions: "250",
-    emails: "250",
-    sms: "0 managed SMS",
-    contacts: "250",
-    agents: "1 lightweight preview agent",
+    name: "SynaptiReach-Managed Trial",
+    aiActions: `${MANAGED_TRIAL_CAPS.aiActions}`,
+    emails: `${MANAGED_TRIAL_CAPS.emails}`,
+    sms: "0 managed SMS until Twilio/carrier approval",
+    contacts: `${MANAGED_TRIAL_CAPS.contacts}`,
+    agents: `${MANAGED_TRIAL_CAPS.agentRuns} agent runs`,
+    workflowRuns: `${MANAGED_TRIAL_CAPS.activeWorkflows} active workflows`,
     available: true,
     popular: true,
   },
   {
-    name: "Premium Trial",
-    aiActions: "Contact approval",
-    emails: "Contact approval",
-    sms: "0 managed SMS",
-    contacts: "Contact approval",
-    agents: "Locked",
-    available: false,
+    name: "BYOK Trial",
+    aiActions: "Customer provider account",
+    emails: "Customer provider account",
+    sms: "Customer Twilio account",
+    contacts: "250 during trial",
+    agents: "1 lightweight preview agent",
+    workflowRuns: "Selected plan limit",
+    available: true,
   },
 ];
 

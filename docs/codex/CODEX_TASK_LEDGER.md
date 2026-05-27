@@ -590,6 +590,34 @@ Build result: Passed. Latest `npm.cmd run build` completed successfully with 150
 Tests run: `npm.cmd run build`; local production route smoke; fail-closed API probes; `.env.local` tracked-file check; customer-facing wording grep; secret-reference source grep.
 Next recommended task: Run manual live verification for Stripe, Supabase writes, Resend/Twilio delivery, and browser/mobile modal behavior, then deploy and production-smoke this pass.
 
+### 2026-05-27 - SynaptiReach Onboarding Master Prompt Pass
+
+Date: 2026-05-27
+Model: Codex
+Prompt/Goal: Rebuild onboarding into a complete real workspace-generation system while preserving the completed User CRM usability pass.
+Completed: Expanded `/onboarding` into a save/resume multi-step wizard covering owner details, business/legal profile, sales setup, trial path, Stripe billing setup intent, AI/provider setup, integrations, lead import/manual setup, staff permissions, marketing, workflow drafts, safety preferences, help/DFY, and launch readiness. Added dashboard continue-onboarding prompt. Added shared billing constants for managed/BYOK trials, hard managed trial caps, BYOK notes, and DFY assistance pricing. Updated signup/trial handoff so `/signup?trial=managed` and `/signup?trial=byok` seed onboarding defaults without storing the signup password in localStorage. Hardened subscription checkout metadata and removed pre-webhook trial start/end writes so Stripe owns trial timestamps and paid/subscribed/trialing state. Added onboarding server writes for CRM settings metadata, billing metadata, provider connections, staff permissions, workflow drafts, and launch-readiness recommendations using existing tables. Updated onboarding, architecture, decisions, knowledge-map, and final checklist docs.
+Skipped: No User CRM usability rewrite; no billing webhook/payment history redo; no local AI connector; no CRM Intelligence data-flow overhaul; no public page overhaul beyond trial/signup handoff copy needed for onboarding; no `.env.local` changes; no live Stripe mode switch.
+Partial: Browser-click validation of the full authenticated onboarding wizard remains manual. Live Stripe Checkout/webhook lifecycle, provider connection verification, Twilio/carrier approvals, Resend domain verification, and real DFY scheduling/payment flows remain external/manual setup items.
+Blocked: None for build-safe onboarding implementation. Real customer receipt email, managed SMS readiness, and Stripe trial activation require user-owned external service setup and signed Stripe webhook verification.
+Files changed: `app/onboarding/page.tsx`, `lib/onboarding/server.ts`, `app/api/billing/subscription/checkout/route.ts`, `app/(marketing)/signup/page.tsx`, `app/(marketing)/trial/page.tsx`, `app/dashboard/layout.tsx`, `lib/billing/plans.ts`, `docs/onboarding.md`, `docs/architecture.md`, `docs/decisions.md`, `docs/knowledge-map.md`, `docs/codex/CODEX_TASK_LEDGER.md`, `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`.
+Build result: Passed. `npm.cmd run build` completed successfully and generated 150/150 static pages.
+Tests run: `npm.cmd run build`; local production HTTP smoke on `http://localhost:3026` returned 200 for `/trial`, `/signup?trial=managed`, `/signup?trial=byok`, `/onboarding`, `/dashboard`, and `/dashboard/settings`.
+Next recommended task: Run an authenticated browser pass through `/onboarding`, complete a Stripe test-mode checkout and signed webhook lifecycle, then verify dashboard continue prompt clears only after Stripe/setup acknowledgements and onboarding completion.
+
+### 2026-05-27 - SynaptiReach Onboarding Master Prompt V2 Delta
+
+Date: 2026-05-27
+Model: Codex
+Prompt/Goal: Apply the stricter onboarding v2 prompt pact from the Obsidian prompt-pact file without restarting completed onboarding or User CRM usability work.
+Completed: Read `C:\Users\nikna\Documents\Obsidian Vault\SynaptiReach\Codex Prompt Pacts\synaptireach_onboarding_master_prompt_v2_updated_from_current_code.md`; updated centralized managed trial caps to the v2 model; added visible post-trial plan-fit/downgrade guidance; added Supabase auth email-confirmation status to launch readiness and final completion gating; changed final activation behavior so incomplete required gates save state but do not redirect as completed; added onboarding provider test controls that save encrypted setup/readiness state without sending external actions; added Help/DFY persistence into real `crm_service_requests` rows with onboarding metadata and no paid order state; updated checkout metadata with post-trial plan-fit language.
+Skipped: No custom email verification-code send/check API was added because Supabase auth email confirmation already exists and a custom code flow needs a deeper auth/email design pass. No real provider network reachability probes were added because safe provider-specific testing requires separate server test endpoints and live credentials. No trial cap enforcement middleware was added in this pass; current work centralizes caps and stores usage-cap intent.
+Partial: Provider test buttons are safe setup-state checks, not live provider network tests. Trial cap hard-stop enforcement, custom email verification UI/API, service/product upload handling, and launch cohort approval gates remain future passes.
+Blocked: Live Stripe Checkout/webhook, provider tests, managed SMS approvals, and customer email delivery depend on external account configuration.
+Files changed: `app/onboarding/page.tsx`, `lib/onboarding/server.ts`, `lib/billing/plans.ts`, `app/(marketing)/trial/page.tsx`, `app/api/billing/subscription/checkout/route.ts`, `docs/onboarding.md`, `docs/architecture.md`, `docs/decisions.md`, `docs/codex/CODEX_TASK_LEDGER.md`, `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`.
+Build result: Passed. `npm.cmd run build` completed successfully and generated 150/150 static pages.
+Tests run: `npm.cmd run build`; local production HTTP smoke returned 200 for `/trial`, `/pricing`, `/signup?trial=managed`, `/signup?trial=byok`, `/onboarding`, `/dashboard`, `/dashboard/settings`, `/dashboard/leads`, and `/dashboard/workflow`.
+Next recommended task: Build real server-side provider test endpoints and trial cap enforcement, then run an authenticated browser walkthrough and Stripe webhook lifecycle test.
+
 ### Template
 
 Date:

@@ -141,6 +141,7 @@ export default function DashboardLayout({
   const [commandData, setCommandData] = useState<any>(null);
   const [commandLoading, setCommandLoading] = useState(false);
   const [simulationStatus, setSimulationStatus] = useState<any>(null);
+  const [onboardingPrompt, setOnboardingPrompt] = useState<any>(null);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("synaptireach-crm-sidebar-expanded");
@@ -208,6 +209,27 @@ export default function DashboardLayout({
     }
 
     loadSimulationStatus();
+  }, [pathname]);
+
+  useEffect(() => {
+    async function loadOnboardingPrompt() {
+      try {
+        const response = await fetch("/api/onboarding/save", { cache: "no-store" });
+        const data = await response.json();
+        if (response.ok && data.success && data.session && !data.session.completed) {
+          setOnboardingPrompt({
+            score: data.readiness?.score || 0,
+            currentStep: data.session?.metadata?.current_step || "setup",
+          });
+        } else {
+          setOnboardingPrompt(null);
+        }
+      } catch {
+        setOnboardingPrompt(null);
+      }
+    }
+
+    loadOnboardingPrompt();
   }, [pathname]);
 
   useEffect(() => {
@@ -597,6 +619,21 @@ export default function DashboardLayout({
 
         {/* CONTENT */}
         <div className="p-4 md:p-8">
+          {onboardingPrompt && (
+            <div className="mb-5 rounded-3xl border border-cyan-400/20 bg-cyan-500/[0.06] p-4 shadow-xl shadow-cyan-500/5">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">Onboarding in progress</div>
+                  <div className="mt-1 text-sm text-gray-300">
+                    Workspace setup is {onboardingPrompt.score}% ready. Continue onboarding to finish billing, providers, lead setup, workflows, staff, and launch readiness.
+                  </div>
+                </div>
+                <Link href="/onboarding" className="rounded-2xl bg-gradient-to-r from-cyan-400 to-green-400 px-4 py-3 text-sm font-black text-black">
+                  Continue onboarding
+                </Link>
+              </div>
+            </div>
+          )}
           {children}
         </div>
 

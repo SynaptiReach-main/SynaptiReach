@@ -1,7 +1,6 @@
-export {};
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 
@@ -84,7 +83,16 @@ export default function SignupPage() {
     password: "",
     businessName: "",
     industry: "",
+    trialPath: "managed" as "managed" | "byok",
   });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const trial = params.get("trial");
+    if (trial === "byok" || trial === "managed") {
+      setForm((current) => ({ ...current, trialPath: trial }));
+    }
+  }, []);
 
   async function handleSubmit(
     e: React.FormEvent
@@ -114,7 +122,12 @@ export default function SignupPage() {
 
     localStorage.setItem(
       "synaptireach_signup",
-      JSON.stringify(form)
+      JSON.stringify({
+        email: form.email,
+        businessName: form.businessName,
+        industry: form.industry,
+        trialPath: form.trialPath,
+      })
     );
 
     router.push("/onboarding");
@@ -228,6 +241,23 @@ export default function SignupPage() {
               }
               className="w-full px-5 py-4 rounded-2xl bg-black border border-white/10"
             />
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                ["managed", "Managed Trial", "SynaptiReach-managed usage with hard trial caps."],
+                ["byok", "BYOK Trial", "Use your own provider keys and pay providers directly."],
+              ].map(([id, label, description]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setForm({ ...form, trialPath: id as "managed" | "byok" })}
+                  className={`rounded-2xl border px-4 py-3 text-left ${form.trialPath === id ? "border-cyan-300/60 bg-cyan-300/10" : "border-white/10 bg-black/50"}`}
+                >
+                  <div className="font-black text-white">{label}</div>
+                  <div className="mt-1 text-xs text-gray-400">{description}</div>
+                </button>
+              ))}
+            </div>
 
             <button
               type="submit"
