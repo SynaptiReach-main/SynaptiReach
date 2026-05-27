@@ -15,7 +15,7 @@ This is a UX/layout/navigation/readability pass, not a feature-removal pass.
 - Preserve the SynaptiReach dark UI system, cyan-to-green accents, glassmorphism, dashboard feel, and existing CRM architecture.
 - Make the interface calmer, more guided, and less overwhelming.
 - Prioritize clarity for local service businesses, professional services, agencies, ecommerce operators, and non-technical owners.
-- Keep advanced controls available, but do not force them into the user’s face.
+- Keep advanced controls available, but do not force them into the user's face.
 
 ## Pages In Scope
 
@@ -72,9 +72,9 @@ This is a UX/layout/navigation/readability pass, not a feature-removal pass.
 
 7. Improve intelligence panels:
    - avoid confusing labels
-   - show recommendations as “why it matters” + “suggested next step”
+   - show recommendations as "why it matters" + "suggested next step"
    - make dismiss/approve/open-record behavior clear
-   - do not use customer-facing “mini-brain” wording
+   - do not use customer-facing "mini-brain" wording
 
 8. Improve Settings:
    - keep the current collapsible structure
@@ -95,9 +95,6 @@ This is a UX/layout/navigation/readability pass, not a feature-removal pass.
 - Keep test/simulation data isolated to explicit test workspace flows.
 - Preserve real CRM data behavior for normal users.
 
-## Required Process For Codex
-
-1. Read docs/codex/CODEX_TASK_LEDGER.md.
 ## Required Process For Codex
 
 1. Read docs/codex/CODEX_TASK_LEDGER.md.
@@ -123,4 +120,3 @@ Stop if:
 - changes would require major data model changes
 - user feedback is needed for layout decisions
 - only manual browser review remains
-
