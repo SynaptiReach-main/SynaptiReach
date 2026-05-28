@@ -16,7 +16,7 @@ The current wizard collects:
 
 - account owner details
 - business profile, legal/company details, industry, service type, main customer type, target customer, main offer, preferred CTA, sales process, and brand voice
-- service areas, business hours, primary service/product categories, top services/products, common customer problems, common questions/objections, emergency/priority rules, booking/quote/review notes, legal/company acknowledgement, and optional service/product menu upload
+- service areas, business hours, primary service/product categories, top services/products, common customer problems, common questions/objections, emergency/priority rules, booking/quote/review notes, legal/company acknowledgement, optional service/product menu upload, and manual service/product rows
 - trial path, post-trial plan, Stripe card acknowledgement, auto-renewal acknowledgement, usage caps, and managed SMS approval intent
 - AI processing mode, provider setup, recommendation behavior, risk tolerance, topics to avoid, draft-vs-task preference, communication defaults, and rule-based intelligence preference
 - email, SMS, social, and calendar integration setup states
@@ -30,18 +30,18 @@ The wizard writes to existing structures where possible:
 
 - `workspaces` and `workspace_members` for workspace ownership.
 - `onboarding_sessions` for save/resume payload, current step, completed steps, skipped steps, and launch readiness score.
-- `crm_settings` for business profile, audience, service profile, sales setup, CRM defaults, analytics preferences, communication defaults, calendar setup, marketing preferences, help preference, brand voice, timezone, and automation safety policy.
+- `crm_settings` for business profile, audience, service profile, sales setup, manual service/product rows, CRM defaults, analytics preferences, communication defaults, calendar setup, marketing preferences, help preference, brand voice, timezone, automation safety policy, and `crm_setup_summary`.
 - `crm_billing_accounts` for selected plan, trial path, usage caps, managed SMS readiness, and billing intent only. Paid, subscribed, and trialing states still require Stripe Checkout and webhook confirmation.
 - `crm_provider_connections` for AI, email, SMS, social, and calendar setup states. Provider secrets are encrypted server-side and not returned to the browser.
 - `leads`, `crm_csv_imports`, `marketing_events`, and `crm_ai_recommendations` for real lead CSV/manual starter setup.
 - `crm_staff` and `crm_staff_permissions` for pending staff invite rows and requested access. No invite email is sent automatically.
 - `crm_workflows` for onboarding-created workflow drafts only. Draft workflows remain review-gated and do not send externally.
 - `crm_ai_recommendations` for launch-readiness recommendations generated from missing or pending real setup state.
-- `crm_service_menu_uploads` for onboarding service/product menu metadata, private storage path, and pending analysis/review state. Uploads also create a review recommendation and best-effort task; no extraction success is inferred unless a real analyzer is available.
+- `crm_service_menu_uploads` for onboarding service/product menu metadata, private storage path, and pending analysis/review state. Uploads also create a review recommendation and best-effort task; no extraction success is inferred unless a real analyzer is available. Manual service/product rows are stored in onboarding payload and `crm_settings.metadata.service_menu.manual_items`; they do not create fake service orders or fake revenue.
 
 ## Status and Routing
 
-`/onboarding/status` is the submitted-review holding page. Submitted-but-not-complete users see grouped state for submission, billing/webhook, providers, legal/company, email/SMS, calendar, menu, staff, leads, workflows, and help. Incomplete users that have not submitted are redirected back to `/onboarding?step=<saved step>`. Completed users are sent to `/dashboard`. The status page now offers Edit onboarding and Sign Out; Sign Out clears the Supabase session and returns to the public homepage.
+`/onboarding/status` is the submitted-review holding page. Submitted-but-not-complete users see current review state, a timeline from Submitted to CRM Activated, grouped state for billing confirmation, providers, legal/company, email/SMS, calendar, menu, staff, leads, workflows, and help, plus admin-readiness groups for items waiting on SynaptiReach, waiting on Stripe, needing user edits, approved/complete, or missing. Incomplete users that have not submitted are redirected back to `/onboarding?step=<saved step>`. Completed users are sent to `/dashboard`. The status page now offers Edit onboarding and Sign Out; Sign Out clears the Supabase session and returns to the public homepage.
 
 Dashboard layout checks onboarding state before showing CRM pages. Submitted sessions go to `/onboarding/status`; incomplete unsubmitted sessions resume onboarding from the saved step. Direct `/onboarding` access requires an authenticated Supabase session and redirects unauthenticated users to `/signin?returnTo=...` instead of trying to load indefinitely.
 
@@ -59,6 +59,7 @@ Required setup:
 - Access pattern: server-side upload/read using the service role; do not expose public URLs.
 - Path format: `<workspace_id>/service-menu/<timestamp>-<uuid>.<ext>`.
 - Metadata includes workspace id, user id, company id when present, content type, size, bucket, storage path, and pending analysis state.
+- Manual service/product entries are saved separately under `serviceMenu.manualItems` and normalized into `crm_settings.metadata.service_menu.manual_items`. Each row can include name, category, price/range, duration, description, internal notes, and an enabled flag.
 
 If the bucket is missing, `/api/onboarding/upload` attempts to create it privately. If creation fails because storage is not provisioned or permissions are unavailable, the route returns setup-required instructions instead of pretending the upload or analysis succeeded.
 
@@ -81,10 +82,11 @@ New or expanded CRM-aware fields are stored in `crm_settings.metadata` and relat
 - Communications and AI: `communications_setup`, `ai_behavior.risk_tolerance`, `ai_behavior.topics_to_avoid`, and `ai_behavior.draft_mode`.
 - Calendar/marketing/workflows: calendar appointment/default duration/reminder/no-show preferences, marketing goals/channels/offers/segments/retargeting/review timing, and workflow draft preferences.
 - Billing/help/review: trial path, post-trial plan, managed SMS readiness, usage cap preferences, service-menu upload review state, and onboarding help/DFY service request intent.
+- Admin/review: `crm_setup_summary` captures clean derived setup context for future admin review, and onboarding session metadata records submitted/review status, user-visible status, approval blockers, pending items, missing/edit items, approved items, requested edits placeholder, reviewer notes placeholder, last user update time, and the CRM setup summary.
 
 Required fields remain owner identity, core business profile, legal review acknowledgement, trial path/plan acknowledgements, AI mode, reviewed email/SMS/calendar choices, billing submission, and safety acknowledgement. Optional fields pre-configure the CRM and can be completed later. No optional field creates fake customers, revenue, provider success, paid state, or subscription state.
 
-Current managed trial caps are centralized in `lib/billing/plans.ts`: 300 AI credits, 250 emails, 0 SMS by default, 25 SMS after approval/payment, 250 contacts, 10 active workflows, 25 agent runs, 2 invited staff users, 5 campaign drafts, 1 CSV import, and 10 onboarding files / 25 MB total if file storage is enabled.
+Current managed trial caps are centralized in `lib/billing/plans.ts`: 300 AI credits, 250 emails, 0 SMS by default, 25 SMS after approval/payment, 250 contacts, 10 active workflows, 25 AI review checks, 2 invited staff users, 5 campaign drafts, 1 CSV import, and 10 onboarding files / 25 MB total if file storage is enabled.
 
 The post-trial plan-fit panel explains that trial access can be broader than the selected post-trial tier. Existing CRM data is not deleted automatically; future usage beyond the selected plan cap is restricted until upgrade or eligible capacity is added.
 

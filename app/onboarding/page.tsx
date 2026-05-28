@@ -246,6 +246,7 @@ type WizardData = {
   };
   serviceMenu: {
     files: Array<{ id?: string; file_name?: string; storage_path?: string; analysis_state?: string; extraction_state?: string }>;
+    manualItems: Array<{ name: string; category: string; priceRange: string; duration: string; description: string; notes: string; enabled: boolean }>;
     notAvailable: boolean;
     notes: string;
   };
@@ -468,6 +469,7 @@ const initialData: WizardData = {
   },
   serviceMenu: {
     files: [],
+    manualItems: [],
     notAvailable: false,
     notes: "",
   },
@@ -500,6 +502,7 @@ const readinessStepMap: Record<string, string> = {
   business_profile: "profile",
   legal_company: "profile",
   sales_setup: "sales",
+  crm_setup_summary: "launch",
   plan: "plan",
   billing: "billing",
   trial_acknowledgements: "plan",
@@ -658,6 +661,36 @@ function currentTrialPath(value: any): "managed" | "byok" {
   return value === "byok" ? "byok" : "managed";
 }
 
+function splitSetupText(value: string) {
+  return String(value || "")
+    .split(/[,|\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function shortList(items: string[], fallback = "Not provided yet") {
+  const clean = items.filter(Boolean);
+  if (!clean.length) return fallback;
+  if (clean.length <= 4) return clean.join(", ");
+  return `${clean.slice(0, 4).join(", ")} +${clean.length - 4} more`;
+}
+
+function readableToken(value: string) {
+  return String(value || "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function serviceMenuStateLabel(serviceMenu: WizardData["serviceMenu"]) {
+  const hasFiles = serviceMenu.files.length > 0;
+  const manualCount = serviceMenu.manualItems.filter((item) => item.name.trim()).length;
+  if (hasFiles && manualCount > 0) return `Menu uploaded. Analysis pending. ${manualCount} manual service/product entr${manualCount === 1 ? "y" : "ies"} saved.`;
+  if (hasFiles) return "Menu uploaded. Analysis pending.";
+  if (manualCount > 0) return `Manual services/products saved (${manualCount}).`;
+  if (serviceMenu.notAvailable) return "Service/product menu marked as not available yet.";
+  return "Service/product menu missing. You can upload a file or add services manually.";
+}
+
 function defaultPlanForTrialPath(value: "managed" | "byok") {
   return value === "byok" ? "growth-byok" : "growth-managed";
 }
@@ -702,7 +735,12 @@ function mergePayload(payload: any): WizardData {
     workflows: { ...initialData.workflows, ...(payload?.workflows || {}) },
     help: { ...initialData.help, ...(payload?.help || {}) },
     automation: { ...initialData.automation, ...(payload?.automation || {}) },
-    serviceMenu: { ...initialData.serviceMenu, ...(payload?.serviceMenu || {}) },
+    serviceMenu: {
+      ...initialData.serviceMenu,
+      ...(payload?.serviceMenu || {}),
+      files: Array.isArray(payload?.serviceMenu?.files) ? payload.serviceMenu.files : [],
+      manualItems: Array.isArray(payload?.serviceMenu?.manualItems) ? payload.serviceMenu.manualItems : [],
+    },
   };
 }
 
@@ -771,6 +809,32 @@ export default function OnboardingPage() {
     () => SUBSCRIPTION_PLANS.find((plan) => plan.slug === data.plan.planSlug),
     [data.plan.planSlug]
   );
+  const crmSetupSummary = useMemo(() => {
+    const staffRoles = data.staff.members
+      .map((member) => member.title || member.name)
+      .filter(Boolean);
+    const workflowLabels = data.workflows.recommended
+      .map((id) => workflowOptions.find((option) => option[0] === id)?.[1] || readableToken(id))
+      .filter(Boolean);
+    const menuState = serviceMenuStateLabel(data.serviceMenu);
+
+    return [
+      {
+        label: "Business profile",
+        value: [data.businessProfile.businessName, data.businessProfile.industry, data.businessProfile.serviceType]
+          .filter(Boolean)
+          .join(" / ") || "Business details not provided yet",
+      },
+      { label: "Pipeline stages", value: shortList(splitSetupText(data.crmSetup.pipelineStages)) },
+      { label: "Lead sources", value: shortList(splitSetupText(data.crmSetup.leadSources)) },
+      { label: "Staff roles", value: data.staff.setupMode === "solo" ? "Owner-only workspace" : shortList(staffRoles, "No staff roles added yet") },
+      { label: "Workflow drafts", value: data.workflows.createDrafts ? shortList(workflowLabels, "Drafts enabled; choose workflows to prepare") : "Workflow drafts skipped for now" },
+      { label: "Marketing goals", value: shortList(data.marketing.goals.map(readableToken), "No marketing goals selected yet") },
+      { label: "Calendar preference", value: data.integrations.calendarMode ? readableToken(data.integrations.calendarMode) : "Not selected yet" },
+      { label: "Billing/trial path", value: `${readableToken(data.plan.trialPath || "not selected")} / ${selectedPlan?.name || "No post-trial plan selected"}` },
+      { label: "Service/product menu", value: `${menuState} You can also enter or edit services manually later.` },
+    ];
+  }, [data, selectedPlan]);
   const completedSet = useMemo(() => new Set(completedSteps), [completedSteps]);
   const firstIncompleteIndex = steps.findIndex((item) => !completedSet.has(item.id));
   const maxUnlockedStep = firstIncompleteIndex === -1 ? steps.length - 1 : firstIncompleteIndex;
@@ -860,11 +924,11 @@ export default function OnboardingPage() {
             });
             const statusResult = await statusResponse.json().catch(() => ({}));
             if (!statusResponse.ok || !statusResult.success) {
-              const detail = statusResult.error || "Could not refresh Stripe checkout status. You can retry from Billing.";
+              const detail = "Could not refresh checkout status. You can retry from Billing.";
               setCheckoutStatusError(detail);
-              showToast("error", "Stripe status check failed", detail);
+              showToast("error", "Billing status check failed", detail);
             } else {
-              showToast("info", "Stripe checkout submitted", "Waiting for webhook confirmation.");
+              showToast("info", "Checkout Submitted", "Waiting Confirmation & Review.");
               const refreshed = await fetch("/api/onboarding/save", {
                 cache: "no-store",
                 headers: { Authorization: `Bearer ${session.access_token}` },
@@ -1153,6 +1217,29 @@ export default function OnboardingPage() {
     router.push("/");
   }
 
+  function addManualServiceItem() {
+    updateSection("serviceMenu", {
+      manualItems: [
+        ...data.serviceMenu.manualItems,
+        { name: "", category: "", priceRange: "", duration: "", description: "", notes: "", enabled: true },
+      ],
+      notAvailable: false,
+    });
+  }
+
+  function updateManualServiceItem(index: number, patch: Partial<WizardData["serviceMenu"]["manualItems"][number]>) {
+    const manualItems = data.serviceMenu.manualItems.map((item, itemIndex) =>
+      itemIndex === index ? { ...item, ...patch } : item
+    );
+    updateSection("serviceMenu", { manualItems, notAvailable: manualItems.some((item) => item.name.trim()) ? false : data.serviceMenu.notAvailable });
+  }
+
+  function removeManualServiceItem(index: number) {
+    updateSection("serviceMenu", {
+      manualItems: data.serviceMenu.manualItems.filter((_, itemIndex) => itemIndex !== index),
+    });
+  }
+
   async function handleMenuUpload(file?: File | null) {
     if (!file) return;
     setMenuUploading(true);
@@ -1252,15 +1339,15 @@ export default function OnboardingPage() {
         body: JSON.stringify({ session_id: stripeSessionId }),
       }).catch(() => null);
       if (!stripeResponse) {
-        setCheckoutStatusError("Could not reach the Stripe status check route. Retry in a moment.");
-        showToast("error", "Stripe status check failed", "Could not reach the status check route.");
+        setCheckoutStatusError("Could not reach the billing status check route. Retry in a moment.");
+        showToast("error", "Billing status check failed", "Could not reach the status check route.");
         return;
       }
       const stripeResult = await stripeResponse.json().catch(() => ({}));
       if (!stripeResponse.ok || !stripeResult.success) {
-        const detail = stripeResult.error || "Stripe status check failed. Retry in a moment.";
+        const detail = "Billing status check failed. Retry in a moment.";
         setCheckoutStatusError(detail);
-        showToast("error", "Stripe status check failed", detail);
+        showToast("error", "Billing status check failed", detail);
         return;
       }
       setCheckoutStatusError("");
@@ -1537,11 +1624,12 @@ export default function OnboardingPage() {
                   <textarea className={inputClass()} rows={3} value={data.businessProfile.commonProblems} onChange={(event) => updateSection("businessProfile", { commonProblems: event.target.value })} placeholder="Issues customers mention before they become leads." />
                 </Field>
               </div>
-              <div className="md:col-span-2">
-                <Field label="Common questions and objections" optional hint="Questions are what customers ask. Objections are reasons they hesitate. Example: price, timing, trust, warranty, availability.">
-                  <textarea className={inputClass()} rows={3} value={[data.businessProfile.commonQuestions, data.businessProfile.commonObjections].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("businessProfile", { commonQuestions: event.target.value })} placeholder="Example questions: How soon can you come out? Do you offer financing? Example objections: too expensive, need to ask spouse, comparing quotes." />
-                </Field>
-              </div>
+              <Field label="Common questions" optional hint="Questions are what customers ask before booking or buying.">
+                <textarea className={inputClass()} rows={3} value={data.businessProfile.commonQuestions} onChange={(event) => updateSection("businessProfile", { commonQuestions: event.target.value })} placeholder="Example: How soon can you come out? Do you offer financing?" />
+              </Field>
+              <Field label="Common objections" optional hint="Objections are reasons customers hesitate.">
+                <textarea className={inputClass()} rows={3} value={data.businessProfile.commonObjections} onChange={(event) => updateSection("businessProfile", { commonObjections: event.target.value })} placeholder="Example: too expensive, need to ask spouse, comparing quotes." />
+              </Field>
               <Field label="Main offer" optional>
                 <input className={inputClass()} value={data.businessProfile.mainOffer} onChange={(event) => updateSection("businessProfile", { mainOffer: event.target.value })} />
               </Field>
@@ -1553,11 +1641,18 @@ export default function OnboardingPage() {
                   <textarea className={inputClass()} rows={3} value={data.businessProfile.emergencyPriorityRules} onChange={(event) => updateSection("businessProfile", { emergencyPriorityRules: event.target.value })} placeholder="Example: Emergency calls after hours should create an urgent owner task. VIP customers and active leaks get priority." />
                 </Field>
               </div>
-              <div className="md:col-span-2">
-                <Field label="Pricing, booking, quote, and review notes" optional>
-                  <textarea className={inputClass()} rows={4} value={[data.businessProfile.pricingNotes, data.businessProfile.bookingProcess, data.businessProfile.quoteProcess, data.businessProfile.reviewProcess].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("businessProfile", { pricingNotes: event.target.value })} placeholder="Pricing rules, booking process, quote process, and when review requests are appropriate." />
-                </Field>
-              </div>
+              <Field label="Pricing notes" optional>
+                <textarea className={inputClass()} rows={3} value={data.businessProfile.pricingNotes} onChange={(event) => updateSection("businessProfile", { pricingNotes: event.target.value })} placeholder="Example: quote required, diagnostic fee applies, discounts need owner approval." />
+              </Field>
+              <Field label="Booking process" optional>
+                <textarea className={inputClass()} rows={3} value={data.businessProfile.bookingProcess} onChange={(event) => updateSection("businessProfile", { bookingProcess: event.target.value })} placeholder="Example: collect address, preferred time, service type, and urgency before booking." />
+              </Field>
+              <Field label="Quote process" optional>
+                <textarea className={inputClass()} rows={3} value={data.businessProfile.quoteProcess} onChange={(event) => updateSection("businessProfile", { quoteProcess: event.target.value })} placeholder="Example: estimates require photos or inspection; owner reviews final quote." />
+              </Field>
+              <Field label="Review request rules" optional>
+                <textarea className={inputClass()} rows={3} value={data.businessProfile.reviewProcess} onChange={(event) => updateSection("businessProfile", { reviewProcess: event.target.value })} placeholder="Example: ask for reviews after completed service and confirmed satisfaction." />
+              </Field>
               <div className="md:col-span-2">
                 <Field label="Brand voice" optional>
                   <textarea className={inputClass()} rows={3} value={data.businessProfile.brandVoice} onChange={(event) => {
@@ -1572,7 +1667,10 @@ export default function OnboardingPage() {
               </label>
               <div className="md:col-span-2 rounded-2xl border border-white/10 bg-black/30 p-4">
                 <div className="mb-2 font-black">Service/product menu upload</div>
-                <p className="mb-3 text-sm text-slate-400">Accepted: PDF, PNG, JPG/JPEG, WEBP. Uploads are stored for pending analysis and review; extraction is not marked successful until available.</p>
+                <p className="mb-3 text-sm text-slate-400">
+                  Accepted: PDF, PNG, JPG/JPEG, WEBP. Uploads are stored for pending analysis and review; extraction is not marked successful until available.
+                  SynaptiReach will look for service/product names, categories, price ranges, descriptions, durations, and notes.
+                </p>
                 <label className="flex cursor-pointer flex-wrap items-center gap-3 rounded-xl border border-dashed border-cyan-300/30 bg-cyan-300/5 p-4 text-sm">
                   {menuUploading ? <Loader2 className="animate-spin text-cyan-200" size={18} /> : <FileUp className="text-cyan-200" size={18} />}
                   <span>{menuUploading ? "Uploading menu..." : "Upload service/product menu"}</span>
@@ -1587,12 +1685,64 @@ export default function OnboardingPage() {
                     {data.serviceMenu.files.map((file, index) => (
                       <div key={file.id || file.storage_path || index} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
                         <span className="break-all font-bold text-white">{file.file_name || file.storage_path || "Uploaded menu"}</span>
-                        <span className="ml-2 text-cyan-100">{file.analysis_state || "pending_analysis"}</span>
+                        <span className="ml-2 text-cyan-100">Analysis pending</span>
                       </div>
                     ))}
                   </div>
                 ) : null}
-                <textarea className={`${inputClass()} mt-3`} rows={2} value={data.serviceMenu.notes} onChange={(event) => updateSection("serviceMenu", { notes: event.target.value })} placeholder="Optional notes for menu review or extraction." />
+                <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="font-black text-white">Manual services/products</div>
+                      <p className="mt-1 text-xs text-slate-400">
+                        Add the services or products customers can buy or book. These are saved as setup data for CRM recommendations; they are not fake customers, revenue, or completed jobs.
+                      </p>
+                    </div>
+                    <button type="button" onClick={addManualServiceItem} className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-xs font-black text-cyan-50">
+                      Add service/product
+                    </button>
+                  </div>
+                  <div className="mt-3 space-y-3">
+                    {data.serviceMenu.manualItems.map((item, index) => (
+                      <div key={index} className="grid gap-3 rounded-xl border border-white/10 bg-black/30 p-3 md:grid-cols-2">
+                        <Field label="Service/product name" hint="The thing customers can buy or book. Example: Haircut, Roof Inspection, HVAC Tune-Up.">
+                          <input className={inputClass()} value={item.name} onChange={(event) => updateManualServiceItem(index, { name: event.target.value })} placeholder="Example: HVAC Tune-Up" />
+                        </Field>
+                        <Field label="Category" optional hint="A group this belongs to. Example: Grooming, Repairs, Maintenance, Consulting.">
+                          <input className={inputClass()} value={item.category} onChange={(event) => updateManualServiceItem(index, { category: event.target.value })} placeholder="Example: Maintenance" />
+                        </Field>
+                        <Field label="Price/range" optional hint="Use a normal price or estimate. Example: $45, $99-$149, quote required.">
+                          <input className={inputClass()} value={item.priceRange} onChange={(event) => updateManualServiceItem(index, { priceRange: event.target.value })} placeholder="Example: $99-$149" />
+                        </Field>
+                        <Field label="Duration" optional hint="How long this usually takes. Example: 30 minutes, 2 hours, varies.">
+                          <input className={inputClass()} value={item.duration} onChange={(event) => updateManualServiceItem(index, { duration: event.target.value })} placeholder="Example: 1 hour" />
+                        </Field>
+                        <div className="md:col-span-2">
+                          <Field label="Description" optional hint="A short explanation customers or staff would understand.">
+                            <textarea className={inputClass()} rows={2} value={item.description} onChange={(event) => updateManualServiceItem(index, { description: event.target.value })} placeholder="Example: Seasonal inspection and basic maintenance checklist." />
+                          </Field>
+                        </div>
+                        <div className="md:col-span-2">
+                          <Field label="Notes" optional hint="Internal details SynaptiReach should know when helping build workflows, campaigns, or CRM recommendations.">
+                            <textarea className={inputClass()} rows={2} value={item.notes} onChange={(event) => updateManualServiceItem(index, { notes: event.target.value })} placeholder="Example: Mention maintenance plan after this service; owner approves discounts." />
+                          </Field>
+                        </div>
+                        <div className="md:col-span-2 flex flex-wrap items-center justify-between gap-3">
+                          <label className="flex items-center gap-2 text-sm text-slate-300">
+                            <input type="checkbox" checked={item.enabled !== false} onChange={(event) => updateManualServiceItem(index, { enabled: event.target.checked })} />
+                            <span>Active for setup</span>
+                          </label>
+                          <button type="button" onClick={() => removeManualServiceItem(index)} className="rounded-lg border border-red-300/20 px-3 py-2 text-xs font-bold text-red-100">
+                            Remove row
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    {!data.serviceMenu.manualItems.length ? <div className="text-xs text-slate-500">No manual services/products added yet.</div> : null}
+                  </div>
+                </div>
+                <p className="mt-3 text-xs text-slate-400">{serviceMenuStateLabel(data.serviceMenu)} You can also enter or edit services manually later.</p>
+                <textarea className={`${inputClass()} mt-3`} rows={2} value={data.serviceMenu.notes} onChange={(event) => updateSection("serviceMenu", { notes: event.target.value })} placeholder="Optional notes for menu review or extraction, such as pricing rules or service names to double-check." />
               </div>
             </div>
           ) : null}
@@ -1644,11 +1794,17 @@ export default function OnboardingPage() {
                 <Field label="Default task types" optional>
                   <textarea className={inputClass()} rows={3} value={data.crmSetup.defaultTaskTypes} onChange={(event) => updateSection("crmSetup", { defaultTaskTypes: event.target.value })} />
                 </Field>
-                <Field label="Priority and assignment rules" optional>
-                  <textarea className={inputClass()} rows={4} value={[data.crmSetup.priorityRules, data.crmSetup.assignmentRules].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("crmSetup", { priorityRules: event.target.value })} placeholder="How leads should be prioritized, assigned, or escalated." />
+                <Field label="Priority rules" optional>
+                  <textarea className={inputClass()} rows={4} value={data.crmSetup.priorityRules} onChange={(event) => updateSection("crmSetup", { priorityRules: event.target.value })} placeholder="How leads should be prioritized or escalated." />
                 </Field>
-                <Field label="Won/lost reasons" optional>
-                  <textarea className={inputClass()} rows={4} value={[data.crmSetup.wonReasons, data.crmSetup.lostReasons].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("crmSetup", { wonReasons: event.target.value })} placeholder="Common reasons deals are won or lost." />
+                <Field label="Assignment rules" optional>
+                  <textarea className={inputClass()} rows={4} value={data.crmSetup.assignmentRules} onChange={(event) => updateSection("crmSetup", { assignmentRules: event.target.value })} placeholder="How leads or tasks should be assigned to owners or staff." />
+                </Field>
+                <Field label="Won reasons" optional>
+                  <textarea className={inputClass()} rows={4} value={data.crmSetup.wonReasons} onChange={(event) => updateSection("crmSetup", { wonReasons: event.target.value })} placeholder="Common reasons deals are won." />
+                </Field>
+                <Field label="Lost reasons" optional>
+                  <textarea className={inputClass()} rows={4} value={data.crmSetup.lostReasons} onChange={(event) => updateSection("crmSetup", { lostReasons: event.target.value })} placeholder="Common reasons deals are lost." />
                 </Field>
               </div>
               <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-4 text-sm text-cyan-50/80">
@@ -1764,17 +1920,17 @@ export default function OnboardingPage() {
               {snapshot?.billing?.status || data.plan.checkoutSessionId ? (
                 <div className="rounded-2xl border border-yellow-300/20 bg-yellow-300/10 p-4 text-sm text-yellow-50/85">
                   <div className="font-black">
-                    {["trialing", "active", "checkout_completed"].includes(snapshot?.billing?.status) ? "Payment method on file." : "Stripe checkout submitted. Waiting for webhook confirmation."}
+                    {["trialing", "active", "checkout_completed"].includes(snapshot?.billing?.status) ? "Payment method on file." : "Checkout Submitted. Waiting Confirmation & Review."}
                   </div>
-                  <p className="mt-1 break-all">Billing state: {snapshot?.billing?.status || "pending_webhook"}{data.plan.checkoutSessionId ? ` / Session ${data.plan.checkoutSessionId}` : ""}</p>
+                  <p className="mt-1">Billing Status: {["trialing", "active", "checkout_completed"].includes(snapshot?.billing?.status) ? "Confirmed" : "Pending"}.</p>
                   <button type="button" onClick={refreshOnboardingState} className="mt-3 rounded-xl border border-yellow-200/30 px-3 py-2 text-xs font-black text-yellow-50">
-                    Refresh/check Stripe status
+                    Refresh billing status
                   </button>
                 </div>
               ) : null}
               {checkoutStatusError ? (
                 <div className="rounded-2xl border border-red-300/25 bg-red-500/10 p-4 text-sm text-red-100">
-                  <div className="font-black">Stripe status check needs a retry</div>
+                  <div className="font-black">Billing status check needs a retry</div>
                   <p className="mt-1">{checkoutStatusError}</p>
                   <button type="button" onClick={refreshOnboardingState} className="mt-3 rounded-xl border border-red-200/30 px-3 py-2 text-xs font-black text-red-50">
                     Retry status check
@@ -1951,11 +2107,23 @@ export default function OnboardingPage() {
                 <Field label="SMS style" optional>
                   <textarea className={inputClass()} rows={3} value={data.communications.smsStyle} onChange={(event) => updateSection("communications", { smsStyle: event.target.value })} />
                 </Field>
-                <Field label="Common questions and objections" optional>
-                  <textarea className={inputClass()} rows={4} value={[data.communications.commonQuestions, data.communications.commonObjections].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("communications", { commonQuestions: event.target.value })} />
+                <Field label="Common questions" optional>
+                  <textarea className={inputClass()} rows={4} value={data.communications.commonQuestions} onChange={(event) => updateSection("communications", { commonQuestions: event.target.value })} />
                 </Field>
-                <Field label="Escalation and response rules" optional>
-                  <textarea className={inputClass()} rows={4} value={[data.communications.escalationRules, data.communications.responseTimeExpectation, data.communications.doNotContactPreferences, data.communications.disclaimers].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("communications", { escalationRules: event.target.value })} />
+                <Field label="Common objections" optional>
+                  <textarea className={inputClass()} rows={4} value={data.communications.commonObjections} onChange={(event) => updateSection("communications", { commonObjections: event.target.value })} />
+                </Field>
+                <Field label="Escalation rules" optional>
+                  <textarea className={inputClass()} rows={4} value={data.communications.escalationRules} onChange={(event) => updateSection("communications", { escalationRules: event.target.value })} placeholder="Example: send refund requests or legal concerns to the owner." />
+                </Field>
+                <Field label="Response time expectations" optional>
+                  <textarea className={inputClass()} rows={4} value={data.communications.responseTimeExpectation} onChange={(event) => updateSection("communications", { responseTimeExpectation: event.target.value })} placeholder="Example: respond to new leads within one business day." />
+                </Field>
+                <Field label="Do-not-contact preferences" optional>
+                  <textarea className={inputClass()} rows={4} value={data.communications.doNotContactPreferences} onChange={(event) => updateSection("communications", { doNotContactPreferences: event.target.value })} placeholder="Example: no SMS without explicit consent; avoid Sundays." />
+                </Field>
+                <Field label="Disclaimers or restricted claims" optional>
+                  <textarea className={inputClass()} rows={4} value={data.communications.disclaimers} onChange={(event) => updateSection("communications", { disclaimers: event.target.value })} placeholder="Example: do not promise guaranteed results or final prices." />
                 </Field>
               </div>
             </div>
@@ -2050,7 +2218,11 @@ export default function OnboardingPage() {
                 <input className={inputClass()} placeholder="Appointment types" value={data.calendar.appointmentTypes} onChange={(event) => updateSection("calendar", { appointmentTypes: event.target.value })} />
                 <input className={inputClass()} placeholder="Default duration" value={data.calendar.defaultDuration} onChange={(event) => updateSection("calendar", { defaultDuration: event.target.value })} />
                 <input className={inputClass()} placeholder="Reminder timing, example: 24 hours and 2 hours before" value={data.calendar.reminderTiming} onChange={(event) => updateSection("calendar", { reminderTiming: event.target.value })} />
-                <textarea className={inputClass()} rows={3} placeholder="Availability, booking window, reminders, no-show handling, confirmation workflow" value={[data.calendar.availabilityNotes, data.calendar.bookingWindow, data.calendar.reminderPreferences, data.calendar.noShowPreference, data.calendar.confirmationWorkflow].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("calendar", { availabilityNotes: event.target.value })} />
+                <textarea className={inputClass()} rows={3} placeholder="Availability notes, example: weekdays only, emergency slots, service areas by day" value={data.calendar.availabilityNotes} onChange={(event) => updateSection("calendar", { availabilityNotes: event.target.value })} />
+                <input className={inputClass()} placeholder="Booking window, example: next 14 days, weekdays only" value={data.calendar.bookingWindow} onChange={(event) => updateSection("calendar", { bookingWindow: event.target.value })} />
+                <textarea className={inputClass()} rows={3} placeholder="Reminder preferences, example: internal reminder first; customer messages require approval" value={data.calendar.reminderPreferences} onChange={(event) => updateSection("calendar", { reminderPreferences: event.target.value })} />
+                <textarea className={inputClass()} rows={3} placeholder="No-show preference, example: create reschedule task for owner review" value={data.calendar.noShowPreference} onChange={(event) => updateSection("calendar", { noShowPreference: event.target.value })} />
+                <textarea className={inputClass()} rows={3} placeholder="Confirmation workflow, example: confirm details before sending customer-facing messages" value={data.calendar.confirmationWorkflow} onChange={(event) => updateSection("calendar", { confirmationWorkflow: event.target.value })} />
                 <label className="flex items-start gap-2 text-sm text-slate-300">
                   <input type="checkbox" className="mt-1" checked={data.integrations.calendarRequiredForLaunch} onChange={(event) => updateSection("integrations", { calendarRequiredForLaunch: event.target.checked })} />
                   <span>Calendar connection is required before my launch.</span>
@@ -2224,11 +2396,17 @@ export default function OnboardingPage() {
                 <Field label="Approval workflow" optional>
                   <input className={inputClass()} value={data.marketing.approvalWorkflow} onChange={(event) => updateSection("marketing", { approvalWorkflow: event.target.value })} />
                 </Field>
-                <Field label="Lead magnets and offers" optional>
-                  <textarea className={inputClass()} rows={3} value={[data.marketing.leadMagnets, data.marketing.offersPromotions].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("marketing", { leadMagnets: event.target.value })} />
+                <Field label="Lead magnets" optional>
+                  <textarea className={inputClass()} rows={3} value={data.marketing.leadMagnets} onChange={(event) => updateSection("marketing", { leadMagnets: event.target.value })} placeholder="Example: checklist, guide, free estimate request, consultation offer." />
                 </Field>
-                <Field label="Segments and seasonal campaigns" optional>
-                  <textarea className={inputClass()} rows={3} value={[data.marketing.customerSegments, data.marketing.seasonalCampaigns].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("marketing", { customerSegments: event.target.value })} />
+                <Field label="Offers/promotions" optional>
+                  <textarea className={inputClass()} rows={3} value={data.marketing.offersPromotions} onChange={(event) => updateSection("marketing", { offersPromotions: event.target.value })} placeholder="Example: seasonal tune-up, first visit discount, free consultation." />
+                </Field>
+                <Field label="Customer segments" optional>
+                  <textarea className={inputClass()} rows={3} value={data.marketing.customerSegments} onChange={(event) => updateSection("marketing", { customerSegments: event.target.value })} placeholder="Example: new leads, past customers, VIP accounts, maintenance customers." />
+                </Field>
+                <Field label="Seasonal campaigns" optional>
+                  <textarea className={inputClass()} rows={3} value={data.marketing.seasonalCampaigns} onChange={(event) => updateSection("marketing", { seasonalCampaigns: event.target.value })} placeholder="Example: spring maintenance, holiday promo, back-to-school checkup." />
                 </Field>
                 <Field label="Retargeting interest" optional hint="Retargeting means following up with people who interacted with your business but did not book or buy yet.">
                   <input className={inputClass()} value={data.marketing.retargetingInterest} onChange={(event) => updateSection("marketing", { retargetingInterest: event.target.value })} placeholder="Example: interested later, only after ads are connected, not now" />
@@ -2266,9 +2444,20 @@ export default function OnboardingPage() {
                   <input className={inputClass()} value={data.analytics.reportingCadence} onChange={(event) => updateSection("analytics", { reportingCadence: event.target.value })} />
                 </Field>
               </div>
-              <Field label="30/60/90 day success notes and reporting pain points" optional>
-                <textarea className={inputClass()} rows={4} value={[data.analytics.success30, data.analytics.success60, data.analytics.success90, data.analytics.painPoints].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("analytics", { success30: event.target.value })} />
-              </Field>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="30-day success goal" optional>
+                  <textarea className={inputClass()} rows={3} value={data.analytics.success30} onChange={(event) => updateSection("analytics", { success30: event.target.value })} />
+                </Field>
+                <Field label="60-day success goal" optional>
+                  <textarea className={inputClass()} rows={3} value={data.analytics.success60} onChange={(event) => updateSection("analytics", { success60: event.target.value })} />
+                </Field>
+                <Field label="90-day success goal" optional>
+                  <textarea className={inputClass()} rows={3} value={data.analytics.success90} onChange={(event) => updateSection("analytics", { success90: event.target.value })} />
+                </Field>
+                <Field label="Reporting pain points" optional>
+                  <textarea className={inputClass()} rows={3} value={data.analytics.painPoints} onChange={(event) => updateSection("analytics", { painPoints: event.target.value })} />
+                </Field>
+              </div>
               <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-4 text-sm text-cyan-50/80">
                 Marketing setup prepares drafts and recommendations only. It does not auto-send email, SMS, or social posts.
               </div>
@@ -2373,6 +2562,20 @@ export default function OnboardingPage() {
 
           {step.id === "launch" ? (
             <div className="space-y-5">
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
+                <div className="mb-1 text-lg font-black text-white">Your CRM will be configured with...</div>
+                <p className="mb-4 text-sm text-slate-400">
+                  This summarizes saved onboarding setup and safe defaults only. It does not create fake leads, customers, revenue, provider success, or subscription status.
+                </p>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {crmSetupSummary.map((item) => (
+                    <div key={item.label} className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                      <div className="text-xs font-bold uppercase tracking-[0.14em] text-cyan-100/60">{item.label}</div>
+                      <div className="mt-1 break-words text-sm text-slate-200">{item.value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
               <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-5">
                 <div className="flex items-center justify-between gap-4">
                   <div>
@@ -2387,12 +2590,20 @@ export default function OnboardingPage() {
               </div>
               <div className="space-y-2">
                 {(readiness?.checks || []).map((check: any) => (
-                  <button key={check.id} type="button" onClick={() => goToReadiness(check)} className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/30 p-3 text-left transition hover:border-cyan-300/25">
-                    <div className="min-w-0">
-                      <div className="text-sm font-bold">{check.label}</div>
-                      {check.detail ? <div className="text-xs text-slate-400">{check.detail}</div> : null}
+                  <button key={check.id} type="button" onClick={() => goToReadiness(check)} className="w-full min-w-0 rounded-xl border border-white/10 bg-black/30 p-3 text-left transition hover:border-cyan-300/25">
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-bold">{check.label}</div>
+                        {check.detail ? <div className="mt-1 break-words text-xs text-slate-400">{check.detail}</div> : null}
+                      </div>
+                      <StatusPill status={check.status} />
                     </div>
-                    <StatusPill status={check.status} />
+                    {["missing", "pending"].includes(check.status) ? (
+                      <div className="mt-3 grid gap-2 text-xs text-slate-400 md:grid-cols-2">
+                        <div><span className="font-bold text-slate-200">Why it matters:</span> {check.why}</div>
+                        <div><span className="font-bold text-slate-200">What to do next:</span> {check.next}</div>
+                      </div>
+                    ) : null}
                   </button>
                 ))}
               </div>
@@ -2453,7 +2664,7 @@ export default function OnboardingPage() {
               <div className="flex justify-between gap-3"><span>Leads</span><span className="text-white">{snapshot?.leads?.length || 0}</span></div>
               <div className="flex justify-between gap-3"><span>Staff</span><span className="text-white">{snapshot?.staff?.length || 0}</span></div>
               <div className="flex justify-between gap-3"><span>Providers</span><span className="text-white">{snapshot?.providerConnections?.length || 0}</span></div>
-              <div className="flex justify-between gap-3"><span>Billing</span><span className="truncate text-white">{snapshot?.billing?.status || "not saved"}</span></div>
+              <div className="flex justify-between gap-3"><span>Billing</span><span className="truncate text-white">{["trialing", "active", "checkout_completed"].includes(snapshot?.billing?.status) ? "Confirmed" : snapshot?.billing?.status ? "Pending" : "Not saved"}</span></div>
             </div>
           </div>
 
@@ -2462,7 +2673,7 @@ export default function OnboardingPage() {
               <AlertTriangle size={16} />
               Manual setup remains explicit
             </div>
-            Stripe confirmation, verified Resend domains, Twilio compliance, Google OAuth, and social connections stay pending until their providers confirm them.
+            Checkout confirmation, verified email domains, SMS compliance, Google Calendar, and social connections stay pending until the required providers confirm them.
           </div>
 
           <div className="rounded-2xl border border-cyan-300/15 bg-slate-950/75 p-4 backdrop-blur-xl">

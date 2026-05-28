@@ -1,5 +1,35 @@
 # Final Full CRM Completion Checklist
 
+## Onboarding Final Admin-Ready Polish - 2026-05-28
+
+- [x] Read `docs/codex/synaptireach_onboarding_final_admin_ready_polish_prompt.md`.
+- [x] Inspected required onboarding, billing, sign-in, docs, ledger, and checklist files before editing.
+- [x] Preserved existing onboarding flow, save/resume behavior, Stripe webhook ownership, dashboard access rules, CRM usability work, and real-data-only behavior.
+- [x] Added manual service/product rows under `serviceMenu.manualItems`.
+- [x] Manual rows support name, category, price/range, duration, description, notes, and active flag.
+- [x] Manual service/product rows map into `crm_settings.metadata.service_menu.manual_items`.
+- [x] Service/product menu status distinguishes uploaded files, manual entries, analysis pending, not available yet, missing/not provided, and needs review copy.
+- [x] `crm_setup_summary` now captures business, sales/CRM, staff, marketing, analytics, communications, calendar, automation/workflows, CRM intelligence, billing/trial, Help/DFY, and service-menu setup context.
+- [x] Onboarding session metadata now includes admin-review readiness fields: submitted/review status, user-visible status, blockers, needs-edit items, approved items, pending items, reviewer/requested-edit placeholders, last user update, and CRM setup summary.
+- [x] Combined onboarding fields were split where needed to preserve separate CRM mapping without deleting existing payload fields.
+- [x] `/onboarding/status` now includes current review state and admin-ready groups for Waiting on SynaptiReach, Waiting on Stripe, Needs Your Edits, Approved / Complete, and Missing.
+- [x] Customer-facing `agent runs` wording in onboarding docs was changed to AI review checks; internal route/API names were left intact.
+- [x] No SQL/schema changes were needed.
+- [x] `npm.cmd run build` passed and generated 153/153 static pages.
+- [ ] Manual test: unauthenticated `/onboarding` redirects safely and does not hang.
+- [ ] Manual test: incomplete user signs in and returns to exact saved step.
+- [ ] Manual test: Finish Later saves and redirects to homepage.
+- [ ] Manual test: sign back in resumes exact saved step.
+- [ ] Manual test: Stripe Checkout returns to `/onboarding` without loading hang.
+- [ ] Manual test: Billing section shows user-friendly pending status.
+- [ ] Manual test: Submit onboarding for review goes to `/onboarding/status`.
+- [ ] Manual test: submitted/pending user signs in and goes to `/onboarding/status`.
+- [ ] Manual test: status page button says Sign Out.
+- [ ] Manual test: dashboard is only accessible for approved/active onboarding state.
+- [ ] Manual test: manual service/product rows save and appear in CRM setup summary.
+- [ ] Manual test: uploaded service/product menu remains pending analysis unless real extraction exists.
+- [ ] Manual test: status page clearly distinguishes missing, pending, approved, and needs-edit states.
+
 ## Onboarding Stabilization and CRM Population Pass - 2026-05-28
 
 - [x] Preserved existing onboarding flow instead of redesigning it.

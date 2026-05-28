@@ -13,6 +13,10 @@ function statusClass(status: string) {
   return "border-red-300/25 bg-red-500/10 text-red-100";
 }
 
+function onboardingHref(check: any) {
+  return `/onboarding?step=${encodeURIComponent(check?.onboardingStep || "launch")}`;
+}
+
 export default function OnboardingStatusPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -65,7 +69,52 @@ export default function OnboardingStatusPage() {
       { title: "Submission", icon: ShieldCheck, checks: ["business_profile", "legal_company", "plan", "trial_acknowledgements"].map((id) => byId[id]).filter(Boolean) },
       { title: "Billing", icon: CreditCard, checks: ["billing", "email_verification"].map((id) => byId[id]).filter(Boolean) },
       { title: "Providers", icon: Settings2, checks: ["ai", "email", "sms", "calendar"].map((id) => byId[id]).filter(Boolean) },
-      { title: "CRM Setup", icon: Workflow, checks: ["service_menu", "staff", "lead_setup", "marketing", "workflow_drafts", "automation_safety", "help"].map((id) => byId[id]).filter(Boolean) },
+      { title: "CRM Setup", icon: Workflow, checks: ["crm_setup_summary", "service_menu", "staff", "lead_setup", "marketing", "workflow_drafts", "automation_safety", "help"].map((id) => byId[id]).filter(Boolean) },
+    ];
+  }, [state]);
+
+  const timeline = useMemo(() => {
+    const checks = state?.readiness?.checks || [];
+    const byId = Object.fromEntries(checks.map((check: any) => [check.id, check]));
+    const billingStatus = byId.billing?.status || "missing";
+    const reviewReady = checks.every((check: any) => !["missing"].includes(check.status));
+    return [
+      { label: "Submitted", status: "complete" },
+      { label: "Billing Confirmation", status: billingStatus === "complete" ? "complete" : billingStatus === "pending" ? "pending" : "missing" },
+      { label: "SynaptiReach Review", status: reviewReady ? "pending" : "missing" },
+      { label: "Approved", status: "pending" },
+      { label: "CRM Activated", status: "pending" },
+    ];
+  }, [state]);
+
+  const reviewGroups = useMemo(() => {
+    const checks = state?.readiness?.checks || [];
+    return [
+      {
+        title: "Waiting on SynaptiReach",
+        description: "No action is needed unless SynaptiReach requests edits.",
+        checks: checks.filter((check: any) => check.status === "pending" && !["billing", "email_verification"].includes(check.id)),
+      },
+      {
+        title: "Waiting on Stripe",
+        description: "Billing confirmation is pending. Do not re-enter card details unless checkout asks you to.",
+        checks: checks.filter((check: any) => check.id === "billing" && check.status === "pending"),
+      },
+      {
+        title: "Needs Your Edits",
+        description: "These can be updated from onboarding.",
+        checks: checks.filter((check: any) => check.status === "missing"),
+      },
+      {
+        title: "Approved / Complete",
+        description: "These items are complete or intentionally skipped for now.",
+        checks: checks.filter((check: any) => ["complete", "skipped"].includes(check.status)),
+      },
+      {
+        title: "Missing",
+        description: "Nothing appears here when required missing items are already listed above.",
+        checks: checks.filter((check: any) => check.status === "missing"),
+      },
     ];
   }, [state]);
 
@@ -98,8 +147,11 @@ export default function OnboardingStatusPage() {
               </div>
               <h1 className="mt-4 text-3xl font-black">Onboarding submitted for review</h1>
               <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-400">
-                Your CRM setup has been saved. SynaptiReach will review pending items such as Stripe webhook confirmation, providers, legal details, service menu analysis, staff, leads, and workflow drafts before activation.
+                Your CRM setup has been saved. SynaptiReach will review pending items such as checkout confirmation, providers, legal details, service menu analysis, staff, leads, and workflow drafts before activation.
               </p>
+              <div className="mt-3 text-sm text-cyan-100">
+                Current review state: {state?.session?.metadata?.user_visible_status || state?.session?.metadata?.review_status || "Submitted for review"}
+              </div>
             </div>
             <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-4 text-center">
               <div className="text-xs font-black uppercase tracking-[0.18em] text-cyan-100/70">Readiness</div>
@@ -133,6 +185,53 @@ export default function OnboardingStatusPage() {
           </div>
         </div>
 
+        <section className="rounded-2xl border border-white/10 bg-slate-950/75 p-5">
+          <div className="mb-4 font-black">Status timeline</div>
+          <div className="grid gap-3 md:grid-cols-5">
+            {timeline.map((item, index) => (
+              <div key={item.label} className={`min-w-0 rounded-xl border p-3 ${statusClass(item.status)}`}>
+                <div className="text-xs font-black uppercase tracking-[0.14em] opacity-80">Step {index + 1}</div>
+                <div className="mt-1 break-words text-sm font-black">{item.label}</div>
+                <div className="mt-2 text-xs">{item.status === "complete" ? "Approved" : item.status === "pending" ? "Pending" : "Needs attention"}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-cyan-300/15 bg-slate-950/75 p-5">
+          <div className="mb-2 font-black">What happens next</div>
+          <div className="grid gap-3 text-sm text-slate-300 md:grid-cols-3">
+            <div className="rounded-xl border border-white/10 bg-black/30 p-3">SynaptiReach checks billing confirmation and required setup details.</div>
+            <div className="rounded-xl border border-white/10 bg-black/30 p-3">Pending or missing items can be edited from onboarding without losing submitted status.</div>
+            <div className="rounded-xl border border-white/10 bg-black/30 p-3">After approval and activation, dashboard access opens for the real CRM workspace.</div>
+          </div>
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-2">
+          {reviewGroups.map((group) => (
+            <div key={group.title} className="rounded-2xl border border-white/10 bg-slate-950/75 p-5">
+              <div className="font-black">{group.title}</div>
+              <p className="mt-1 text-xs text-slate-400">{group.description}</p>
+              <div className="mt-3 space-y-2">
+                {group.checks.slice(0, 5).map((check: any) => (
+                  <div key={check.id} className="rounded-xl border border-white/10 bg-black/30 p-3 text-sm">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <span className="break-words font-bold text-white">{check.label}</span>
+                      <span className={`w-fit rounded-full border px-2 py-1 text-[11px] font-black uppercase ${statusClass(check.status)}`}>{check.statusText || check.status}</span>
+                    </div>
+                    {["missing", "pending"].includes(check.status) ? (
+                      <Link href={onboardingHref(check)} className="mt-2 inline-flex rounded-lg border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-xs font-bold text-cyan-50">
+                        Edit onboarding
+                      </Link>
+                    ) : null}
+                  </div>
+                ))}
+                {!group.checks.length ? <div className="text-sm text-slate-500">No items in this group.</div> : null}
+              </div>
+            </div>
+          ))}
+        </section>
+
         <div className="grid gap-4 md:grid-cols-2">
           {grouped.map((group) => {
             const Icon = group.icon;
@@ -145,13 +244,27 @@ export default function OnboardingStatusPage() {
                 <div className="space-y-2">
                   {group.checks.map((check: any) => (
                     <div key={check.id} className="rounded-xl border border-white/10 bg-black/30 p-3">
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
                           <div className="text-sm font-bold">{check.label}</div>
-                          {check.detail ? <div className="mt-1 text-xs text-slate-400">{check.detail}</div> : null}
+                          {check.detail ? <div className="mt-1 break-words text-xs text-slate-400">{check.detail}</div> : null}
                         </div>
-                        <span className={`shrink-0 rounded-full border px-2 py-1 text-[11px] font-black uppercase ${statusClass(check.status)}`}>{check.status}</span>
+                        <span className={`w-fit shrink-0 rounded-full border px-2 py-1 text-[11px] font-black uppercase ${statusClass(check.status)}`}>{check.statusText || check.status}</span>
                       </div>
+                      {["pending", "missing"].includes(check.status) ? (
+                        <details className="mt-3 rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs text-slate-400">
+                          <summary className="cursor-pointer font-bold text-slate-200">Why this matters and next step</summary>
+                          <div className="mt-2 space-y-2">
+                            <p><span className="font-bold text-slate-200">Why it matters:</span> {check.why}</p>
+                            <p><span className="font-bold text-slate-200">What to do next:</span> {check.next}</p>
+                            <Link href={onboardingHref(check)} className="inline-flex rounded-lg border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 font-bold text-cyan-50">
+                              {check.actionLabel || "Fix in onboarding"}
+                            </Link>
+                          </div>
+                        </details>
+                      ) : (
+                        <div className="mt-2 text-xs text-slate-500">{check.status === "complete" ? "Approved for this stage." : "No action needed right now."}</div>
+                      )}
                     </div>
                   ))}
                   {!group.checks.length ? <div className="text-sm text-slate-500">No status items yet.</div> : null}
@@ -166,7 +279,7 @@ export default function OnboardingStatusPage() {
             <Clock3 size={16} />
             Pending activation
           </div>
-          Pending Stripe checkout can be reviewed, but active trial access still requires Stripe webhook confirmation and any required clarification.
+          Pending checkout can be reviewed, but active trial access still requires confirmation and any required clarification.
         </div>
       </div>
     </main>

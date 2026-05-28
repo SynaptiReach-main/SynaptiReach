@@ -80,6 +80,198 @@ function listFromText(value?: string) {
     .filter(Boolean);
 }
 
+function normalizedManualServiceItems(serviceMenu: any) {
+  return (Array.isArray(serviceMenu?.manualItems) ? serviceMenu.manualItems : [])
+    .map((item: any) => ({
+      name: String(item?.name || "").trim(),
+      category: String(item?.category || "").trim() || null,
+      price_range: String(item?.priceRange || item?.price_range || "").trim() || null,
+      duration: String(item?.duration || "").trim() || null,
+      description: String(item?.description || "").trim() || null,
+      notes: String(item?.notes || "").trim() || null,
+      enabled: item?.enabled !== false,
+      source: "manual_onboarding_entry",
+    }))
+    .filter((item: any) => item.name);
+}
+
+function buildCrmSetupSummary(payload: Record<string, any>) {
+  const profile = payload.businessProfile || {};
+  const planInput = payload.plan || {};
+  const crmSetup = payload.crmSetup || {};
+  const staff = payload.staff || {};
+  const workflows = payload.workflows || {};
+  const marketing = payload.marketing || {};
+  const analytics = payload.analytics || {};
+  const communications = payload.communications || {};
+  const calendar = payload.calendar || {};
+  const integrations = payload.integrations || {};
+  const automation = payload.automation || {};
+  const ai = payload.ai || {};
+  const help = payload.help || {};
+  const serviceMenu = payload.serviceMenu || {};
+  const plan = getSubscriptionPlan(planInput.planSlug);
+  const menuFiles = Array.isArray(serviceMenu.files) ? serviceMenu.files : [];
+  const manualItems = normalizedManualServiceItems(serviceMenu);
+  const uploadedMenuState =
+    menuFiles.length > 0
+      ? "analysis_pending"
+      : serviceMenu.notAvailable
+        ? "not_available_yet"
+        : "missing";
+
+  return {
+    business: {
+      business_name: profile.businessName || null,
+      legal_name_present: Boolean(profile.legalName),
+      legal_review_state: profile.legalReviewed ? "reviewed" : "pending_review",
+      industry: profile.industry || null,
+      business_type: payload.businessType || null,
+      service_areas: profile.serviceAreas || null,
+      business_hours: profile.businessHours || null,
+      service_type: profile.serviceType || null,
+      main_customer_type: profile.mainCustomerType || null,
+      primary_categories: listFromText(profile.primaryCategories),
+      top_services_products: listFromText(profile.topServices),
+      manual_service_product_rows: manualItems,
+      uploaded_menu_state: {
+        status: uploadedMenuState,
+        file_count: menuFiles.length,
+        notes_present: Boolean(serviceMenu.notes),
+      },
+      common_questions: profile.commonQuestions || communications.commonQuestions || null,
+      common_objections: profile.commonObjections || communications.commonObjections || null,
+      preferred_call_to_action: profile.preferredCta || null,
+      brand_voice: profile.brandVoice || ai.brandVoice || null,
+    },
+    sales_crm: {
+      pipeline_stages: listFromText(crmSetup.pipelineStages),
+      lead_statuses: listFromText(crmSetup.leadStatuses),
+      lead_sources: listFromText(crmSetup.leadSources),
+      lead_tags: listFromText(crmSetup.leadTags),
+      typical_deal_value: crmSetup.typicalDealValue || null,
+      average_close_time: crmSetup.averageCloseTime || null,
+      stale_lead_threshold: crmSetup.staleLeadThreshold || null,
+      stale_deal_threshold: crmSetup.staleDealThreshold || null,
+      follow_up_timing: crmSetup.followUpTiming || null,
+      owner_assignment_preference: crmSetup.ownerAssignmentPreference || null,
+      appointment_types: listFromText(crmSetup.appointmentTypes || calendar.appointmentTypes),
+      task_types: listFromText(crmSetup.defaultTaskTypes),
+      won_reasons: listFromText(crmSetup.wonReasons),
+      lost_reasons: listFromText(crmSetup.lostReasons),
+      priority_rules: crmSetup.priorityRules || null,
+      assignment_rules: crmSetup.assignmentRules || null,
+    },
+    staff: {
+      setup_mode: staff.setupMode || null,
+      roles: Array.isArray(staff.members)
+        ? staff.members.map((member: any) => member.title || member.role || member.name).filter(Boolean)
+        : [],
+    },
+    marketing: {
+      goals: Array.isArray(marketing.goals) ? marketing.goals : [],
+      channels: Array.isArray(marketing.channels) ? marketing.channels : [],
+      starter_strategy: marketing.strategy || null,
+      first_campaign_idea: marketing.firstCampaignIdea || null,
+      monthly_budget: marketing.monthlyBudget || null,
+      lead_magnets: marketing.leadMagnets || null,
+      offers_promotions: marketing.offersPromotions || null,
+      customer_segments: marketing.customerSegments || null,
+      seasonal_campaigns: marketing.seasonalCampaigns || null,
+      review_request_timing: marketing.reviewRequestTiming || null,
+      approval_workflow: marketing.approvalWorkflow || null,
+    },
+    analytics: {
+      primary_kpi: analytics.primaryKpi || null,
+      monthly_lead_goal: analytics.monthlyLeadGoal || null,
+      monthly_revenue_goal: analytics.monthlyRevenueGoal || null,
+      appointment_goal: analytics.appointmentGoal || null,
+      conversion_goal: analytics.conversionGoal || null,
+      average_customer_value: analytics.averageCustomerValue || crmSetup.typicalDealValue || null,
+      current_monthly_lead_volume: analytics.currentMonthlyLeadVolume || null,
+      current_monthly_appointment_volume: analytics.currentMonthlyAppointmentVolume || null,
+      reporting_cadence: analytics.reportingCadence || null,
+      success_30: analytics.success30 || null,
+      success_60: analytics.success60 || null,
+      success_90: analytics.success90 || null,
+      pain_points: analytics.painPoints || null,
+    },
+    communications: {
+      email_style: communications.emailStyle || null,
+      sms_style: communications.smsStyle || null,
+      common_questions: communications.commonQuestions || profile.commonQuestions || null,
+      common_objections: communications.commonObjections || profile.commonObjections || null,
+      escalation_rules: communications.escalationRules || null,
+      response_time_expectations: communications.responseTimeExpectation || null,
+      do_not_contact_preferences: communications.doNotContactPreferences || null,
+      disclaimers_restricted_claims: communications.disclaimers || null,
+    },
+    calendar: {
+      calendar_mode: integrations.calendarMode || null,
+      appointment_types: listFromText(calendar.appointmentTypes || crmSetup.appointmentTypes),
+      default_duration: calendar.defaultDuration || null,
+      booking_window: calendar.bookingWindow || null,
+      availability_notes: calendar.availabilityNotes || null,
+      reminder_timing: calendar.reminderTiming || null,
+      no_show_preference: calendar.noShowPreference || null,
+      confirmation_workflow: calendar.confirmationWorkflow || null,
+    },
+    automation_workflows: {
+      workflow_drafts_selected: Array.isArray(workflows.recommended) ? workflows.recommended : [],
+      workflow_notes: workflows.notes || null,
+      create_drafts: Boolean(workflows.createDrafts),
+      review_gated_policy: automation.requireApproval !== false ? "review_required" : "assisted",
+      quiet_hours: automation.quietHoursEnabled ? { start: automation.quietHoursStart || null, end: automation.quietHoursEnd || null } : null,
+      usage_warning_preferences: automation.usageWarningPreferences || null,
+    },
+    ai_crm_intelligence: {
+      mode: ai.mode || null,
+      provider_preference: ai.provider || null,
+      brand_voice: ai.brandVoice || profile.brandVoice || null,
+      tone: ai.tone || null,
+      risk_tolerance: ai.riskTolerance || null,
+      topics_to_avoid: ai.topicsToAvoid || null,
+      draft_mode: ai.draftMode || null,
+      rule_based_first: ai.useRuleBasedFirst !== false,
+    },
+    billing_trial: {
+      trial_path: planInput.trialPath || null,
+      selected_post_trial_plan: plan?.name || null,
+      billing_status: planInput.checkoutSessionId || planInput.billingIntent === "checkout_started" ? "pending_confirmation" : "not_submitted",
+      acknowledgement_states: {
+        stripe_card_acknowledged: Boolean(planInput.stripeCardAcknowledged),
+        auto_renew_acknowledged: Boolean(planInput.autoRenewAcknowledged),
+        managed_caps_acknowledged: Boolean(planInput.managedCapsAcknowledged),
+        byok_provider_cost_acknowledged: Boolean(planInput.byokProviderCostAcknowledged),
+      },
+      managed_sms_readiness_state:
+        planInput.managedSms?.requested && planInput.managedSms?.carrierFeeApproval && planInput.managedSms?.setupFeeApproval
+          ? "approval_ready"
+          : planInput.managedSms?.requested
+            ? "approval_required"
+            : "not_requested",
+      byok_provider_cost_acknowledgement: Boolean(planInput.byokProviderCostAcknowledged),
+    },
+    help_dfy: {
+      mode: help.mode || "self_guided",
+      requested_services: Array.isArray(help.requestedServices) ? help.requestedServices : [],
+      guided_call_requested: Boolean(help.guidedCallRequested),
+      help_notes: help.notes || null,
+    },
+    service_menu: {
+      uploaded_files: {
+        status: uploadedMenuState,
+        file_count: menuFiles.length,
+      },
+      manual_items: manualItems,
+      notes: serviceMenu.notes || null,
+      not_available_yet: Boolean(serviceMenu.notAvailable),
+    },
+    source: "onboarding",
+    record_policy: "Configuration summary only; does not create fake customers, fake revenue, provider success, subscription status, or paid state.",
+  };
+}
+
 const workflowDraftTemplates: Record<string, { name: string; trigger: string; condition: string; action: string; what: string; why: string }> = {
   new_lead_followup: {
     name: "New lead follow-up draft",
@@ -618,7 +810,17 @@ async function upsertSettings(supabase: any, workspace: any, user: any, payload:
         calendar_required_for_launch: Boolean(integrations.calendarRequiredForLaunch),
         calendar_reviewed: Boolean(integrations.calendarMode),
       },
-      service_menu: payload.serviceMenu || {},
+      service_menu: {
+        ...(payload.serviceMenu || {}),
+        manual_items: normalizedManualServiceItems(payload.serviceMenu || {}),
+        upload_state:
+          Array.isArray(payload.serviceMenu?.files) && payload.serviceMenu.files.length > 0
+            ? "analysis_pending"
+            : payload.serviceMenu?.notAvailable
+              ? "not_available_yet"
+              : "missing",
+      },
+      crm_setup_summary: buildCrmSetupSummary(payload),
     },
   };
 
@@ -1138,6 +1340,7 @@ export function calculateOnboardingReadiness(payload: Record<string, any>, snaps
   const connections = snapshot.providerConnections || [];
   const leadCount = snapshot.leads?.length || 0;
   const menuUploadCount = snapshot.menuUploads?.length || 0;
+  const manualMenuCount = normalizedManualServiceItems(payload.serviceMenu || {}).length || (settingsMeta.service_menu?.manual_items || []).length || 0;
   const importedCount = (snapshot.csvImports || []).reduce((sum: number, item: any) => sum + Number(item.imported_rows || 0), 0);
   const staffCount = snapshot.staff?.length || 0;
   const workflowDraftCount = (snapshot.workflows || []).filter((item: any) => item.metadata?.source === "onboarding").length;
@@ -1148,6 +1351,30 @@ export function calculateOnboardingReadiness(payload: Record<string, any>, snaps
   const legalProfile = settingsMeta.legal_profile || {};
   const help = payload.help || {};
   const emailVerified = Boolean(snapshot.user?.emailConfirmed);
+  const setupSummary = settingsMeta.crm_setup_summary || buildCrmSetupSummary(payload);
+  const readinessGuidance: Record<string, { why: string; next: string; step: string }> = {
+    owner: { why: "SynaptiReach needs a clear owner for setup questions and account notifications.", next: "Confirm the owner name and email.", step: "owner" },
+    email_verification: { why: "Email verification protects account access and trial activation.", next: "Verify the account email, then refresh onboarding status.", step: "owner" },
+    business_type: { why: "Business type tunes the setup flow and default CRM recommendations.", next: "Choose the option that best matches your operation.", step: "welcome" },
+    business_profile: { why: "The CRM uses this profile for workspace settings, recommendations, and communication context.", next: "Add the business name, industry, and contact details.", step: "profile" },
+    legal_company: { why: "Legal/company review helps prevent activation with unclear account details.", next: "Confirm the company information is accurate or update it.", step: "profile" },
+    sales_setup: { why: "Pipeline stages and lead sources shape how leads and deals are organized.", next: "Review the sales process, pipeline stages, and lead sources.", step: "sales" },
+    crm_setup_summary: { why: "This confirms what onboarding will map into CRM settings and metadata.", next: "Review the final setup summary before submission.", step: "launch" },
+    plan: { why: "The trial path and post-trial plan define billing intent and trial limits.", next: "Choose the trial path and post-trial plan.", step: "plan" },
+    billing: { why: "Checkout confirmation is required before trial activation.", next: "Complete or refresh billing setup.", step: "billing" },
+    trial_acknowledgements: { why: "Trial renewal, card setup, and usage cap rules must be acknowledged.", next: "Review and accept the required trial acknowledgements.", step: "plan" },
+    ai: { why: "AI mode controls whether SynaptiReach-managed or customer-owned providers are used.", next: "Choose an AI processing mode and provider plan.", step: "ai" },
+    email: { why: "Email setup review keeps outreach provider choices explicit.", next: "Choose how email should be handled.", step: "integrations" },
+    sms: { why: "SMS requires explicit consent, compliance review, and provider readiness.", next: "Choose how SMS should be handled.", step: "integrations" },
+    calendar: { why: "Calendar preference controls appointment defaults and launch expectations.", next: "Choose Google Calendar later, internal calendar, or setup help.", step: "integrations" },
+    service_menu: { why: "A menu helps SynaptiReach prepare service/product knowledge for CRM intelligence.", next: "Upload a menu, mark it unavailable, or add review notes.", step: "profile" },
+    lead_setup: { why: "Lead setup determines whether existing contacts are imported now or added later.", next: "Import a CSV, add a starter lead, or intentionally skip.", step: "leads" },
+    staff: { why: "Staff roles and permissions prepare team access without sending invites automatically.", next: "Invite staff later or mark the workspace as owner-only.", step: "staff" },
+    marketing: { why: "Marketing goals guide campaign drafts and review-gated recommendations.", next: "Select at least one marketing goal or channel.", step: "marketing" },
+    workflow_drafts: { why: "Workflow drafts prepare repeatable processes without activating automation.", next: "Choose draft workflows or intentionally skip drafts.", step: "workflows" },
+    automation_safety: { why: "Safety preferences prevent customer-facing sends or billing actions without review.", next: "Acknowledge no-auto-send and SMS compliance rules.", step: "safety" },
+    help: { why: "Help preference tells SynaptiReach whether you want self-guided setup, a guided call, or DFY review.", next: "Choose a setup help preference.", step: "help" },
+  };
 
   const checks = [
     {
@@ -1184,9 +1411,22 @@ export function calculateOnboardingReadiness(payload: Record<string, any>, snaps
     },
     {
       id: "sales_setup",
-      label: "Sales process and pipeline configured",
+      label: "Sales Process and Pipeline",
       status: settingsMeta.pipeline_stages?.length || payload.crmSetup?.pipelineStages ? "complete" : "missing",
       href: "/dashboard/pipeline",
+    },
+    {
+      id: "crm_setup_summary",
+      label: "CRM Setup Summary",
+      status:
+        setupSummary.business?.business_name ||
+        setupSummary.sales_crm?.pipeline_stages?.length ||
+        setupSummary.sales_crm?.lead_sources?.length ||
+        setupSummary.billing_trial?.trial_path
+          ? "complete"
+          : "pending",
+      href: "/onboarding",
+      detail: "Onboarding setup is mapped into CRM settings metadata without creating fake CRM activity.",
     },
     {
       id: "plan",
@@ -1208,7 +1448,7 @@ export function calculateOnboardingReadiness(payload: Record<string, any>, snaps
       href: "/dashboard/settings#billing",
       detail:
         billing.status === "pending_webhook" || billing.status === "checkout_created"
-          ? "Stripe checkout submitted. Waiting for webhook confirmation."
+          ? "Checkout Submitted. Waiting Confirmation & Review."
           : ["trialing", "active", "checkout_completed"].includes(billing.status)
             ? "Payment method on file."
             : billing.status || "No billing setup state saved yet.",
@@ -1225,35 +1465,44 @@ export function calculateOnboardingReadiness(payload: Record<string, any>, snaps
     },
     {
       id: "ai",
-      label: "AI processing mode selected",
+      label: "CRM Intelligence",
       status: connectionReady(connections, "ai"),
       href: "/dashboard/settings#providers",
     },
     {
       id: "email",
-      label: "Email integration reviewed",
+      label: "Email Setup Reviewed",
       status: reviewedConnectionReady(connections, "email", integrationPrefs.email_reviewed || payload.integrations?.emailReviewed || payload.integrations?.emailReviewChoice),
       href: "/dashboard/settings#integrations",
     },
     {
       id: "sms",
-      label: "SMS integration reviewed",
+      label: "SMS Setup Reviewed",
       status: reviewedConnectionReady(connections, "sms", integrationPrefs.sms_reviewed || payload.integrations?.smsReviewed || payload.integrations?.smsReviewChoice),
       href: "/dashboard/settings#integrations",
     },
     {
       id: "calendar",
-      label: "Calendar setup reviewed",
+      label: "Calendar Setup Reviewed",
       status: integrationPrefs.calendar_reviewed || payload.integrations?.calendarMode ? "complete" : "pending",
       href: "/dashboard/settings#integrations",
       detail: "Google Calendar OAuth is completed later from provider settings, or the internal CRM calendar can be used.",
     },
     {
       id: "service_menu",
-      label: "Service/product menu reviewed",
-      status: payload.serviceMenu?.files?.length || menuUploadCount > 0 ? "pending" : payload.serviceMenu?.notAvailable ? "skipped" : "pending",
+      label: "Service/Menu Upload",
+      status: payload.serviceMenu?.files?.length || menuUploadCount > 0 ? "pending" : manualMenuCount > 0 ? "complete" : payload.serviceMenu?.notAvailable ? "skipped" : "pending",
       href: "/onboarding",
-      detail: payload.serviceMenu?.files?.length || menuUploadCount > 0 ? "Menu upload saved for analysis/review." : "Upload is optional and can be reviewed later.",
+      detail:
+        payload.serviceMenu?.files?.length || menuUploadCount > 0
+          ? manualMenuCount > 0
+            ? "Menu uploaded. Analysis pending. Manual services/products saved."
+            : "Menu uploaded. Analysis pending."
+          : manualMenuCount > 0
+            ? "Manual services/products saved."
+            : payload.serviceMenu?.notAvailable
+              ? "Service/product menu marked as not available yet."
+              : "Service/product menu missing. You can upload a file or add services manually.",
     },
     {
       id: "lead_setup",
@@ -1264,7 +1513,7 @@ export function calculateOnboardingReadiness(payload: Record<string, any>, snaps
     },
     {
       id: "staff",
-      label: "Staff setup reviewed",
+      label: "Staff Setup",
       status: staffCount > 0 || payload.staff?.setupMode === "solo" ? (staffCount > 0 ? "complete" : "skipped") : "missing",
       href: "/dashboard/settings#staff",
     },
@@ -1276,14 +1525,14 @@ export function calculateOnboardingReadiness(payload: Record<string, any>, snaps
     },
     {
       id: "workflow_drafts",
-      label: "Workflow recommendations prepared",
+      label: "Workflow Drafts",
       status: workflowDraftCount > 0 ? "complete" : payload.workflows?.createDrafts === false ? "skipped" : "pending",
       href: "/dashboard/workflow",
       detail: workflowDraftCount > 0 ? `${workflowDraftCount} onboarding draft workflow(s)` : "No onboarding workflow drafts saved yet.",
     },
     {
       id: "automation_safety",
-      label: "Automation safety preferences saved",
+      label: "Automation Safety",
       status: automation.no_auto_send_acknowledged || automation.noAutoSendAck ? "complete" : "missing",
       href: "/dashboard/settings#automation",
     },
@@ -1299,15 +1548,38 @@ export function calculateOnboardingReadiness(payload: Record<string, any>, snaps
     },
   ];
 
-  const completeWeight = checks.reduce((sum, check) => {
+  const enrichedChecks = checks.map((check) => {
+    const guidance = readinessGuidance[check.id] || {
+      why: "This item improves launch readiness.",
+      next: "Review this setup item before activation.",
+      step: "launch",
+    };
+    return {
+      ...check,
+      why: guidance.why,
+      next: check.status === "complete" ? "No action needed right now." : guidance.next,
+      onboardingStep: guidance.step,
+      actionLabel: check.status === "complete" || check.status === "skipped" ? "Review" : "Fix in onboarding",
+      statusText:
+        check.status === "complete"
+          ? "Approved"
+          : check.status === "pending"
+            ? "Pending"
+            : check.status === "skipped"
+              ? "Skipped"
+              : "Missing",
+    };
+  });
+
+  const completeWeight = enrichedChecks.reduce((sum, check) => {
     if (check.status === "complete") return sum + 1;
     if (check.status === "skipped" || check.status === "pending") return sum + 0.5;
     return sum;
   }, 0);
 
   return {
-    score: Math.round((completeWeight / checks.length) * 100),
-    checks,
+    score: Math.round((completeWeight / enrichedChecks.length) * 100),
+    checks: enrichedChecks,
     providerRuntime: {
       aiProviders: getAIProviderStatus(),
       stripe: getStripeBillingStatus(),
@@ -1421,21 +1693,56 @@ export async function saveOnboardingState(request: Request, input: SaveInput) {
   });
   const effectiveComplete = Boolean(input.complete && billingReady && trialAcknowledged && emailVerified && requiredReady);
   const submittedForReview = Boolean(input.complete && !effectiveComplete && billingSubmitted && trialAcknowledged && requiredReady);
+  const now = new Date().toISOString();
+  const { data: existingSessionForReview } = await supabase
+    .from("onboarding_sessions")
+    .select("id,metadata,completed")
+    .eq("workspace_id", workspace.id)
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+    .catch(() => ({ data: null }));
+  const wasSubmittedForReview = Boolean(existingSessionForReview?.metadata?.submitted_for_review && !existingSessionForReview?.completed);
+  const effectiveSubmittedForReview = Boolean((submittedForReview || wasSubmittedForReview) && !effectiveComplete);
+  const approvedItems = readiness.checks.filter((check: any) => check.status === "complete" || check.status === "skipped").map((check: any) => check.label);
+  const pendingItems = readiness.checks.filter((check: any) => check.status === "pending").map((check: any) => check.label);
+  const needsEditItems = readiness.checks.filter((check: any) => check.status === "missing").map((check: any) => check.label);
+  const approvalBlockers = readiness.checks
+    .filter((check: any) => check.status !== "complete" && check.status !== "skipped")
+    .map((check: any) => ({
+      id: check.id,
+      label: check.label,
+      status: check.status,
+      next: check.next || null,
+    }));
+  const crmSetupSummary = buildCrmSetupSummary(payload);
   const session = await upsertSession(supabase, {
     workspace_id: workspace.id,
     user_id: user.id,
     payload,
     completed: effectiveComplete,
     metadata: {
-      source: "onboarding_wizard",
+      source: "onboarding",
       current_step: input.currentStep || payload.__onboardingProgress?.current_step || null,
       completed_steps: input.completedSteps || [],
       skipped_steps: input.skippedSteps || {},
       readiness_score: readiness.score,
-      submitted_for_review: submittedForReview,
-      submitted_for_review_at: submittedForReview ? new Date().toISOString() : null,
-      completion_blocked_reason: input.complete && !effectiveComplete ? "Email verification, required workspace fields, provider mode, reviewed Email/SMS setup choices, Stripe webhook confirmation, and trial acknowledgements are required before onboarding is complete. Pending Stripe checkout can be submitted for review but does not activate trial access." : null,
-      completed_at: effectiveComplete ? new Date().toISOString() : null,
+      submitted_for_review: effectiveSubmittedForReview,
+      submitted_for_review_at: effectiveSubmittedForReview ? existingSessionForReview?.metadata?.submitted_for_review_at || now : null,
+      submitted_at: effectiveSubmittedForReview ? existingSessionForReview?.metadata?.submitted_at || now : null,
+      review_status: effectiveComplete ? "approved" : effectiveSubmittedForReview ? "pending_review" : "draft",
+      user_visible_status: effectiveComplete ? "CRM activated" : effectiveSubmittedForReview ? "Submitted for review" : "In progress",
+      approval_blockers: approvalBlockers,
+      needs_edit_items: needsEditItems,
+      approved_items: approvedItems,
+      pending_items: pendingItems,
+      reviewer_notes: existingSessionForReview?.metadata?.reviewer_notes || "",
+      requested_edits: existingSessionForReview?.metadata?.requested_edits || [],
+      last_user_update_at: now,
+      crm_setup_summary: crmSetupSummary,
+      completion_blocked_reason: input.complete && !effectiveComplete ? "Email verification, required workspace fields, provider mode, reviewed Email/SMS setup choices, checkout confirmation, and trial acknowledgements are required before onboarding is complete. Pending checkout can be submitted for review but does not activate trial access." : null,
+      completed_at: effectiveComplete ? now : null,
     },
   });
 

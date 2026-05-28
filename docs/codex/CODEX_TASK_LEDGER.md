@@ -44,6 +44,19 @@ Codex must update this after every pass.
 
 Add new entries below after each Codex pass.
 
+### 2026-05-28 - Onboarding Final Admin-Ready Polish
+
+Date: 2026-05-28
+Model: Codex
+Prompt/Goal: Execute `docs/codex/synaptireach_onboarding_final_admin_ready_polish_prompt.md` exactly, preserving onboarding/CRM behavior while adding manual service/product rows, admin-review metadata, richer CRM setup summary, and final status/readiness copy polish.
+Completed: Inspected all required onboarding, billing, sign-in, docs, ledger, and checklist files before editing. Preserved Stripe webhook ownership, hosted Checkout, save/resume behavior, routing, dashboard access rules, real-data-only behavior, service-menu pending analysis, and existing `crm_setup_summary`. Added manual service/product rows under `serviceMenu.manualItems` with name, category, price/range, duration, description, notes, and active flag; mapped normalized rows into `crm_settings.metadata.service_menu.manual_items` and the derived CRM setup summary. Improved service/menu review copy to distinguish uploaded files, manual rows, analysis pending, not available yet, and missing state. Expanded onboarding session metadata for future admin review with submitted/review status, user-visible status, blockers, pending/missing/approved items, placeholders for reviewer notes/requested edits, last user update time, and CRM setup summary. Expanded `crm_setup_summary` across business, sales/CRM, staff, marketing, analytics, communications, calendar, automation/workflows, CRM intelligence, billing/trial, Help/DFY, and service menu context. Split combined UI fields where they weakened CRM mapping while preserving existing payload field names. Added status-page review groups for Waiting on SynaptiReach, Waiting on Stripe, Needs Your Edits, Approved / Complete, and Missing.
+Skipped: No schema changes, no admin portal build, no billing rewrite, no dashboard redesign, no fake service menu extraction, no fake customers/revenue/provider success/paid/subscribed/trial state, and no normal-user simulated data.
+Partial: Authenticated browser/manual checks remain required for save/resume, submitted edit/update, Stripe return, manual service rows persistence, status grouping, and dashboard access gating.
+Files changed: `app/onboarding/page.tsx`, `app/onboarding/status/page.tsx`, `lib/onboarding/server.ts`, `docs/onboarding.md`, `docs/architecture.md`, `docs/knowledge-map.md`, `docs/codex/CODEX_TASK_LEDGER.md`, `exports/FINAL_FULL_CRM_COMPLETION_CHECKLIST.md`.
+Build result: `npm.cmd run build` passed and generated 153/153 static pages.
+Tests run: Required source/doc inspection; Supabase changelog review for relevant breaking-change awareness; local Stripe/Supabase skill guidance review; customer-facing wording scans; `npm.cmd run build`.
+Next recommended task: Run the authenticated manual onboarding checklist, including managed/BYOK signup, exact saved-step resume, Stripe Checkout return, submitted status routing, dashboard gating, and manual service/product metadata verification.
+
 ### 2026-05-28 - Onboarding Stabilization and CRM Population Pass
 
 Date: 2026-05-28
