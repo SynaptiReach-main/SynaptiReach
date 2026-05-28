@@ -47,6 +47,9 @@ Guardrails:
 - Users who save but do not submit resume `/onboarding` at the saved step.
 - Users who submit for review can edit onboarding and resubmit/update without losing the submitted state.
 - Users with completed onboarding sessions can access `/dashboard`.
+- Stripe Checkout returns may temporarily show Billing, but they must not permanently overwrite the saved onboarding step unless the user was actually saving from Billing.
+- Unauthenticated onboarding/status access redirects to sign-in with a return URL; onboarding APIs return 401 instead of attempting anonymous workspace access.
+- Authenticated onboarding reads/writes are scoped to the user's owned workspace/session and do not honor raw workspace/session query params for cross-user access.
 
 Rationale: non-technical business owners need clear help without confusing free guidance with paid implementation. Saving the preference in onboarding lets SynaptiReach follow up without auto-charging or auto-fulfilling services.
 
@@ -70,6 +73,19 @@ Guardrails:
 - Metadata is stored in `crm_service_menu_uploads` with `pending_analysis` / `needs_review` by default.
 - A review recommendation is created for admin/manual analysis when parsing is unavailable.
 - Structured service/product knowledge must remain tied to the source file and review state.
+
+## CRM-Aware Onboarding Defaults
+
+Decision: onboarding may collect real customer-provided configuration data for CRM defaults, analytics baselines, communication preferences, workflow drafts, and admin review, but it must store those values as settings/defaults unless a real user-provided record is intentionally imported or entered.
+
+Rationale: the User CRM should feel pre-configured after onboarding without creating fake customers, fake analytics, fake revenue, fake provider success, or fake billing state.
+
+Guardrails:
+
+- Optional baseline metrics are stored as analytics preferences and do not create analytics events or revenue.
+- Lead/deal/task/pipeline fields configure defaults and recommendations; they do not create fake deals or tasks.
+- AI, marketing, and workflow fields create draft/review preferences only; external sends remain review-gated.
+- Service/product menu uploads remain pending review until real extraction/admin review occurs.
 
 ## User CRM Portal Usability Presentation Layer
 

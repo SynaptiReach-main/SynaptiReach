@@ -15,15 +15,15 @@ documents:: [[SynaptiReach]]
 The current wizard collects:
 
 - account owner details
-- business profile, legal/company details, industry, service type, target customer, main offer, preferred CTA, sales process, and brand voice
-- service areas, business hours, common customer problems, booking/quote/review notes, legal/company acknowledgement, and optional service/product menu upload
+- business profile, legal/company details, industry, service type, main customer type, target customer, main offer, preferred CTA, sales process, and brand voice
+- service areas, business hours, primary service/product categories, top services/products, common customer problems, common questions/objections, emergency/priority rules, booking/quote/review notes, legal/company acknowledgement, and optional service/product menu upload
 - trial path, post-trial plan, Stripe card acknowledgement, auto-renewal acknowledgement, usage caps, and managed SMS approval intent
-- AI processing mode, provider setup, recommendation behavior, communication defaults, and rule-based intelligence preference
+- AI processing mode, provider setup, recommendation behavior, risk tolerance, topics to avoid, draft-vs-task preference, communication defaults, and rule-based intelligence preference
 - email, SMS, social, and calendar integration setup states
 - lead import/manual starter lead intent and CSV mapping notes
-- pipeline stages, lead statuses, sources, tags, appointment types, task defaults, assignment guidance, deal value/close-time expectations, and won/lost reasons
+- pipeline stages, lead statuses, sources, tags, appointment types, task defaults, assignment guidance, deal value/close-time expectations, stale lead/deal thresholds, follow-up timing, owner assignment preference, and won/lost reasons
 - staff invite rows and requested permissions
-- marketing goals, channels, campaign notes, budget/offer/segment guidance, analytics preferences, notification preferences, and workflow draft recommendations
+- marketing goals, channels, campaign notes, budget/offer/segment guidance, retargeting interest, review request timing, analytics preferences, baseline lead/appointment volume, goals, notification preferences, and workflow draft recommendations
 - free guidance, guided setup call, and paid DFY assistance preference
 
 The wizard writes to existing structures where possible:
@@ -41,9 +41,9 @@ The wizard writes to existing structures where possible:
 
 ## Status and Routing
 
-`/onboarding/status` is the submitted-review holding page. Submitted-but-not-complete users see grouped state for submission, billing/webhook, providers, legal/company, email/SMS, calendar, menu, staff, leads, workflows, and help. Incomplete users that have not submitted are redirected back to `/onboarding?step=<saved step>`. Completed users are sent to `/dashboard`.
+`/onboarding/status` is the submitted-review holding page. Submitted-but-not-complete users see grouped state for submission, billing/webhook, providers, legal/company, email/SMS, calendar, menu, staff, leads, workflows, and help. Incomplete users that have not submitted are redirected back to `/onboarding?step=<saved step>`. Completed users are sent to `/dashboard`. The status page now offers Edit onboarding and Sign Out; Sign Out clears the Supabase session and returns to the public homepage.
 
-Dashboard layout checks onboarding state before showing CRM pages. Submitted sessions go to `/onboarding/status`; incomplete unsubmitted sessions resume onboarding from the saved step. The status page provides Edit onboarding and Finish Later actions.
+Dashboard layout checks onboarding state before showing CRM pages. Submitted sessions go to `/onboarding/status`; incomplete unsubmitted sessions resume onboarding from the saved step. Direct `/onboarding` access requires an authenticated Supabase session and redirects unauthenticated users to `/signin?returnTo=...` instead of trying to load indefinitely.
 
 ## Service Menu Storage
 
@@ -69,7 +69,20 @@ Onboarding supports two 14-day trial paths:
 - SynaptiReach-Managed Trial: full software access with hard free caps for managed AI, email, SMS, contacts, workflows, and AI review checks. A Stripe card is required before the trial starts. The selected paid plan controls post-trial renewal only; higher managed tiers do not expand trial exposure. Managed SMS is optional and approval-based, and readiness requires approval for estimated Twilio/carrier registration and messaging costs plus the SynaptiReach $20 setup fee approval.
 - BYOK Trial: full software access while the customer connects their own Gemini/OpenAI/OpenRouter, Resend, Twilio, and Ayrshare accounts as needed. The customer pays providers directly. SynaptiReach has no managed AI/email/SMS credit exposure. A Stripe card is still required before the trial starts, and optional self-imposed caps can be saved.
 
-Stripe Checkout remains the only card collection path. Onboarding-originated subscription checkout now returns to `/onboarding?checkout=success&session_id={CHECKOUT_SESSION_ID}&step=billing` or `/onboarding?checkout=cancelled&step=billing`; Settings-originated checkout still returns to Settings. Onboarding records checkout submission as `pending_webhook`/submitted state and shows "Stripe checkout submitted. Waiting for webhook confirmation." Trial start/end timestamps and active/trialing/subscribed states are left empty until Stripe webhook confirmation supplies them.
+Stripe Checkout remains the only card collection path. Onboarding-originated subscription checkout now returns to `/onboarding?checkout=success&session_id={CHECKOUT_SESSION_ID}&step=billing` or `/onboarding?checkout=cancelled&step=billing`; Settings-originated checkout still returns to Settings. On Stripe return, onboarding confirms auth, records the checkout session id through `/api/onboarding/stripe-session`, updates billing visibility to `pending_webhook` when webhook-owned statuses are not already present, and shows Billing only for the fresh return without permanently overwriting the saved onboarding step. If the Stripe status refresh fails, the Billing step shows a retryable error instead of an infinite loading state. Trial start/end timestamps and active/trialing/subscribed states are left empty until Stripe webhook confirmation supplies them.
+
+## CRM Population Mapping
+
+New or expanded CRM-aware fields are stored in `crm_settings.metadata` and related existing records only:
+
+- Business/workspace: `main_customer_type`, `service_areas`, `business_hours`, `primary_categories`, `top_services_products`, `common_customer_questions`, `common_customer_objections`, `emergency_priority_rules`, booking/quote/review notes, and brand voice.
+- Leads/pipeline/tasks: `pipeline_stages`, `lead_statuses`, `lead_sources`, `lead_tags`, `crm_defaults.stale_lead_threshold`, `crm_defaults.stale_deal_threshold`, `crm_defaults.follow_up_timing`, `crm_defaults.owner_assignment_preference`, appointment types, default task types, and won/lost reasons.
+- Dashboard/analytics: `analytics_preferences.primary_kpi`, monthly lead/revenue/appointment goals, conversion goal, average customer value, current monthly lead volume, current monthly appointment volume, reporting cadence, 30/60/90-day goals, and pain points.
+- Communications and AI: `communications_setup`, `ai_behavior.risk_tolerance`, `ai_behavior.topics_to_avoid`, and `ai_behavior.draft_mode`.
+- Calendar/marketing/workflows: calendar appointment/default duration/reminder/no-show preferences, marketing goals/channels/offers/segments/retargeting/review timing, and workflow draft preferences.
+- Billing/help/review: trial path, post-trial plan, managed SMS readiness, usage cap preferences, service-menu upload review state, and onboarding help/DFY service request intent.
+
+Required fields remain owner identity, core business profile, legal review acknowledgement, trial path/plan acknowledgements, AI mode, reviewed email/SMS/calendar choices, billing submission, and safety acknowledgement. Optional fields pre-configure the CRM and can be completed later. No optional field creates fake customers, revenue, provider success, paid state, or subscription state.
 
 Current managed trial caps are centralized in `lib/billing/plans.ts`: 300 AI credits, 250 emails, 0 SMS by default, 25 SMS after approval/payment, 250 contacts, 10 active workflows, 25 agent runs, 2 invited staff users, 5 campaign drafts, 1 CSV import, and 10 onboarding files / 25 MB total if file storage is enabled.
 
@@ -176,3 +189,15 @@ The schema also includes `crm_service_menu_uploads` for onboarding menu files. T
 - The completion button is now “Complete Onboarding” and remains blocked until required readiness gates are complete.
 - Dashboard onboarding prompts fetch with the active Supabase session token and also prompt when a workspace exists but no completed onboarding session exists.
 - Provider test buttons call `POST /api/onboarding/provider-test`, save/read server-side readiness state, and do not send campaigns, email, SMS, or social posts.
+
+## Stabilization and CRM Population Pass - 2026-05-28
+
+- Stripe Checkout returns are processed through `/api/onboarding/stripe-session` instead of a generic onboarding save, so a fresh Billing display does not permanently overwrite the saved step.
+- Stripe return status failures now show a retryable Billing error.
+- `/onboarding` and `/onboarding/status` redirect unauthenticated users to sign-in with a return URL.
+- Submitted users are routed to `/onboarding/status` unless they are editing onboarding from a specific step; completed users are routed to `/dashboard`.
+- Subscription checkout now verifies the authenticated user owns the requested workspace before creating checkout state.
+- Status page `Finish Later` is now `Sign Out`.
+- `Business profile saved` is now `Business Profile`; `Stripe card setup state is explicit` is now `Billing Set-Up`.
+- CRM-aware optional fields now populate `crm_settings.metadata` for real workspace defaults and admin/review context. No SQL changes were required.
+- `npm.cmd run build` passed and generated 153/153 static pages.

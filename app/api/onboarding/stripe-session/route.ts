@@ -10,6 +10,7 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => ({}));
     const sessionId = String(body.session_id || "");
+    const checkoutReturnState = String(body.checkout_return_state || body.checkoutReturnState || "");
     const supabase = createSupabaseAdmin();
     const { data: workspace, error: workspaceError } = await supabase
       .from("workspaces")
@@ -36,18 +37,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Stripe session does not match this workspace." }, { status: 403 });
     }
 
+    const webhookOwnedStatuses = new Set(["trialing", "active", "past_due", "canceled", "unpaid", "checkout_completed"]);
+    await supabase
+      .from("crm_billing_accounts")
+      .update({
+        status: webhookOwnedStatuses.has(billing.status) ? billing.status : "pending_webhook",
+        metadata: {
+          ...(billing.metadata || {}),
+          checkout_session_id: sessionId,
+          stripe_session_id: sessionId,
+          checkout_return_state: checkoutReturnState || billing.metadata?.checkout_return_state || "success",
+          checkout_submitted_at: billing.metadata?.checkout_submitted_at || new Date().toISOString(),
+          checkout_status_source: "onboarding_stripe_return",
+        },
+      })
+      .eq("id", billing.id);
+
     const stripe = await retrieveStripeCheckoutSession(sessionId);
     if (!stripe.success) {
       return NextResponse.json(stripe, { status: stripe.setupRequired ? 503 : 502 });
     }
 
-    const webhookOwnedStatuses = new Set(["trialing", "active", "past_due", "canceled", "unpaid", "checkout_completed"]);
     await supabase
       .from("crm_billing_accounts")
       .update({
-        status: webhookOwnedStatuses.has(billing.status) ? billing.status : billing.status || "pending_webhook",
+        status: webhookOwnedStatuses.has(billing.status) ? billing.status : "pending_webhook",
         metadata: {
           ...(billing.metadata || {}),
+          checkout_session_id: sessionId,
+          stripe_session_id: sessionId,
+          checkout_return_state: checkoutReturnState || billing.metadata?.checkout_return_state || "success",
+          checkout_submitted_at: billing.metadata?.checkout_submitted_at || new Date().toISOString(),
+          checkout_status_source: "onboarding_stripe_return",
           stripe_session_check: {
             checked_at: new Date().toISOString(),
             ...stripe.session,

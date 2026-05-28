@@ -79,7 +79,8 @@ export default function SignInPage() {
         );
 
       } else {
-        router.push("/dashboard");
+        const returnTo = new URLSearchParams(window.location.search).get("returnTo");
+        router.push(returnTo && returnTo.startsWith("/") ? returnTo : "/dashboard");
       }
 
       router.refresh();

@@ -46,6 +46,9 @@ type WizardData = {
     taxIdLast4: string;
     industry: string;
     serviceType: string;
+    mainCustomerType: string;
+    primaryCategories: string;
+    topServices: string;
     website: string;
     contactEmail: string;
     phone: string;
@@ -67,6 +70,9 @@ type WizardData = {
     bookingProcess: string;
     quoteProcess: string;
     reviewProcess: string;
+    commonQuestions: string;
+    commonObjections: string;
+    emergencyPriorityRules: string;
   };
   plan: {
     planSlug: string;
@@ -105,6 +111,9 @@ type WizardData = {
     tone: string;
     assistantBehavior: string;
     intelligencePreference: "conservative" | "balanced" | "proactive";
+    riskTolerance: "strict" | "balanced" | "flexible";
+    topicsToAvoid: string;
+    draftMode: "draft_messages" | "recommend_tasks_only";
     useRuleBasedFirst: boolean;
   };
   integrations: {
@@ -136,6 +145,10 @@ type WizardData = {
     priorityRules: string;
     wonReasons: string;
     lostReasons: string;
+    staleLeadThreshold: string;
+    staleDealThreshold: string;
+    followUpTiming: string;
+    ownerAssignmentPreference: string;
     appointmentTypes: string;
     defaultTaskTypes: string;
     assignmentRules: string;
@@ -169,6 +182,8 @@ type WizardData = {
     offersPromotions: string;
     seasonalCampaigns: string;
     customerSegments: string;
+    retargetingInterest: string;
+    reviewRequestTiming: string;
     approvalWorkflow: string;
   };
   analytics: {
@@ -177,6 +192,9 @@ type WizardData = {
     monthlyRevenueGoal: string;
     appointmentGoal: string;
     conversionGoal: string;
+    averageCustomerValue: string;
+    currentMonthlyLeadVolume: string;
+    currentMonthlyAppointmentVolume: string;
     reportingCadence: string;
     success30: string;
     success60: string;
@@ -200,6 +218,7 @@ type WizardData = {
     bookingWindow: string;
     availabilityNotes: string;
     reminderPreferences: string;
+    reminderTiming: string;
     noShowPreference: string;
     confirmationWorkflow: string;
   };
@@ -216,6 +235,8 @@ type WizardData = {
   };
   automation: {
     requireApproval: boolean;
+    draftOnlyAutomations: string;
+    usageWarningPreferences: string;
     allowAutoAssign: boolean;
     quietHoursEnabled: boolean;
     quietHoursStart: string;
@@ -247,6 +268,9 @@ const initialData: WizardData = {
     taxIdLast4: "",
     industry: "",
     serviceType: "",
+    mainCustomerType: "",
+    primaryCategories: "",
+    topServices: "",
     website: "",
     contactEmail: "",
     phone: "",
@@ -268,6 +292,9 @@ const initialData: WizardData = {
     bookingProcess: "",
     quoteProcess: "",
     reviewProcess: "",
+    commonQuestions: "",
+    commonObjections: "",
+    emergencyPriorityRules: "",
   },
   plan: {
     planSlug: "growth-managed",
@@ -306,6 +333,9 @@ const initialData: WizardData = {
     tone: "professional",
     assistantBehavior: "Draft helpful, concise recommendations and explain why each action matters.",
     intelligencePreference: "balanced",
+    riskTolerance: "balanced",
+    topicsToAvoid: "",
+    draftMode: "draft_messages",
     useRuleBasedFirst: true,
   },
   integrations: {
@@ -337,6 +367,10 @@ const initialData: WizardData = {
     priorityRules: "",
     wonReasons: "",
     lostReasons: "",
+    staleLeadThreshold: "7 days",
+    staleDealThreshold: "14 days",
+    followUpTiming: "Follow up with new leads within 1 business day.",
+    ownerAssignmentPreference: "",
     appointmentTypes: "Consultation, estimate, follow-up, service visit",
     defaultTaskTypes: "Call back, send estimate, follow up, schedule appointment, request review",
     assignmentRules: "",
@@ -370,6 +404,8 @@ const initialData: WizardData = {
     offersPromotions: "",
     seasonalCampaigns: "",
     customerSegments: "",
+    retargetingInterest: "",
+    reviewRequestTiming: "After completed service or confirmed customer success.",
     approvalWorkflow: "Owner reviews campaign drafts before sending.",
   },
   analytics: {
@@ -378,6 +414,9 @@ const initialData: WizardData = {
     monthlyRevenueGoal: "",
     appointmentGoal: "",
     conversionGoal: "",
+    averageCustomerValue: "",
+    currentMonthlyLeadVolume: "",
+    currentMonthlyAppointmentVolume: "",
     reportingCadence: "Weekly",
     success30: "",
     success60: "",
@@ -401,6 +440,7 @@ const initialData: WizardData = {
     bookingWindow: "",
     availabilityNotes: "",
     reminderPreferences: "Internal reminder first; customer messages require review.",
+    reminderTiming: "24 hours before appointment and 2 hours before appointment.",
     noShowPreference: "Create a review-gated reschedule task.",
     confirmationWorkflow: "Confirm appointment details before sending customer-facing messages.",
   },
@@ -417,6 +457,8 @@ const initialData: WizardData = {
   },
   automation: {
     requireApproval: true,
+    draftOnlyAutomations: "Customer-facing email, SMS, social posts, billing actions, and review requests stay draft-only until approved.",
+    usageWarningPreferences: "Warn me at 80% of managed trial caps.",
     allowAutoAssign: false,
     quietHoursEnabled: true,
     quietHoursStart: "20:00",
@@ -720,6 +762,7 @@ export default function OnboardingPage() {
   const [csvRows, setCsvRows] = useState<Record<string, string>[]>([]);
   const [csvFileName, setCsvFileName] = useState("");
   const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [checkoutStatusError, setCheckoutStatusError] = useState("");
   const [menuUploading, setMenuUploading] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error" | "info"; title: string; detail?: string } | null>(null);
 
@@ -756,122 +799,145 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     async function load() {
-      setLoading(true);
-      setError("");
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      try {
+        setLoading(true);
+        setError("");
+        setCheckoutStatusError("");
+        const params = new URLSearchParams(window.location.search);
+        const checkoutReturn = params.get("checkout");
+        const checkoutSessionId = params.get("session_id") || "";
+        const requestedStep = params.get("step");
+        const editingSubmitted = Boolean(requestedStep);
+        const returnTo = `${window.location.pathname}${window.location.search}`;
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-      if (!session?.user) {
-        router.push("/signup");
-        return;
-      }
-
-      setSessionToken(session.access_token);
-
-      const response = await fetch("/api/onboarding/save", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        setError(result.error || "Could not load onboarding state.");
-        setLoading(false);
-        return;
-      }
-
-      const params = new URLSearchParams(window.location.search);
-      const checkoutReturn = params.get("checkout");
-      const checkoutSessionId = params.get("session_id") || "";
-      const requestedStep = params.get("step");
-      if (result.payload) {
-        const merged = mergePayload(result.payload);
-        if (checkoutReturn === "success" && checkoutSessionId) {
-          merged.plan = {
-            ...merged.plan,
-            billingIntent: "checkout_started",
-            checkoutSessionId,
-            checkoutReturnState: "success",
-          };
-          await fetch("/api/onboarding/save", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-            body: JSON.stringify({
-              payload: {
-                ...merged,
-                __onboardingProgress: {
-                  ...(result.session?.metadata || result.payload?.__onboardingProgress || {}),
-                  current_step: "billing",
-                },
-              },
-              currentStep: "billing",
-              completedSteps: result.session?.metadata?.completed_steps || result.payload?.__onboardingProgress?.completed_steps || [],
-              skippedSteps: result.session?.metadata?.skipped_steps || result.payload?.__onboardingProgress?.skipped_steps || {},
-            }),
-          }).then(() => undefined).catch(() => undefined);
-          showToast("info", "Stripe checkout submitted", "Waiting for webhook confirmation.");
-        } else if (checkoutReturn === "cancelled") {
-          merged.plan = { ...merged.plan, checkoutReturnState: "cancelled" };
-          showToast("info", "Stripe checkout cancelled", "Set up payment method with Stripe to continue onboarding.");
+        if (!session?.access_token || !session.user) {
+          router.replace(`/signin?returnTo=${encodeURIComponent(returnTo)}`);
+          setError("Sign in to continue onboarding.");
+          setLoading(false);
+          return;
         }
-        setData(merged);
-      } else {
-        const storedType = localStorage.getItem("synaptireach_business_type");
-        let signup: any = {};
-        try {
-          signup = JSON.parse(localStorage.getItem("synaptireach_signup") || "{}");
-        } catch {
-          signup = {};
-        }
-        const storedTrialPath = signup.trialPath === "byok" ? "byok" : signup.trialPath === "managed" ? "managed" : null;
-        setData((current) => {
-          const signupTrialPath = storedTrialPath || currentTrialPath(current.plan.trialPath);
-          const signupPlanSlug = defaultPlanForTrialPath(signupTrialPath);
-          return {
-            ...current,
-            businessType: storedType || current.businessType,
-            owner: {
-              ...current.owner,
-              email: signup.email || session.user.email || current.owner.email,
-            },
-            plan: {
-              ...current.plan,
-              trialPath: signupTrialPath,
-              planSlug: current.plan.planSlug?.endsWith(`-${signupTrialPath}`) ? current.plan.planSlug : signupPlanSlug,
-            },
-            ai: {
-              ...current.ai,
-              mode: current.ai.mode || signupTrialPath,
-            },
-            integrations: {
-              ...current.integrations,
-              emailMode: current.integrations.emailMode || signupTrialPath,
-              smsMode: current.integrations.smsMode || (signupTrialPath === "byok" ? "byok" : "skip"),
-            },
-            businessProfile: {
-              ...current.businessProfile,
-              businessName: signup.businessName || current.businessProfile.businessName,
-              industry: signup.industry || current.businessProfile.industry,
-              contactEmail: signup.email || session.user.email || current.businessProfile.contactEmail,
-            },
-          };
+
+        setSessionToken(session.access_token);
+
+        const response = await fetch("/api/onboarding/save", {
+          cache: "no-store",
+          headers: { Authorization: `Bearer ${session.access_token}` },
         });
+        let result = await response.json().catch(() => ({}));
+
+        if (!response.ok || !result.success) {
+          setError(result.error || "Could not load onboarding state.");
+          setLoading(false);
+          return;
+        }
+
+        if (result.session?.completed) {
+          router.replace("/dashboard");
+          return;
+        }
+
+        if (result.session?.metadata?.submitted_for_review && !editingSubmitted && checkoutReturn !== "success") {
+          router.replace("/onboarding/status");
+          return;
+        }
+
+        if (result.payload) {
+          const merged = mergePayload(result.payload);
+          if (checkoutReturn === "success" && checkoutSessionId) {
+            merged.plan = {
+              ...merged.plan,
+              billingIntent: "checkout_started",
+              checkoutSessionId,
+              checkoutReturnState: "success",
+            };
+            const statusResponse = await fetch("/api/onboarding/stripe-session", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+              body: JSON.stringify({ session_id: checkoutSessionId, checkout_return_state: "success" }),
+            });
+            const statusResult = await statusResponse.json().catch(() => ({}));
+            if (!statusResponse.ok || !statusResult.success) {
+              const detail = statusResult.error || "Could not refresh Stripe checkout status. You can retry from Billing.";
+              setCheckoutStatusError(detail);
+              showToast("error", "Stripe status check failed", detail);
+            } else {
+              showToast("info", "Stripe checkout submitted", "Waiting for webhook confirmation.");
+              const refreshed = await fetch("/api/onboarding/save", {
+                cache: "no-store",
+                headers: { Authorization: `Bearer ${session.access_token}` },
+              });
+              const refreshedResult = await refreshed.json().catch(() => ({}));
+              if (refreshed.ok && refreshedResult.success) result = refreshedResult;
+            }
+          } else if (checkoutReturn === "cancelled") {
+            merged.plan = { ...merged.plan, checkoutReturnState: "cancelled" };
+            showToast("info", "Stripe checkout cancelled", "Set up payment method with Stripe to continue onboarding.");
+          }
+          setData(merged);
+        } else {
+          const storedType = localStorage.getItem("synaptireach_business_type");
+          let signup: any = {};
+          try {
+            signup = JSON.parse(localStorage.getItem("synaptireach_signup") || "{}");
+          } catch {
+            signup = {};
+          }
+          const storedTrialPath = signup.trialPath === "byok" ? "byok" : signup.trialPath === "managed" ? "managed" : null;
+          setData((current) => {
+            const signupTrialPath = storedTrialPath || currentTrialPath(current.plan.trialPath);
+            const signupPlanSlug = defaultPlanForTrialPath(signupTrialPath);
+            return {
+              ...current,
+              businessType: storedType || current.businessType,
+              owner: {
+                ...current.owner,
+                email: signup.email || session.user.email || current.owner.email,
+              },
+              plan: {
+                ...current.plan,
+                trialPath: signupTrialPath,
+                planSlug: current.plan.planSlug?.endsWith(`-${signupTrialPath}`) ? current.plan.planSlug : signupPlanSlug,
+              },
+              ai: {
+                ...current.ai,
+                mode: current.ai.mode || signupTrialPath,
+              },
+              integrations: {
+                ...current.integrations,
+                emailMode: current.integrations.emailMode || signupTrialPath,
+                smsMode: current.integrations.smsMode || (signupTrialPath === "byok" ? "byok" : "skip"),
+              },
+              businessProfile: {
+                ...current.businessProfile,
+                businessName: signup.businessName || current.businessProfile.businessName,
+                industry: signup.industry || current.businessProfile.industry,
+                contactEmail: signup.email || session.user.email || current.businessProfile.contactEmail,
+              },
+            };
+          });
+        }
+        setWorkspaceId(result.workspace?.id || null);
+        setOnboardingSession(result.session || null);
+        setReadiness(result.readiness || null);
+        setSnapshot(result.snapshot || {});
+        const savedProgress = result.session?.metadata || result.payload?.__onboardingProgress || {};
+        const savedCompleted = savedProgress.completed_steps || [];
+        setCompletedSteps(savedCompleted);
+        setSkippedSteps(savedProgress.skipped_steps || {});
+        const savedStep = savedProgress.current_step;
+        const targetStep = checkoutReturn === "success" && requestedStep === "billing" ? "billing" : requestedStep || savedStep || "welcome";
+        if (targetStep && stepIndexById[targetStep] !== undefined) {
+          const savedIndex = stepIndexById[targetStep];
+          setActiveStep(checkoutReturn === "success" ? savedIndex : Math.min(savedIndex, maxUnlockedFor(savedCompleted)));
+        }
+        setLoading(false);
+      } catch (err: any) {
+        setError(err?.message || "Could not load onboarding state.");
+        setLoading(false);
       }
-      setWorkspaceId(result.workspace?.id || null);
-      setOnboardingSession(result.session || null);
-      setReadiness(result.readiness || null);
-      setSnapshot(result.snapshot || {});
-      const savedProgress = result.session?.metadata || result.payload?.__onboardingProgress || {};
-      const savedCompleted = savedProgress.completed_steps || [];
-      setCompletedSteps(savedCompleted);
-      setSkippedSteps(savedProgress.skipped_steps || {});
-      const savedStep = savedProgress.current_step;
-      const targetStep = checkoutReturn ? "billing" : requestedStep || savedStep;
-      if (targetStep && stepIndexById[targetStep] !== undefined) {
-        const savedIndex = stepIndexById[targetStep];
-        setActiveStep(Math.min(savedIndex, maxUnlockedFor(savedCompleted)));
-      }
-      setLoading(false);
     }
 
     load();
@@ -970,7 +1036,7 @@ export default function OnboardingPage() {
     goToStep(targetStep);
   }
 
-  async function save(options: { silent?: boolean; complete?: boolean; includeCsv?: boolean; markStepComplete?: boolean; skippedOverride?: Record<string, boolean> } = {}) {
+  async function save(options: { silent?: boolean; complete?: boolean; includeCsv?: boolean; markStepComplete?: boolean; skippedOverride?: Record<string, boolean>; currentStepOverride?: string } = {}) {
     if (!sessionToken) return null;
     setSaving(true);
     setError("");
@@ -980,10 +1046,11 @@ export default function OnboardingPage() {
     const effectiveSkipped = options.skippedOverride || skippedSteps;
     const canMarkStepComplete = Boolean(options.markStepComplete || options.complete || effectiveSkipped[step.id]);
     const nextCompleted = canMarkStepComplete ? Array.from(new Set([...completedSteps, step.id])) : completedSteps;
+    const currentStepForSave = options.currentStepOverride || step.id;
     const payloadWithProgress = {
       ...data,
       __onboardingProgress: {
-        current_step: step.id,
+        current_step: currentStepForSave,
         completed_steps: nextCompleted,
         skipped_steps: effectiveSkipped,
       },
@@ -999,7 +1066,7 @@ export default function OnboardingPage() {
         payload: payloadWithProgress,
         completedSteps: nextCompleted,
         skippedSteps: effectiveSkipped,
-        currentStep: step.id,
+        currentStep: currentStepForSave,
         complete: Boolean(options.complete),
         leadRows: options.includeCsv ? csvRows : [],
         importFileName: options.includeCsv ? csvFileName : null,
@@ -1041,7 +1108,8 @@ export default function OnboardingPage() {
       showToast("error", "Required items missing", "Review the checklist before continuing.");
       return;
     }
-    const result = await save({ silent: true, markStepComplete: true });
+    const nextStepId = steps[Math.min(activeStep + 1, steps.length - 1)]?.id || step.id;
+    const result = await save({ silent: true, markStepComplete: true, currentStepOverride: nextStepId });
     if (result) setActiveStep((current) => Math.min(current + 1, steps.length - 1));
   }
 
@@ -1058,7 +1126,8 @@ export default function OnboardingPage() {
     }
     setSkippedSteps((current) => ({ ...current, [step.id]: true }));
     const nextSkipped = { ...skippedSteps, [step.id]: true };
-    save({ silent: true, markStepComplete: true, skippedOverride: nextSkipped }).then((result) => {
+    const nextStepId = steps[Math.min(activeStep + 1, steps.length - 1)]?.id || step.id;
+    save({ silent: true, markStepComplete: true, skippedOverride: nextSkipped, currentStepOverride: nextStepId }).then((result) => {
       if (result) setActiveStep((current) => Math.min(current + 1, steps.length - 1));
     });
   }
@@ -1177,11 +1246,24 @@ export default function OnboardingPage() {
     if (!sessionToken) return;
     const stripeSessionId = data.plan.checkoutSessionId || snapshot?.billing?.metadata?.stripe_session_id || snapshot?.billing?.metadata?.checkout_session_id;
     if (stripeSessionId) {
-      await fetch("/api/onboarding/stripe-session", {
+      const stripeResponse = await fetch("/api/onboarding/stripe-session", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionToken}` },
         body: JSON.stringify({ session_id: stripeSessionId }),
-      }).catch(() => undefined);
+      }).catch(() => null);
+      if (!stripeResponse) {
+        setCheckoutStatusError("Could not reach the Stripe status check route. Retry in a moment.");
+        showToast("error", "Stripe status check failed", "Could not reach the status check route.");
+        return;
+      }
+      const stripeResult = await stripeResponse.json().catch(() => ({}));
+      if (!stripeResponse.ok || !stripeResult.success) {
+        const detail = stripeResult.error || "Stripe status check failed. Retry in a moment.";
+        setCheckoutStatusError(detail);
+        showToast("error", "Stripe status check failed", detail);
+        return;
+      }
+      setCheckoutStatusError("");
     }
     const response = await fetch("/api/onboarding/save", {
       headers: { Authorization: `Bearer ${sessionToken}` },
@@ -1405,8 +1487,11 @@ export default function OnboardingPage() {
                   {industries.map((industry) => <option key={industry}>{industry}</option>)}
                 </select>
               </Field>
-              <Field label="Service type" optional>
+              <Field label="Service type" optional hint="What kind of work this CRM should expect. Example: emergency repair, appointment-based service, consultations, online orders.">
                 <input className={inputClass()} placeholder="Emergency service, appointment-based, consultative, ecommerce..." value={data.businessProfile.serviceType} onChange={(event) => updateSection("businessProfile", { serviceType: event.target.value })} />
+              </Field>
+              <Field label="Main customer type" optional hint="Who usually buys from you. Example: homeowners, property managers, patients, small business owners, brides, contractors.">
+                <input className={inputClass()} value={data.businessProfile.mainCustomerType} onChange={(event) => updateSection("businessProfile", { mainCustomerType: event.target.value })} placeholder="Example: homeowners and property managers" />
               </Field>
               <Field label="Contact email" required>
                 <input className={inputClass()} value={data.businessProfile.contactEmail} onChange={(event) => updateSection("businessProfile", { contactEmail: event.target.value })} type="email" />
@@ -1426,10 +1511,16 @@ export default function OnboardingPage() {
                 </Field>
               </div>
               <div className="md:col-span-2">
-                <Field label="Products and services" optional>
-                  <textarea className={inputClass()} rows={3} value={data.businessProfile.productsServices} onChange={(event) => updateSection("businessProfile", { productsServices: event.target.value })} />
+                <Field label="Products and services" optional hint="Primary service/product categories and top services. This helps pre-configure CRM knowledge, workflows, and campaign ideas.">
+                  <textarea className={inputClass()} rows={3} value={data.businessProfile.productsServices} onChange={(event) => updateSection("businessProfile", { productsServices: event.target.value })} placeholder="Example: haircuts, beard trims, color services, wedding styling, product sales." />
                 </Field>
               </div>
+              <Field label="Primary service/product categories" optional hint="Broad groups you sell. Example: repairs, installs, maintenance, consultations, retail products.">
+                <input className={inputClass()} value={data.businessProfile.primaryCategories} onChange={(event) => updateSection("businessProfile", { primaryCategories: event.target.value })} placeholder="Example: repairs, maintenance, emergency calls" />
+              </Field>
+              <Field label="Top services/products" optional hint="The specific services customers ask for most often. These can become CRM tags, recommendations, and service/menu review context.">
+                <input className={inputClass()} value={data.businessProfile.topServices} onChange={(event) => updateSection("businessProfile", { topServices: event.target.value })} placeholder="Example: drain cleaning, water heater install, annual maintenance" />
+              </Field>
               <Field label="Service areas" optional>
                 <input className={inputClass()} value={data.businessProfile.serviceAreas} onChange={(event) => updateSection("businessProfile", { serviceAreas: event.target.value })} placeholder="Cities, counties, regions, or online service area." />
               </Field>
@@ -1442,8 +1533,13 @@ export default function OnboardingPage() {
                 </Field>
               </div>
               <div className="md:col-span-2">
-                <Field label="Common customer problems" optional>
+                <Field label="Common customer problems" optional hint="Problems people mention before they become leads. Example: broken AC, missed appointment, confusing pricing, urgent quote.">
                   <textarea className={inputClass()} rows={3} value={data.businessProfile.commonProblems} onChange={(event) => updateSection("businessProfile", { commonProblems: event.target.value })} placeholder="Issues customers mention before they become leads." />
+                </Field>
+              </div>
+              <div className="md:col-span-2">
+                <Field label="Common questions and objections" optional hint="Questions are what customers ask. Objections are reasons they hesitate. Example: price, timing, trust, warranty, availability.">
+                  <textarea className={inputClass()} rows={3} value={[data.businessProfile.commonQuestions, data.businessProfile.commonObjections].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("businessProfile", { commonQuestions: event.target.value })} placeholder="Example questions: How soon can you come out? Do you offer financing? Example objections: too expensive, need to ask spouse, comparing quotes." />
                 </Field>
               </div>
               <Field label="Main offer" optional>
@@ -1452,6 +1548,11 @@ export default function OnboardingPage() {
               <Field label="Preferred call to action" optional>
                 <input className={inputClass()} value={data.businessProfile.preferredCta} onChange={(event) => updateSection("businessProfile", { preferredCta: event.target.value })} />
               </Field>
+              <div className="md:col-span-2">
+                <Field label="Emergency or priority service rules" optional hint="When a lead should be treated as urgent. Example: same-day requests, safety issues, high-value jobs, existing customers.">
+                  <textarea className={inputClass()} rows={3} value={data.businessProfile.emergencyPriorityRules} onChange={(event) => updateSection("businessProfile", { emergencyPriorityRules: event.target.value })} placeholder="Example: Emergency calls after hours should create an urgent owner task. VIP customers and active leaks get priority." />
+                </Field>
+              </div>
               <div className="md:col-span-2">
                 <Field label="Pricing, booking, quote, and review notes" optional>
                   <textarea className={inputClass()} rows={4} value={[data.businessProfile.pricingNotes, data.businessProfile.bookingProcess, data.businessProfile.quoteProcess, data.businessProfile.reviewProcess].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("businessProfile", { pricingNotes: event.target.value })} placeholder="Pricing rules, booking process, quote process, and when review requests are appropriate." />
@@ -1505,13 +1606,13 @@ export default function OnboardingPage() {
                 }} placeholder="Example: new inquiry, call, estimate, proposal, follow-up, won/lost." />
               </Field>
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Pipeline stages" required>
+                <Field label="Pipeline stages" required hint="Pipeline stage means the steps a lead or deal moves through before becoming a customer. Example: New Lead > Contacted > Estimate Sent > Won.">
                   <textarea className={inputClass()} rows={4} value={data.crmSetup.pipelineStages} onChange={(event) => updateSection("crmSetup", { pipelineStages: event.target.value })} />
                 </Field>
-                <Field label="Lead statuses" optional>
+                <Field label="Lead statuses" optional hint="Status describes where a lead stands right now. Example: new, contacted, qualified, nurture, converted, lost.">
                   <textarea className={inputClass()} rows={4} value={data.crmSetup.leadStatuses} onChange={(event) => updateSection("crmSetup", { leadStatuses: event.target.value })} />
                 </Field>
-                <Field label="Lead sources" optional>
+                <Field label="Lead sources" optional hint="Lead source means where new leads usually come from. Example: Google, Facebook, referrals, website, cold outreach, trade shows.">
                   <textarea className={inputClass()} rows={4} value={data.crmSetup.leadSources} onChange={(event) => updateSection("crmSetup", { leadSources: event.target.value })} />
                 </Field>
                 <Field label="Useful lead tags" optional>
@@ -1519,11 +1620,23 @@ export default function OnboardingPage() {
                 </Field>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Typical deal value" optional>
-                  <input className={inputClass()} value={data.crmSetup.typicalDealValue} onChange={(event) => updateSection("crmSetup", { typicalDealValue: event.target.value })} />
+                <Field label="Typical deal value" optional hint="About how much a normal customer/job is worth. Example: if most jobs are around $750, enter 750.">
+                  <input className={inputClass()} value={data.crmSetup.typicalDealValue} onChange={(event) => updateSection("crmSetup", { typicalDealValue: event.target.value })} placeholder="Example: 750" />
                 </Field>
                 <Field label="Average close time" optional>
-                  <input className={inputClass()} value={data.crmSetup.averageCloseTime} onChange={(event) => updateSection("crmSetup", { averageCloseTime: event.target.value })} />
+                  <input className={inputClass()} value={data.crmSetup.averageCloseTime} onChange={(event) => updateSection("crmSetup", { averageCloseTime: event.target.value })} placeholder="Example: 3 days, 2 weeks, same day" />
+                </Field>
+                <Field label="Stale lead threshold" optional hint="When the CRM should flag a lead as going cold because nobody followed up.">
+                  <input className={inputClass()} value={data.crmSetup.staleLeadThreshold} onChange={(event) => updateSection("crmSetup", { staleLeadThreshold: event.target.value })} placeholder="Example: 7 days" />
+                </Field>
+                <Field label="Stale deal threshold" optional hint="When an open deal should be flagged because it has not moved forward.">
+                  <input className={inputClass()} value={data.crmSetup.staleDealThreshold} onChange={(event) => updateSection("crmSetup", { staleDealThreshold: event.target.value })} placeholder="Example: 14 days" />
+                </Field>
+                <Field label="Follow-up timing" optional hint="How soon the team should follow up after a new lead, quote, appointment, or missed response.">
+                  <textarea className={inputClass()} rows={3} value={data.crmSetup.followUpTiming} onChange={(event) => updateSection("crmSetup", { followUpTiming: event.target.value })} placeholder="Example: call new leads within 5 minutes during business hours; follow up on estimates after 2 days." />
+                </Field>
+                <Field label="Owner assignment preference" optional hint="How leads or tasks should be assigned. Example: round-robin, by service area, owner handles VIP leads.">
+                  <textarea className={inputClass()} rows={3} value={data.crmSetup.ownerAssignmentPreference} onChange={(event) => updateSection("crmSetup", { ownerAssignmentPreference: event.target.value })} placeholder="Example: assign emergency requests to the owner; route maintenance leads to the service coordinator." />
                 </Field>
                 <Field label="Appointment types" optional>
                   <textarea className={inputClass()} rows={3} value={data.crmSetup.appointmentTypes} onChange={(event) => updateSection("crmSetup", { appointmentTypes: event.target.value })} />
@@ -1659,6 +1772,15 @@ export default function OnboardingPage() {
                   </button>
                 </div>
               ) : null}
+              {checkoutStatusError ? (
+                <div className="rounded-2xl border border-red-300/25 bg-red-500/10 p-4 text-sm text-red-100">
+                  <div className="font-black">Stripe status check needs a retry</div>
+                  <p className="mt-1">{checkoutStatusError}</p>
+                  <button type="button" onClick={refreshOnboardingState} className="mt-3 rounded-xl border border-red-200/30 px-3 py-2 text-xs font-black text-red-50">
+                    Retry status check
+                  </button>
+                </div>
+              ) : null}
               {[
                 ["start_trial", "Start 14-day trial through Stripe", "Creates a Stripe Checkout session with a 14-day trial for the selected post-trial plan."],
                 ["checkout_now", "Set up billing now", "Use Stripe Checkout for secure payment setup. No card data touches SynaptiReach."],
@@ -1782,11 +1904,18 @@ export default function OnboardingPage() {
                   <input type="checkbox" className="mt-1" checked={data.ai.useRuleBasedFirst} onChange={(event) => updateSection("ai", { useRuleBasedFirst: event.target.checked })} />
                   <span>Use built-in rule-based intelligence before external AI.</span>
                 </label>
-                <Field label="Intelligence style">
+                <Field label="Intelligence style" hint="How assertive CRM Intelligence should be when recommending next steps. Conservative means fewer, safer suggestions.">
                   <select className={inputClass()} value={data.ai.intelligencePreference} onChange={(event) => updateSection("ai", { intelligencePreference: event.target.value as any })}>
                     <option value="conservative">Conservative</option>
                     <option value="balanced">Balanced</option>
                     <option value="proactive">Proactive</option>
+                  </select>
+                </Field>
+                <Field label="AI review risk tolerance" hint="How cautious AI reviews should be before a message or recommendation is considered ready for human approval.">
+                  <select className={inputClass()} value={data.ai.riskTolerance} onChange={(event) => updateSection("ai", { riskTolerance: event.target.value as any })}>
+                    <option value="strict">Strict</option>
+                    <option value="balanced">Balanced</option>
+                    <option value="flexible">Flexible</option>
                   </select>
                 </Field>
                 <Field label="Assistant tone">
@@ -1804,6 +1933,17 @@ export default function OnboardingPage() {
               <Field label="AI recommendation behavior">
                 <textarea className={inputClass()} rows={3} value={data.ai.assistantBehavior} onChange={(event) => updateSection("ai", { assistantBehavior: event.target.value })} />
               </Field>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Topics AI should avoid" optional hint="Subjects the CRM should not draft or recommend without extra review. Example: legal claims, medical advice, discounts, guarantees.">
+                  <textarea className={inputClass()} rows={3} value={data.ai.topicsToAvoid} onChange={(event) => updateSection("ai", { topicsToAvoid: event.target.value })} placeholder="Example: do not promise guaranteed results, quote final prices, or discuss refunds without owner review." />
+                </Field>
+                <Field label="AI action preference" hint="Choose whether AI should prepare draft messages or only recommend internal tasks. External sends remain review-gated either way.">
+                  <select className={inputClass()} value={data.ai.draftMode} onChange={(event) => updateSection("ai", { draftMode: event.target.value as any })}>
+                    <option value="draft_messages">Draft messages for review</option>
+                    <option value="recommend_tasks_only">Recommend tasks only</option>
+                  </select>
+                </Field>
+              </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="Email style" optional>
                   <textarea className={inputClass()} rows={3} value={data.communications.emailStyle} onChange={(event) => updateSection("communications", { emailStyle: event.target.value })} />
@@ -1909,6 +2049,7 @@ export default function OnboardingPage() {
                 <p className="text-sm text-slate-400">OAuth connection is completed later from provider settings.</p>
                 <input className={inputClass()} placeholder="Appointment types" value={data.calendar.appointmentTypes} onChange={(event) => updateSection("calendar", { appointmentTypes: event.target.value })} />
                 <input className={inputClass()} placeholder="Default duration" value={data.calendar.defaultDuration} onChange={(event) => updateSection("calendar", { defaultDuration: event.target.value })} />
+                <input className={inputClass()} placeholder="Reminder timing, example: 24 hours and 2 hours before" value={data.calendar.reminderTiming} onChange={(event) => updateSection("calendar", { reminderTiming: event.target.value })} />
                 <textarea className={inputClass()} rows={3} placeholder="Availability, booking window, reminders, no-show handling, confirmation workflow" value={[data.calendar.availabilityNotes, data.calendar.bookingWindow, data.calendar.reminderPreferences, data.calendar.noShowPreference, data.calendar.confirmationWorkflow].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("calendar", { availabilityNotes: event.target.value })} />
                 <label className="flex items-start gap-2 text-sm text-slate-300">
                   <input type="checkbox" className="mt-1" checked={data.integrations.calendarRequiredForLaunch} onChange={(event) => updateSection("integrations", { calendarRequiredForLaunch: event.target.checked })} />
@@ -2089,6 +2230,12 @@ export default function OnboardingPage() {
                 <Field label="Segments and seasonal campaigns" optional>
                   <textarea className={inputClass()} rows={3} value={[data.marketing.customerSegments, data.marketing.seasonalCampaigns].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("marketing", { customerSegments: event.target.value })} />
                 </Field>
+                <Field label="Retargeting interest" optional hint="Retargeting means following up with people who interacted with your business but did not book or buy yet.">
+                  <input className={inputClass()} value={data.marketing.retargetingInterest} onChange={(event) => updateSection("marketing", { retargetingInterest: event.target.value })} placeholder="Example: interested later, only after ads are connected, not now" />
+                </Field>
+                <Field label="Review request timing" optional hint="When it is appropriate to ask for a review. Example: after completed service, after invoice paid, after appointment marked complete.">
+                  <input className={inputClass()} value={data.marketing.reviewRequestTiming} onChange={(event) => updateSection("marketing", { reviewRequestTiming: event.target.value })} />
+                </Field>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="Primary KPI" optional>
@@ -2099,6 +2246,21 @@ export default function OnboardingPage() {
                 </Field>
                 <Field label="Monthly revenue goal" optional>
                   <input className={inputClass()} value={data.analytics.monthlyRevenueGoal} onChange={(event) => updateSection("analytics", { monthlyRevenueGoal: event.target.value })} />
+                </Field>
+                <Field label="Monthly appointment goal" optional>
+                  <input className={inputClass()} value={data.analytics.appointmentGoal} onChange={(event) => updateSection("analytics", { appointmentGoal: event.target.value })} placeholder="Example: 40 booked appointments" />
+                </Field>
+                <Field label="Target conversion rate" optional hint="Conversion rate means the percentage of leads who become paying customers. If you are not sure, leave this blank or use an estimate.">
+                  <input className={inputClass()} value={data.analytics.conversionGoal} onChange={(event) => updateSection("analytics", { conversionGoal: event.target.value })} placeholder="Example: 25%" />
+                </Field>
+                <Field label="Average customer value" optional hint="About how much a typical customer is worth over time. Use an estimate if you know it.">
+                  <input className={inputClass()} value={data.analytics.averageCustomerValue} onChange={(event) => updateSection("analytics", { averageCustomerValue: event.target.value })} placeholder="Example: 1200" />
+                </Field>
+                <Field label="Current monthly lead volume" optional hint="How many leads you usually get in a month today. This creates baseline analytics preferences, not fake lead records.">
+                  <input className={inputClass()} value={data.analytics.currentMonthlyLeadVolume} onChange={(event) => updateSection("analytics", { currentMonthlyLeadVolume: event.target.value })} placeholder="Example: 35" />
+                </Field>
+                <Field label="Current monthly appointment volume" optional hint="How many appointments you usually book in a month today.">
+                  <input className={inputClass()} value={data.analytics.currentMonthlyAppointmentVolume} onChange={(event) => updateSection("analytics", { currentMonthlyAppointmentVolume: event.target.value })} placeholder="Example: 20" />
                 </Field>
                 <Field label="Reporting cadence" optional>
                   <input className={inputClass()} value={data.analytics.reportingCadence} onChange={(event) => updateSection("analytics", { reportingCadence: event.target.value })} />
@@ -2198,6 +2360,12 @@ export default function OnboardingPage() {
                 </Field>
                 <Field label="Quiet hours end">
                   <input className={inputClass()} type="time" value={data.automation.quietHoursEnd} onChange={(event) => updateSection("automation", { quietHoursEnd: event.target.value })} />
+                </Field>
+                <Field label="Draft-only automations" optional hint="Workflow means a repeatable process the CRM can prepare for review, such as creating a follow-up task after a new lead is added. List anything that should never run automatically.">
+                  <textarea className={inputClass()} rows={3} value={data.automation.draftOnlyAutomations} onChange={(event) => updateSection("automation", { draftOnlyAutomations: event.target.value })} />
+                </Field>
+                <Field label="Usage warning preferences" optional hint="When you want alerts before managed trial caps are reached. Example: warn at 80% of AI review checks or emails.">
+                  <textarea className={inputClass()} rows={3} value={data.automation.usageWarningPreferences} onChange={(event) => updateSection("automation", { usageWarningPreferences: event.target.value })} />
                 </Field>
               </div>
             </div>

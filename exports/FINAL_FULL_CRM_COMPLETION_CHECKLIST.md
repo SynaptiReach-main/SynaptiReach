@@ -1,5 +1,35 @@
 # Final Full CRM Completion Checklist
 
+## Onboarding Stabilization and CRM Population Pass - 2026-05-28
+
+- [x] Preserved existing onboarding flow instead of redesigning it.
+- [x] Preserved OwnerFocusPanel, grouped sidebar, Review gated / Real records wording, dashboard routes, Stripe webhook ownership, save/resume architecture, `/onboarding/status`, and `/api/onboarding/stripe-session`.
+- [x] Inspected CRM pages and flows: `/dashboard`, `/dashboard/analytics`, `/dashboard/leads`, `/dashboard/pipeline`, `/dashboard/tasks`, `/dashboard/calendar`, `/dashboard/communications`, `/dashboard/marketing`, `/dashboard/workflow`, `/dashboard/ai_assistant`, `/dashboard/settings`, CRM APIs/helpers, analytics/metrics, workflow, notification, staff, billing/usage/caps, and service-menu upload code.
+- [x] Fixed Stripe checkout return handling so success return calls `/api/onboarding/stripe-session` and does not save Billing as the permanent onboarding step.
+- [x] Added recoverable Stripe status-check error with Retry status check button.
+- [x] Added unauthenticated `/onboarding` redirect to `/signin?returnTo=...`.
+- [x] Added submitted-user `/onboarding` redirect to `/onboarding/status` unless the user is editing from a specific onboarding step.
+- [x] Completed onboarding redirects to `/dashboard`.
+- [x] Continue saves the next step; Save and Finish Later preserve the current step.
+- [x] Tightened subscription checkout to require an authenticated user and an owned workspace.
+- [x] Kept onboarding save/complete/upload/provider-test/stripe-session scoped to the authenticated user's owned workspace/session.
+- [x] Changed readiness labels to `Business Profile` and `Billing Set-Up`.
+- [x] Changed `/onboarding/status` action from Finish Later to Sign Out and clears the Supabase session before returning home.
+- [x] Added helper text/placeholders for CRM-aware terms such as pipeline stages, lead sources, conversion rate, average customer value, brand/AI risk, workflow draft behavior, retargeting, and usage warnings.
+- [x] Added onboarding fields that map to `crm_settings.metadata`: main customer type, primary categories, top services/products, common questions/objections, emergency rules, stale thresholds, follow-up timing, owner assignment preference, analytics goals/baselines, AI risk/topics/draft mode, reminder timing, retargeting interest, review request timing, draft-only automations, and usage warning preferences.
+- [x] Directly populates real CRM settings/defaults only; no fake CRM records, fake analytics, fake revenue, fake provider success, or fake paid/subscribed/trialing state.
+- [x] No SQL/schema changes required; fields are metadata-backed.
+- [ ] Manual test: unauthenticated `/onboarding` does not hang.
+- [ ] Manual test: unauthorized user cannot access another user's onboarding.
+- [ ] Manual test: incomplete user returns to exact saved step.
+- [ ] Manual test: submitted/pending user lands on `/onboarding/status`.
+- [ ] Manual test: approved/active user lands on `/dashboard`.
+- [ ] Manual test: Stripe return does not get stuck on Loading onboarding state.
+- [ ] Manual test: Stripe return stores checkout state and shows Billing status.
+- [ ] Manual test: status page button says Sign Out.
+- [ ] Manual test: CRM-aware onboarding fields save into real CRM settings/defaults.
+- [x] `npm.cmd run build` passed and generated 153/153 static pages.
+
 ## User CRM Portal Usability Pass - 2026-05-27
 
 - [x] Read `docs/codex/USER_CRM_PORTAL_USABILITY_GOAL.md`.

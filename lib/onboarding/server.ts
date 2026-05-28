@@ -381,6 +381,9 @@ async function upsertSession(supabase: any, input: any) {
 
   function valuesFor(options: { metadata: boolean; updatedAt: boolean }) {
     const nextMetadata = { ...(existing?.metadata || {}), ...(input.metadata || {}) };
+    if (!input.metadata?.current_step && existing?.metadata?.current_step) {
+      nextMetadata.current_step = existing.metadata.current_step;
+    }
     if (
       existing?.metadata?.submitted_for_review &&
       !input.completed &&
@@ -481,10 +484,15 @@ async function upsertSettings(supabase: any, workspace: any, user: any, payload:
       address: profile.address || null,
       team_size: profile.teamSize || null,
       service_type: profile.serviceType || null,
+      main_customer_type: profile.mainCustomerType || null,
       service_areas: profile.serviceAreas || null,
       business_hours: profile.businessHours || null,
       products_services: profile.productsServices || null,
+      primary_categories: listFromText(profile.primaryCategories),
+      top_services_products: listFromText(profile.topServices),
       common_customer_problems: profile.commonProblems || null,
+      common_customer_questions: profile.commonQuestions || communications.commonQuestions || null,
+      common_customer_objections: profile.commonObjections || communications.commonObjections || null,
       target_customer: profile.targetCustomer || profile.audience || null,
       main_offer: profile.mainOffer || null,
       preferred_cta: profile.preferredCta || null,
@@ -492,6 +500,7 @@ async function upsertSettings(supabase: any, workspace: any, user: any, payload:
       booking_process: profile.bookingProcess || null,
       quote_process: profile.quoteProcess || null,
       review_process: profile.reviewProcess || null,
+      emergency_priority_rules: profile.emergencyPriorityRules || null,
       sales_process: crmSetup.salesProcess || profile.salesProcess || null,
       pipeline_stages: listFromText(crmSetup.pipelineStages),
       lead_statuses: listFromText(crmSetup.leadStatuses),
@@ -502,6 +511,10 @@ async function upsertSettings(supabase: any, workspace: any, user: any, payload:
         average_close_time: crmSetup.averageCloseTime || null,
         priority_rules: crmSetup.priorityRules || null,
         assignment_rules: crmSetup.assignmentRules || null,
+        owner_assignment_preference: crmSetup.ownerAssignmentPreference || null,
+        follow_up_timing: crmSetup.followUpTiming || null,
+        stale_lead_threshold: crmSetup.staleLeadThreshold || null,
+        stale_deal_threshold: crmSetup.staleDealThreshold || null,
         won_reasons: listFromText(crmSetup.wonReasons),
         lost_reasons: listFromText(crmSetup.lostReasons),
         appointment_types: listFromText(crmSetup.appointmentTypes || calendar.appointmentTypes),
@@ -521,6 +534,8 @@ async function upsertSettings(supabase: any, workspace: any, user: any, payload:
         offers_promotions: marketing.offersPromotions || null,
         seasonal_campaigns: marketing.seasonalCampaigns || null,
         customer_segments: marketing.customerSegments || null,
+        retargeting_interest: marketing.retargetingInterest || null,
+        review_request_timing: marketing.reviewRequestTiming || null,
         approval_workflow: marketing.approvalWorkflow || null,
       },
       analytics_preferences: {
@@ -529,6 +544,9 @@ async function upsertSettings(supabase: any, workspace: any, user: any, payload:
         monthly_revenue_goal: analytics.monthlyRevenueGoal || null,
         appointment_goal: analytics.appointmentGoal || null,
         conversion_goal: analytics.conversionGoal || null,
+        average_customer_value: analytics.averageCustomerValue || crmSetup.typicalDealValue || null,
+        current_monthly_lead_volume: analytics.currentMonthlyLeadVolume || null,
+        current_monthly_appointment_volume: analytics.currentMonthlyAppointmentVolume || null,
         reporting_cadence: analytics.reportingCadence || null,
         success_30: analytics.success30 || null,
         success_60: analytics.success60 || null,
@@ -552,6 +570,7 @@ async function upsertSettings(supabase: any, workspace: any, user: any, payload:
         booking_window: calendar.bookingWindow || null,
         availability_notes: calendar.availabilityNotes || null,
         reminder_preferences: calendar.reminderPreferences || null,
+        reminder_timing: calendar.reminderTiming || null,
         no_show_preference: calendar.noShowPreference || null,
         confirmation_workflow: calendar.confirmationWorkflow || null,
       },
@@ -570,11 +589,16 @@ async function upsertSettings(supabase: any, workspace: any, user: any, payload:
       ai_behavior: {
         assistant_behavior: ai.assistantBehavior || null,
         intelligence_preference: ai.intelligencePreference || "balanced",
+        risk_tolerance: ai.riskTolerance || "balanced",
+        topics_to_avoid: ai.topicsToAvoid || null,
+        draft_mode: ai.draftMode || "draft_messages",
         rule_based_first: ai.useRuleBasedFirst !== false,
         provider_order: "Gemini first, OpenRouter fallback, OpenAI only if enabled.",
       },
       automation_policy: {
         approval_required: automation.requireApproval !== false,
+        draft_only_automations: automation.draftOnlyAutomations || null,
+        usage_warning_preferences: automation.usageWarningPreferences || null,
         allow_auto_assign: Boolean(automation.allowAutoAssign),
         quiet_hours_enabled: Boolean(automation.quietHoursEnabled),
         quiet_hours_start: automation.quietHoursStart || null,
@@ -1147,7 +1171,7 @@ export function calculateOnboardingReadiness(payload: Record<string, any>, snaps
     },
     {
       id: "business_profile",
-      label: "Business profile saved",
+      label: "Business Profile",
       status: profile.business_name && profile.industry ? "complete" : "missing",
       href: "/dashboard/settings#business",
     },
@@ -1172,7 +1196,7 @@ export function calculateOnboardingReadiness(payload: Record<string, any>, snaps
     },
     {
       id: "billing",
-      label: "Stripe card setup state is explicit",
+      label: "Billing Set-Up",
       status:
         ["trialing", "active", "checkout_completed"].includes(billing.status)
           ? "complete"
@@ -1404,7 +1428,7 @@ export async function saveOnboardingState(request: Request, input: SaveInput) {
     completed: effectiveComplete,
     metadata: {
       source: "onboarding_wizard",
-      current_step: input.currentStep || null,
+      current_step: input.currentStep || payload.__onboardingProgress?.current_step || null,
       completed_steps: input.completedSteps || [],
       skipped_steps: input.skippedSteps || {},
       readiness_score: readiness.score,

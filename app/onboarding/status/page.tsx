@@ -26,7 +26,7 @@ export default function OnboardingStatusPage() {
         data: { session },
       } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        router.replace("/signin");
+        router.replace(`/signin?returnTo=${encodeURIComponent("/onboarding/status")}`);
         return;
       }
 
@@ -68,6 +68,12 @@ export default function OnboardingStatusPage() {
       { title: "CRM Setup", icon: Workflow, checks: ["service_menu", "staff", "lead_setup", "marketing", "workflow_drafts", "automation_safety", "help"].map((id) => byId[id]).filter(Boolean) },
     ];
   }, [state]);
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    router.push("/");
+    router.refresh();
+  }
 
   if (loading) {
     return (
@@ -121,9 +127,9 @@ export default function OnboardingStatusPage() {
             <Link href="/onboarding?step=launch" className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-black text-cyan-50">
               Edit onboarding
             </Link>
-            <Link href="/" className="rounded-xl border border-white/10 px-4 py-2 text-sm font-bold text-slate-300">
-              Finish Later
-            </Link>
+            <button type="button" onClick={signOut} className="rounded-xl border border-white/10 px-4 py-2 text-sm font-bold text-slate-300">
+              Sign Out
+            </button>
           </div>
         </div>
 

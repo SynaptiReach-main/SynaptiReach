@@ -3,6 +3,7 @@ import { applyWorkspaceScope, getWorkspaceContext } from "@/lib/auth/getWorkspac
 import { createSupabaseAdmin, friendlySupabaseError } from "@/lib/crm/supabaseAdmin";
 import { getPlanPriceId, getSubscriptionPlan } from "@/lib/billing/plans";
 import { createStripeCustomer, createSubscriptionCheckoutSession, getStripeBillingStatus } from "@/lib/billing/stripe";
+import { getOnboardingUser } from "@/lib/onboarding/server";
 
 async function safeNotify(supabase: any, values: Record<string, any>) {
   await supabase.from("crm_notifications").insert(values).then(() => undefined).catch(() => undefined);
@@ -36,26 +37,40 @@ export async function POST(request: Request) {
       );
     }
 
+    const user = await getOnboardingUser(request);
+    if (!user) {
+      return NextResponse.json({ success: false, error: "Authentication is required for subscription checkout." }, { status: 401 });
+    }
+
     const supabase = createSupabaseAdmin();
     const context = await getWorkspaceContext(request);
-    const workspaceId = body.workspace_id || body.workspaceId || context.workspaceId || null;
-    const companyId = body.company_id || body.companyId || context.companyId || null;
-    const userId = context.userId || body.user_id || body.userId || null;
+    const requestedWorkspaceId = body.workspace_id || body.workspaceId || context.workspaceId || null;
+    const workspaceQuery = requestedWorkspaceId
+      ? supabase.from("workspaces").select("id,company_id,owner_id").eq("id", requestedWorkspaceId).eq("owner_id", user.id).maybeSingle()
+      : supabase.from("workspaces").select("id,company_id,owner_id").eq("owner_id", user.id).order("created_at", { ascending: true }).limit(1).maybeSingle();
+    const { data: authorizedWorkspace, error: workspaceError } = await workspaceQuery;
+    if (workspaceError) throw workspaceError;
+    if (!authorizedWorkspace?.id) {
+      return NextResponse.json({ success: false, error: "No authorized workspace was found for this checkout request." }, { status: 403 });
+    }
+
+    const workspaceId = authorizedWorkspace.id;
+    const companyId = authorizedWorkspace.company_id || null;
+    const userId = user.id;
     const acknowledgements = body.acknowledgements || {};
 
     let existing = null;
-    if (workspaceId || companyId || userId) {
-      const billingScope = {
-        ...context,
-        workspaceId,
-        companyId,
-        userId,
-        isScoped: Boolean(workspaceId || companyId || userId),
-      };
-      const existingQuery = applyWorkspaceScope(supabase.from("crm_billing_accounts").select("*"), billingScope).limit(1);
-      const { data } = await existingQuery.maybeSingle();
-      existing = data;
-    }
+    const billingScope = {
+      ...context,
+      workspaceId,
+      companyId,
+      userId,
+      isAuthenticated: true,
+      isScoped: true,
+    };
+    const existingQuery = applyWorkspaceScope(supabase.from("crm_billing_accounts").select("*"), billingScope).limit(1);
+    const { data } = await existingQuery.maybeSingle();
+    existing = data;
 
     let customerId = existing?.stripe_customer_id || null;
     if (!customerId && getStripeBillingStatus().configured) {
