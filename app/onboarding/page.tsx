@@ -60,6 +60,13 @@ type WizardData = {
     salesProcess: string;
     brandVoice: string;
     legalReviewed: boolean;
+    serviceAreas: string;
+    businessHours: string;
+    commonProblems: string;
+    pricingNotes: string;
+    bookingProcess: string;
+    quoteProcess: string;
+    reviewProcess: string;
   };
   plan: {
     planSlug: string;
@@ -102,12 +109,12 @@ type WizardData = {
   };
   integrations: {
     emailMode: "managed" | "byok" | "skip" | "";
-    emailReviewChoice: "setup_now" | "managed_later" | "byok_later" | "not_using" | "";
+    emailReviewChoice: "setup_now" | "managed_later" | "byok_later" | "reviewed_later" | "not_using" | "";
     emailReviewed: boolean;
     senderEmail: string;
     resendApiKey: string;
     smsMode: "managed" | "byok" | "skip" | "";
-    smsReviewChoice: "setup_now" | "managed_later" | "byok_later" | "not_using" | "";
+    smsReviewChoice: "setup_now" | "managed_later" | "byok_later" | "reviewed_later" | "not_using" | "";
     smsReviewed: boolean;
     twilioAccountSid: string;
     twilioAuthToken: string;
@@ -124,6 +131,17 @@ type WizardData = {
     leadSources: string;
     leadTags: string;
     salesProcess: string;
+    typicalDealValue: string;
+    averageCloseTime: string;
+    priorityRules: string;
+    wonReasons: string;
+    lostReasons: string;
+    appointmentTypes: string;
+    defaultTaskTypes: string;
+    assignmentRules: string;
+    requiredLeadFields: string;
+    requiredDealFields: string;
+    requiredTaskFields: string;
   };
   leads: {
     setupMode: "csv" | "manual" | "skip" | "";
@@ -146,6 +164,44 @@ type WizardData = {
     strategy: string;
     firstCampaignIdea: string;
     notificationPreferences: string[];
+    monthlyBudget: string;
+    leadMagnets: string;
+    offersPromotions: string;
+    seasonalCampaigns: string;
+    customerSegments: string;
+    approvalWorkflow: string;
+  };
+  analytics: {
+    primaryKpi: string;
+    monthlyLeadGoal: string;
+    monthlyRevenueGoal: string;
+    appointmentGoal: string;
+    conversionGoal: string;
+    reportingCadence: string;
+    success30: string;
+    success60: string;
+    success90: string;
+    painPoints: string;
+  };
+  communications: {
+    emailStyle: string;
+    smsStyle: string;
+    commonQuestions: string;
+    commonObjections: string;
+    followUpMessages: string;
+    escalationRules: string;
+    responseTimeExpectation: string;
+    doNotContactPreferences: string;
+    disclaimers: string;
+  };
+  calendar: {
+    appointmentTypes: string;
+    defaultDuration: string;
+    bookingWindow: string;
+    availabilityNotes: string;
+    reminderPreferences: string;
+    noShowPreference: string;
+    confirmationWorkflow: string;
   };
   workflows: {
     recommended: string[];
@@ -205,6 +261,13 @@ const initialData: WizardData = {
     salesProcess: "",
     brandVoice: brandVoiceStarter,
     legalReviewed: false,
+    serviceAreas: "",
+    businessHours: "",
+    commonProblems: "",
+    pricingNotes: "",
+    bookingProcess: "",
+    quoteProcess: "",
+    reviewProcess: "",
   },
   plan: {
     planSlug: "growth-managed",
@@ -269,6 +332,17 @@ const initialData: WizardData = {
     leadSources: "website, referral, Google Business Profile, Facebook, Instagram, LinkedIn, paid ads, CSV import",
     leadTags: "hot, warm, cold, follow-up, VIP",
     salesProcess: "",
+    typicalDealValue: "",
+    averageCloseTime: "",
+    priorityRules: "",
+    wonReasons: "",
+    lostReasons: "",
+    appointmentTypes: "Consultation, estimate, follow-up, service visit",
+    defaultTaskTypes: "Call back, send estimate, follow up, schedule appointment, request review",
+    assignmentRules: "",
+    requiredLeadFields: "name, email or phone, source, status",
+    requiredDealFields: "title, stage, value when known, next step",
+    requiredTaskFields: "title, due date, owner, priority",
   },
   leads: {
     setupMode: "",
@@ -291,6 +365,44 @@ const initialData: WizardData = {
     strategy: "service_appointment_funnel",
     firstCampaignIdea: "",
     notificationPreferences: ["task_due", "new_lead", "billing_setup"],
+    monthlyBudget: "",
+    leadMagnets: "",
+    offersPromotions: "",
+    seasonalCampaigns: "",
+    customerSegments: "",
+    approvalWorkflow: "Owner reviews campaign drafts before sending.",
+  },
+  analytics: {
+    primaryKpi: "Qualified leads",
+    monthlyLeadGoal: "",
+    monthlyRevenueGoal: "",
+    appointmentGoal: "",
+    conversionGoal: "",
+    reportingCadence: "Weekly",
+    success30: "",
+    success60: "",
+    success90: "",
+    painPoints: "",
+  },
+  communications: {
+    emailStyle: "Clear, helpful, and concise.",
+    smsStyle: "Short, permission-aware, and appointment focused.",
+    commonQuestions: "",
+    commonObjections: "",
+    followUpMessages: "",
+    escalationRules: "",
+    responseTimeExpectation: "",
+    doNotContactPreferences: "",
+    disclaimers: "",
+  },
+  calendar: {
+    appointmentTypes: "Consultation, estimate, service visit, follow-up",
+    defaultDuration: "30 minutes",
+    bookingWindow: "",
+    availabilityNotes: "",
+    reminderPreferences: "Internal reminder first; customer messages require review.",
+    noShowPreference: "Create a review-gated reschedule task.",
+    confirmationWorkflow: "Confirm appointment details before sending customer-facing messages.",
   },
   workflows: {
     recommended: ["new_lead_followup", "stale_deal_followup", "appointment_reminder"],
@@ -368,7 +480,7 @@ const managedTrialCaps = [
   ["SMS", `0 by default; ${MANAGED_TRIAL_CAPS.approvedSms} after approval/payment`],
   ["Contacts", `${MANAGED_TRIAL_CAPS.contacts}`],
   ["Workflows", `${MANAGED_TRIAL_CAPS.activeWorkflows} active workflows`],
-  ["Agent runs", `${MANAGED_TRIAL_CAPS.agentRuns}`],
+  ["AI review checks", `${MANAGED_TRIAL_CAPS.agentRuns}`],
   ["Staff", `${MANAGED_TRIAL_CAPS.staff} invited users`],
   ["Campaign drafts", `${MANAGED_TRIAL_CAPS.campaignDrafts}`],
   ["CSV imports", `${MANAGED_TRIAL_CAPS.csvImports}`],
@@ -388,7 +500,7 @@ const businessTypes = [
 const postTrialFitChecks = [
   ["Contacts", `${MANAGED_TRIAL_CAPS.contacts} during managed trial`, "New contacts beyond the selected plan cap are blocked after trial until upgrade or eligible capacity is added."],
   ["Active workflows", `${MANAGED_TRIAL_CAPS.activeWorkflows} during managed trial`, "Existing workflow drafts are kept. Future activation/runs are capped by the post-trial plan."],
-  ["Agent runs", `${MANAGED_TRIAL_CAPS.agentRuns} during managed trial`, "Agent activity hard-stops at the applicable cap; rule-based recommendations still work."],
+  ["AI review checks", `${MANAGED_TRIAL_CAPS.agentRuns} during managed trial`, "AI review activity hard-stops at the applicable cap; rule-based recommendations still work."],
   ["Email/SMS", `${MANAGED_TRIAL_CAPS.emails} managed emails and SMS approval required`, "Managed sends stop at trial caps or provider approval boundaries. BYOK sends depend on your provider account."],
 ];
 
@@ -542,6 +654,9 @@ function mergePayload(payload: any): WizardData {
       members: Array.isArray(payload?.staff?.members) && payload.staff.members.length > 0 ? payload.staff.members : initialData.staff.members,
     },
     marketing: { ...initialData.marketing, ...(payload?.marketing || {}) },
+    analytics: { ...initialData.analytics, ...(payload?.analytics || {}) },
+    communications: { ...initialData.communications, ...(payload?.communications || {}) },
+    calendar: { ...initialData.calendar, ...(payload?.calendar || {}) },
     workflows: { ...initialData.workflows, ...(payload?.workflows || {}) },
     help: { ...initialData.help, ...(payload?.help || {}) },
     automation: { ...initialData.automation, ...(payload?.automation || {}) },
@@ -592,6 +707,7 @@ export default function OnboardingPage() {
   const [data, setData] = useState<WizardData>(initialData);
   const [sessionToken, setSessionToken] = useState("");
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [onboardingSession, setOnboardingSession] = useState<any>(null);
   const [readiness, setReadiness] = useState<any>(null);
   const [snapshot, setSnapshot] = useState<any>({});
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
@@ -605,6 +721,7 @@ export default function OnboardingPage() {
   const [csvFileName, setCsvFileName] = useState("");
   const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [menuUploading, setMenuUploading] = useState(false);
+  const [toast, setToast] = useState<{ type: "success" | "error" | "info"; title: string; detail?: string } | null>(null);
 
   const step = steps[activeStep];
   const selectedPlan = useMemo(
@@ -615,6 +732,27 @@ export default function OnboardingPage() {
   const firstIncompleteIndex = steps.findIndex((item) => !completedSet.has(item.id));
   const maxUnlockedStep = firstIncompleteIndex === -1 ? steps.length - 1 : firstIncompleteIndex;
   const progressPercent = Math.round((completedSteps.length / steps.length) * 100);
+  const submittedForReview = Boolean(onboardingSession?.metadata?.submitted_for_review && !onboardingSession?.completed);
+  const finalButtonLabel = submittedForReview
+    ? "Update Onboarding"
+    : ["pending_webhook", "checkout_created"].includes(snapshot?.billing?.status)
+      ? "Submit Onboarding for Review"
+      : "Complete Onboarding";
+
+  function showToast(type: "success" | "error" | "info", title: string, detail?: string) {
+    setToast({ type, title, detail });
+  }
+
+  useEffect(() => {
+    setMessage("");
+    setValidationErrors([]);
+  }, [activeStep]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 5200);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   useEffect(() => {
     async function load() {
@@ -671,10 +809,10 @@ export default function OnboardingPage() {
               skippedSteps: result.session?.metadata?.skipped_steps || result.payload?.__onboardingProgress?.skipped_steps || {},
             }),
           }).then(() => undefined).catch(() => undefined);
-          setMessage("Stripe checkout submitted. Waiting for webhook confirmation.");
+          showToast("info", "Stripe checkout submitted", "Waiting for webhook confirmation.");
         } else if (checkoutReturn === "cancelled") {
           merged.plan = { ...merged.plan, checkoutReturnState: "cancelled" };
-          setMessage("Stripe checkout was cancelled. Set up payment method with Stripe to continue onboarding.");
+          showToast("info", "Stripe checkout cancelled", "Set up payment method with Stripe to continue onboarding.");
         }
         setData(merged);
       } else {
@@ -720,6 +858,7 @@ export default function OnboardingPage() {
         });
       }
       setWorkspaceId(result.workspace?.id || null);
+      setOnboardingSession(result.session || null);
       setReadiness(result.readiness || null);
       setSnapshot(result.snapshot || {});
       const savedProgress = result.session?.metadata || result.payload?.__onboardingProgress || {};
@@ -783,7 +922,7 @@ export default function OnboardingPage() {
       if (!data.businessProfile.businessName) errors.push("Enter your business name.");
       if (!data.businessProfile.industry) errors.push("Select your industry.");
       if (!data.businessProfile.contactEmail && !data.owner.email) errors.push("Enter a business contact email.");
-      if (!data.businessProfile.legalReviewed) errors.push("Confirm the legal/company information is accurate or intentionally skipped for review.");
+      if (!data.businessProfile.legalReviewed) errors.push("Confirm the legal/company information provided is accurate to the best of your knowledge.");
     }
     if (stepId === "sales" && !data.crmSetup.pipelineStages.trim()) errors.push("Add at least one pipeline stage.");
     if (stepId === "plan") {
@@ -820,6 +959,7 @@ export default function OnboardingPage() {
     if (index === undefined) return;
     if (index > maxUnlockedStep) {
       setError("Future steps unlock after you complete the current required step with Continue.");
+      showToast("error", "Step locked", "Future steps unlock after you complete the current required step.");
       return;
     }
     setActiveStep(index);
@@ -871,10 +1011,12 @@ export default function OnboardingPage() {
 
     if (!response.ok || !result.success) {
       setError(result.error || "Onboarding save failed.");
+      showToast("error", "Save failed", result.error || "Onboarding save failed.");
       return null;
     }
 
     setWorkspaceId(result.workspace?.id || workspaceId);
+    setOnboardingSession(result.session || onboardingSession);
     setReadiness(result.readiness || readiness);
     setSnapshot(result.snapshot || snapshot);
     setCompletedSteps(nextCompleted);
@@ -886,6 +1028,7 @@ export default function OnboardingPage() {
     }));
     if (!options.silent) {
       setMessage(options.includeCsv && result.importResult ? `Saved. Imported ${result.importResult.imported_count} lead record(s).` : "Onboarding progress saved.");
+      showToast("success", "Onboarding saved", options.includeCsv && result.importResult ? `Imported ${result.importResult.imported_count} lead record(s).` : undefined);
     }
     return result;
   }
@@ -895,6 +1038,7 @@ export default function OnboardingPage() {
     if (errors.length) {
       setValidationErrors(errors);
       setError("Please finish the required items before continuing.");
+      showToast("error", "Required items missing", "Review the checklist before continuing.");
       return;
     }
     const result = await save({ silent: true, markStepComplete: true });
@@ -909,6 +1053,7 @@ export default function OnboardingPage() {
     if (!optionalStepIds.has(step.id)) {
       setValidationErrors([`${step.label} is required before you can continue.`]);
       setError("This step is required and cannot be skipped.");
+      showToast("error", "Required step", "This step is required before you can continue.");
       return;
     }
     setSkippedSteps((current) => ({ ...current, [step.id]: true }));
@@ -925,10 +1070,18 @@ export default function OnboardingPage() {
       setCsvRows(rows);
       setCsvFileName(file.name);
       updateNested("leads", "setupMode", "csv");
-      setMessage(`${rows.length} CSV row(s) ready to import. Use Import CSV to write them to the CRM.`);
+      showToast("info", "CSV parsed", `${rows.length} row(s) ready to import. Use Import CSV to write them to the CRM.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not parse CSV.");
+      showToast("error", "CSV parse failed", err instanceof Error ? err.message : "Could not parse CSV.");
     }
+  }
+
+  async function finishLater() {
+    const result = await save({ silent: true });
+    if (!result) return;
+    showToast("success", "Progress saved", "Returning to the SynaptiReach site.");
+    router.push("/");
   }
 
   async function handleMenuUpload(file?: File | null) {
@@ -946,6 +1099,7 @@ export default function OnboardingPage() {
     setMenuUploading(false);
     if (!response.ok || !result.success) {
       setError(result.error || "Service/product menu upload failed.");
+      showToast("error", "Menu upload failed", result.error || "Service/product menu upload failed.");
       return;
     }
     const fileRecord = result.file || {};
@@ -953,7 +1107,7 @@ export default function OnboardingPage() {
       files: [...data.serviceMenu.files, fileRecord],
       notAvailable: false,
     });
-    setMessage(result.message || "Service/product menu uploaded for pending analysis.");
+    showToast("success", "Menu uploaded", result.message || "Service/product menu uploaded for pending analysis.");
   }
 
   async function startCheckout() {
@@ -996,6 +1150,7 @@ export default function OnboardingPage() {
 
     setReadiness(result.readiness || readiness);
     setError(result.error || "Checkout is not ready yet. Billing can be completed later from Settings.");
+    showToast("error", "Checkout unavailable", result.error || "Billing can be completed later from Settings.");
   }
 
   async function saveProviderTest(provider: string) {
@@ -1012,25 +1167,36 @@ export default function OnboardingPage() {
     const testResult = await response.json().catch(() => ({}));
     if (!response.ok || !testResult.success) {
       setError(testResult.error || `${provider} readiness check failed.`);
+      showToast("error", `${provider} check failed`, testResult.error || "Readiness check failed.");
       return;
     }
-    setMessage(testResult.message || `${provider} setup state saved. No customer-facing action was sent.`);
+    showToast("success", `${provider} setup saved`, testResult.message || "No customer-facing action was sent.");
   }
 
   async function refreshOnboardingState() {
     if (!sessionToken) return;
+    const stripeSessionId = data.plan.checkoutSessionId || snapshot?.billing?.metadata?.stripe_session_id || snapshot?.billing?.metadata?.checkout_session_id;
+    if (stripeSessionId) {
+      await fetch("/api/onboarding/stripe-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionToken}` },
+        body: JSON.stringify({ session_id: stripeSessionId }),
+      }).catch(() => undefined);
+    }
     const response = await fetch("/api/onboarding/save", {
       headers: { Authorization: `Bearer ${sessionToken}` },
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok || !result.success) {
       setError(result.error || "Could not refresh onboarding status.");
+      showToast("error", "Refresh failed", result.error || "Could not refresh onboarding status.");
       return;
     }
+    setOnboardingSession(result.session || onboardingSession);
     setReadiness(result.readiness || readiness);
     setSnapshot(result.snapshot || snapshot);
     if (result.payload) setData(mergePayload(result.payload));
-    setMessage("Onboarding status refreshed.");
+    showToast("success", "Onboarding status refreshed");
   }
 
   async function activate() {
@@ -1042,9 +1208,11 @@ export default function OnboardingPage() {
     if (result) {
       const remaining = (result.readiness?.checks || []).filter((check: any) => check.status !== "complete" && check.status !== "skipped");
       setValidationErrors(remaining.map((check: any) => check.label));
-      setMessage(result.session?.metadata?.submitted_for_review
-        ? "Onboarding was submitted for review. Trial activation remains blocked until Stripe webhook confirmation and any remaining required checks are complete."
-        : "Setup was saved, but onboarding is blocked until the required checklist is complete. Select a missing readiness item to jump to the relevant step.");
+      if (result.session?.metadata?.submitted_for_review) {
+        router.push("/onboarding/status");
+        return;
+      }
+      showToast("info", "Onboarding saved", "Select a missing readiness item to jump to the relevant step.");
     }
   }
 
@@ -1062,6 +1230,12 @@ export default function OnboardingPage() {
   return (
     <main className="min-h-screen bg-black px-4 py-8 text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(34,211,238,0.14),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(74,222,128,0.10),transparent_30%)]" />
+      {toast ? (
+        <div className="fixed right-4 top-4 z-[80] w-[min(24rem,calc(100vw-2rem))] rounded-2xl border border-cyan-300/20 bg-slate-950/95 p-4 shadow-2xl shadow-cyan-500/20 backdrop-blur-xl">
+          <div className={`text-sm font-black ${toast.type === "error" ? "text-red-100" : toast.type === "success" ? "text-cyan-100" : "text-yellow-100"}`}>{toast.title}</div>
+          {toast.detail ? <div className="mt-1 text-xs leading-relaxed text-slate-300">{toast.detail}</div> : null}
+        </div>
+      ) : null}
 
       <div className="relative mx-auto grid max-w-7xl min-w-0 gap-5 break-words lg:grid-cols-[280px_minmax(0,1fr)_320px]">
         <aside className="min-w-0 rounded-2xl border border-cyan-300/15 bg-slate-950/75 p-4 backdrop-blur-xl">
@@ -1096,6 +1270,7 @@ export default function OnboardingPage() {
                   onClick={() => {
                     if (locked) {
                       setError("Future steps unlock after you complete the current required step.");
+                      showToast("error", "Step locked", "Complete the current required step before jumping ahead.");
                       return;
                     }
                     setActiveStep(index);
@@ -1128,15 +1303,25 @@ export default function OnboardingPage() {
                 Prepare the CRM with real workspace state. Anything skipped remains visible as pending setup.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => save()}
-              disabled={saving}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-bold text-cyan-50 disabled:opacity-60"
-            >
-              {saving ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
-              Save
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => save()}
+                disabled={saving}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-bold text-cyan-50 disabled:opacity-60"
+              >
+                {saving ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={finishLater}
+                disabled={saving}
+                className="inline-flex items-center justify-center rounded-xl border border-white/10 px-4 py-2 text-sm font-bold text-slate-300 disabled:opacity-60"
+              >
+                Finish Later
+              </button>
+            </div>
           </div>
 
           {error ? (
@@ -1245,9 +1430,20 @@ export default function OnboardingPage() {
                   <textarea className={inputClass()} rows={3} value={data.businessProfile.productsServices} onChange={(event) => updateSection("businessProfile", { productsServices: event.target.value })} />
                 </Field>
               </div>
+              <Field label="Service areas" optional>
+                <input className={inputClass()} value={data.businessProfile.serviceAreas} onChange={(event) => updateSection("businessProfile", { serviceAreas: event.target.value })} placeholder="Cities, counties, regions, or online service area." />
+              </Field>
+              <Field label="Business hours" optional>
+                <input className={inputClass()} value={data.businessProfile.businessHours} onChange={(event) => updateSection("businessProfile", { businessHours: event.target.value })} placeholder="Example: Mon-Fri 8am-5pm, emergency calls after hours." />
+              </Field>
               <div className="md:col-span-2">
                 <Field label="Target customer" optional>
                   <textarea className={inputClass()} rows={3} value={data.businessProfile.audience} onChange={(event) => updateSection("businessProfile", { audience: event.target.value })} />
+                </Field>
+              </div>
+              <div className="md:col-span-2">
+                <Field label="Common customer problems" optional>
+                  <textarea className={inputClass()} rows={3} value={data.businessProfile.commonProblems} onChange={(event) => updateSection("businessProfile", { commonProblems: event.target.value })} placeholder="Issues customers mention before they become leads." />
                 </Field>
               </div>
               <Field label="Main offer" optional>
@@ -1256,6 +1452,11 @@ export default function OnboardingPage() {
               <Field label="Preferred call to action" optional>
                 <input className={inputClass()} value={data.businessProfile.preferredCta} onChange={(event) => updateSection("businessProfile", { preferredCta: event.target.value })} />
               </Field>
+              <div className="md:col-span-2">
+                <Field label="Pricing, booking, quote, and review notes" optional>
+                  <textarea className={inputClass()} rows={4} value={[data.businessProfile.pricingNotes, data.businessProfile.bookingProcess, data.businessProfile.quoteProcess, data.businessProfile.reviewProcess].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("businessProfile", { pricingNotes: event.target.value })} placeholder="Pricing rules, booking process, quote process, and when review requests are appropriate." />
+                </Field>
+              </div>
               <div className="md:col-span-2">
                 <Field label="Brand voice" optional>
                   <textarea className={inputClass()} rows={3} value={data.businessProfile.brandVoice} onChange={(event) => {
@@ -1266,7 +1467,7 @@ export default function OnboardingPage() {
               </div>
               <label className="md:col-span-2 flex items-start gap-3 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-4 text-sm text-cyan-50">
                 <input type="checkbox" className="mt-1" checked={data.businessProfile.legalReviewed} onChange={(event) => updateSection("businessProfile", { legalReviewed: event.target.checked })} />
-                <span>I confirm the legal/company information is accurate or intentionally skipped for review.</span>
+                <span>I confirm the legal/company information provided is accurate to the best of my knowledge. If something is missing, I understand SynaptiReach may request clarification before activation.</span>
               </label>
               <div className="md:col-span-2 rounded-2xl border border-white/10 bg-black/30 p-4">
                 <div className="mb-2 font-black">Service/product menu upload</div>
@@ -1317,6 +1518,29 @@ export default function OnboardingPage() {
                   <textarea className={inputClass()} rows={4} value={data.crmSetup.leadTags} onChange={(event) => updateSection("crmSetup", { leadTags: event.target.value })} />
                 </Field>
               </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Typical deal value" optional>
+                  <input className={inputClass()} value={data.crmSetup.typicalDealValue} onChange={(event) => updateSection("crmSetup", { typicalDealValue: event.target.value })} />
+                </Field>
+                <Field label="Average close time" optional>
+                  <input className={inputClass()} value={data.crmSetup.averageCloseTime} onChange={(event) => updateSection("crmSetup", { averageCloseTime: event.target.value })} />
+                </Field>
+                <Field label="Appointment types" optional>
+                  <textarea className={inputClass()} rows={3} value={data.crmSetup.appointmentTypes} onChange={(event) => updateSection("crmSetup", { appointmentTypes: event.target.value })} />
+                </Field>
+                <Field label="Default task types" optional>
+                  <textarea className={inputClass()} rows={3} value={data.crmSetup.defaultTaskTypes} onChange={(event) => updateSection("crmSetup", { defaultTaskTypes: event.target.value })} />
+                </Field>
+                <Field label="Priority and assignment rules" optional>
+                  <textarea className={inputClass()} rows={4} value={[data.crmSetup.priorityRules, data.crmSetup.assignmentRules].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("crmSetup", { priorityRules: event.target.value })} placeholder="How leads should be prioritized, assigned, or escalated." />
+                </Field>
+                <Field label="Won/lost reasons" optional>
+                  <textarea className={inputClass()} rows={4} value={[data.crmSetup.wonReasons, data.crmSetup.lostReasons].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("crmSetup", { wonReasons: event.target.value })} placeholder="Common reasons deals are won or lost." />
+                </Field>
+              </div>
+              <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-4 text-sm text-cyan-50/80">
+                These defaults configure CRM settings, workflow drafts, analytics preferences, and required-field guidance. They do not create fake deals or activity.
+              </div>
             </div>
           ) : null}
 
@@ -1336,7 +1560,7 @@ export default function OnboardingPage() {
                   className={`rounded-2xl border p-5 text-left ${data.plan.trialPath === "managed" ? "border-cyan-300/50 bg-cyan-300/10" : "border-white/10 bg-white/[0.03]"}`}
                 >
                   <div className="text-xl font-black">SynaptiReach-Managed Trial</div>
-                  <p className="mt-2 text-sm text-slate-400">Full software access with hard free caps for managed AI, email, contacts, workflows, and preview agents. Card required before trial starts.</p>
+                  <p className="mt-2 text-sm text-slate-400">Full software access with hard free caps for managed AI, email, contacts, workflows, and AI review checks. Card required before trial starts.</p>
                   <div className="mt-4 grid gap-2 text-xs text-slate-300">
                     {managedTrialCaps.map(([label, value]) => (
                       <div key={label} className="flex justify-between gap-3 rounded-xl border border-white/10 bg-black/30 px-3 py-2"><span>{label}</span><span className="font-bold text-white">{value}</span></div>
@@ -1407,7 +1631,7 @@ export default function OnboardingPage() {
                 {[
                   ["stripeCardAcknowledged", "I understand a card is required in Stripe before the trial starts."],
                   ["autoRenewAcknowledged", "I understand the selected plan renews automatically after 14 days unless canceled before trial end."],
-                  ["managedCapsAcknowledged", "For managed trials, AI/email/SMS/contact/workflow/agent caps hard-stop those features until a credit pack or paid capacity is available."],
+                  ["managedCapsAcknowledged", "For managed trials, AI/email/SMS/contact/workflow/review-check caps hard-stop those features until a credit pack or paid capacity is available."],
                   ["byokProviderCostAcknowledged", "For BYOK trials, I pay provider usage directly and may set optional self-imposed caps."],
                 ].map(([key, label]) => (
                   <label key={key} className="flex items-start gap-3 rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-slate-300">
@@ -1463,11 +1687,11 @@ export default function OnboardingPage() {
               {data.plan.trialPath === "managed" ? (
                 <div className="rounded-2xl border border-yellow-300/20 bg-yellow-300/10 p-4">
                   <div className="font-black text-yellow-50">Managed SMS readiness</div>
-                  <p className="mt-1 text-sm text-yellow-50/75">Managed SMS is optional and approval-based. It requires Twilio/carrier fee approval plus a SynaptiReach $20 setup fee before readiness is marked complete.</p>
+                  <p className="mt-1 text-sm text-yellow-50/75">Managed SMS is optional and approval-based. It requires approval for estimated Twilio/carrier registration and messaging costs, plus a SynaptiReach $20 setup fee, before readiness is marked complete.</p>
                   <div className="mt-3 grid gap-3 md:grid-cols-3">
                     {[
                       ["requested", "Request managed SMS review"],
-                      ["carrierFeeApproval", "Approve Twilio/carrier fees"],
+                      ["carrierFeeApproval", "Approve estimated Twilio/carrier fees"],
                       ["setupFeeApproval", "Approve SynaptiReach $20 setup fee"],
                     ].map(([key, label]) => (
                       <label key={key} className="flex items-start gap-2 rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-yellow-50/80">
@@ -1483,7 +1707,7 @@ export default function OnboardingPage() {
                   <div className="mb-3 font-black">Optional self-imposed BYOK safety caps</div>
                   <div className="grid gap-3 md:grid-cols-3">
                     {(["aiActions", "emails", "sms", "contacts", "workflows", "agents"] as const).map((key) => (
-                      <Field key={key} label={key}>
+                      <Field key={key} label={key === "agents" ? "AI review checks" : key}>
                         <input className={inputClass()} value={data.plan.usageCaps[key]} onChange={(event) => updateSection("plan", { usageCaps: { ...data.plan.usageCaps, selfImposedCaps: true, [key]: event.target.value } })} />
                       </Field>
                     ))}
@@ -1577,9 +1801,23 @@ export default function OnboardingPage() {
               <Field label="Brand voice">
                 <textarea className={inputClass()} rows={3} value={data.ai.brandVoice} onChange={(event) => updateSection("ai", { brandVoice: event.target.value })} />
               </Field>
-              <Field label="AI assistant behavior">
+              <Field label="AI recommendation behavior">
                 <textarea className={inputClass()} rows={3} value={data.ai.assistantBehavior} onChange={(event) => updateSection("ai", { assistantBehavior: event.target.value })} />
               </Field>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Email style" optional>
+                  <textarea className={inputClass()} rows={3} value={data.communications.emailStyle} onChange={(event) => updateSection("communications", { emailStyle: event.target.value })} />
+                </Field>
+                <Field label="SMS style" optional>
+                  <textarea className={inputClass()} rows={3} value={data.communications.smsStyle} onChange={(event) => updateSection("communications", { smsStyle: event.target.value })} />
+                </Field>
+                <Field label="Common questions and objections" optional>
+                  <textarea className={inputClass()} rows={4} value={[data.communications.commonQuestions, data.communications.commonObjections].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("communications", { commonQuestions: event.target.value })} />
+                </Field>
+                <Field label="Escalation and response rules" optional>
+                  <textarea className={inputClass()} rows={4} value={[data.communications.escalationRules, data.communications.responseTimeExpectation, data.communications.doNotContactPreferences, data.communications.disclaimers].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("communications", { escalationRules: event.target.value })} />
+                </Field>
+              </div>
             </div>
           ) : null}
 
@@ -1592,13 +1830,14 @@ export default function OnboardingPage() {
                   updateSection("integrations", {
                     emailReviewChoice: choice,
                     emailReviewed: Boolean(choice),
-                    emailMode: choice === "managed_later" ? "managed" : choice === "byok_later" || choice === "setup_now" ? "byok" : choice === "not_using" ? "skip" : data.integrations.emailMode,
+                    emailMode: choice === "managed_later" ? "managed" : choice === "byok_later" || choice === "setup_now" ? "byok" : choice === "not_using" ? "skip" : choice === "reviewed_later" ? data.integrations.emailMode : data.integrations.emailMode,
                   });
                 }}>
                   <option value="">Email integration reviewed</option>
                   <option value="setup_now">Set up now</option>
                   <option value="managed_later">Use SynaptiReach-managed setup later</option>
                   <option value="byok_later">BYOK setup later</option>
+                  <option value="reviewed_later">Reviewed / handle later</option>
                   <option value="not_using">Not using this yet</option>
                 </select>
                 <select className={inputClass()} value={data.integrations.emailMode} onChange={(event) => updateSection("integrations", { emailMode: event.target.value as any })}>
@@ -1620,13 +1859,14 @@ export default function OnboardingPage() {
                   updateSection("integrations", {
                     smsReviewChoice: choice,
                     smsReviewed: Boolean(choice),
-                    smsMode: choice === "managed_later" ? "managed" : choice === "byok_later" || choice === "setup_now" ? "byok" : choice === "not_using" ? "skip" : data.integrations.smsMode,
+                    smsMode: choice === "managed_later" ? "managed" : choice === "byok_later" || choice === "setup_now" ? "byok" : choice === "not_using" ? "skip" : choice === "reviewed_later" ? data.integrations.smsMode : data.integrations.smsMode,
                   });
                 }}>
                   <option value="">SMS integration reviewed</option>
                   <option value="setup_now">Set up now</option>
                   <option value="managed_later">Use SynaptiReach-managed setup later</option>
                   <option value="byok_later">BYOK setup later</option>
+                  <option value="reviewed_later">Reviewed / handle later</option>
                   <option value="not_using">Not using this yet</option>
                 </select>
                 <select className={inputClass()} value={data.integrations.smsMode} onChange={(event) => updateSection("integrations", { smsMode: event.target.value as any })}>
@@ -1667,6 +1907,9 @@ export default function OnboardingPage() {
                   <option value="help">Needs SynaptiReach help setting this up</option>
                 </select>
                 <p className="text-sm text-slate-400">OAuth connection is completed later from provider settings.</p>
+                <input className={inputClass()} placeholder="Appointment types" value={data.calendar.appointmentTypes} onChange={(event) => updateSection("calendar", { appointmentTypes: event.target.value })} />
+                <input className={inputClass()} placeholder="Default duration" value={data.calendar.defaultDuration} onChange={(event) => updateSection("calendar", { defaultDuration: event.target.value })} />
+                <textarea className={inputClass()} rows={3} placeholder="Availability, booking window, reminders, no-show handling, confirmation workflow" value={[data.calendar.availabilityNotes, data.calendar.bookingWindow, data.calendar.reminderPreferences, data.calendar.noShowPreference, data.calendar.confirmationWorkflow].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("calendar", { availabilityNotes: event.target.value })} />
                 <label className="flex items-start gap-2 text-sm text-slate-300">
                   <input type="checkbox" className="mt-1" checked={data.integrations.calendarRequiredForLaunch} onChange={(event) => updateSection("integrations", { calendarRequiredForLaunch: event.target.checked })} />
                   <span>Calendar connection is required before my launch.</span>
@@ -1743,8 +1986,7 @@ export default function OnboardingPage() {
                   <button key={id} type="button" onClick={() => updateNested("staff", "setupMode", id as any)} className={`rounded-2xl border p-4 text-left font-black ${data.staff.setupMode === id ? "border-cyan-300/50 bg-cyan-300/10" : "border-white/10 bg-white/[0.03]"}`}>{label}</button>
                 ))}
               </div>
-              {data.staff.setupMode === "invite" ? (
-                <div className="space-y-3">
+              <div className="space-y-3">
                   {data.staff.members.map((member, index) => (
                     <div key={index} className="grid gap-3 rounded-2xl border border-white/10 bg-black/30 p-4 md:grid-cols-4">
                       {(["name", "email", "phone", "title"] as const).map((key) => (
@@ -1800,8 +2042,7 @@ export default function OnboardingPage() {
                   <button type="button" onClick={() => updateSection("staff", { members: [...data.staff.members, { name: "", email: "", phone: "", title: "", permissions: ["leads", "tasks"] }] })} className="rounded-xl border border-cyan-300/20 px-4 py-2 text-sm font-bold text-cyan-50">
                     Add another
                   </button>
-                </div>
-              ) : null}
+              </div>
             </div>
           ) : null}
 
@@ -1834,6 +2075,37 @@ export default function OnboardingPage() {
               </div>
               <Field label="First campaign idea">
                 <textarea className={inputClass()} rows={3} value={data.marketing.firstCampaignIdea} onChange={(event) => updateSection("marketing", { firstCampaignIdea: event.target.value })} placeholder="Example: follow up with qualified leads who requested estimates last month." />
+              </Field>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Monthly budget" optional>
+                  <input className={inputClass()} value={data.marketing.monthlyBudget} onChange={(event) => updateSection("marketing", { monthlyBudget: event.target.value })} />
+                </Field>
+                <Field label="Approval workflow" optional>
+                  <input className={inputClass()} value={data.marketing.approvalWorkflow} onChange={(event) => updateSection("marketing", { approvalWorkflow: event.target.value })} />
+                </Field>
+                <Field label="Lead magnets and offers" optional>
+                  <textarea className={inputClass()} rows={3} value={[data.marketing.leadMagnets, data.marketing.offersPromotions].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("marketing", { leadMagnets: event.target.value })} />
+                </Field>
+                <Field label="Segments and seasonal campaigns" optional>
+                  <textarea className={inputClass()} rows={3} value={[data.marketing.customerSegments, data.marketing.seasonalCampaigns].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("marketing", { customerSegments: event.target.value })} />
+                </Field>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Primary KPI" optional>
+                  <input className={inputClass()} value={data.analytics.primaryKpi} onChange={(event) => updateSection("analytics", { primaryKpi: event.target.value })} />
+                </Field>
+                <Field label="Monthly lead goal" optional>
+                  <input className={inputClass()} value={data.analytics.monthlyLeadGoal} onChange={(event) => updateSection("analytics", { monthlyLeadGoal: event.target.value })} />
+                </Field>
+                <Field label="Monthly revenue goal" optional>
+                  <input className={inputClass()} value={data.analytics.monthlyRevenueGoal} onChange={(event) => updateSection("analytics", { monthlyRevenueGoal: event.target.value })} />
+                </Field>
+                <Field label="Reporting cadence" optional>
+                  <input className={inputClass()} value={data.analytics.reportingCadence} onChange={(event) => updateSection("analytics", { reportingCadence: event.target.value })} />
+                </Field>
+              </div>
+              <Field label="30/60/90 day success notes and reporting pain points" optional>
+                <textarea className={inputClass()} rows={4} value={[data.analytics.success30, data.analytics.success60, data.analytics.success90, data.analytics.painPoints].filter(Boolean).join("\n\n")} onChange={(event) => updateSection("analytics", { success30: event.target.value })} />
               </Field>
               <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-4 text-sm text-cyan-50/80">
                 Marketing setup prepares drafts and recommendations only. It does not auto-send email, SMS, or social posts.
@@ -1959,7 +2231,7 @@ export default function OnboardingPage() {
               <div className="flex flex-wrap gap-3">
                 <button type="button" onClick={activate} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-300 to-green-300 px-5 py-2 font-black text-black">
                   <Rocket size={16} />
-                  {["pending_webhook", "checkout_created"].includes(snapshot?.billing?.status) ? "Submit onboarding for review" : "Complete Onboarding"}
+                  {finalButtonLabel}
                 </button>
               </div>
             </div>
@@ -1971,6 +2243,11 @@ export default function OnboardingPage() {
               Back
             </button>
             <div className="flex flex-wrap gap-3">
+              {step.id !== "launch" ? (
+                <button type="button" onClick={finishLater} disabled={saving} className="rounded-xl border border-white/10 px-4 py-2 text-sm font-bold text-slate-300 disabled:opacity-40">
+                  Finish Later
+                </button>
+              ) : null}
               {step.id !== "launch" ? (
                 <button type="button" onClick={skipCurrent} disabled={!optionalStepIds.has(step.id)} className="rounded-xl border border-white/10 px-4 py-2 text-sm font-bold text-slate-300 disabled:cursor-not-allowed disabled:opacity-40" title={optionalStepIds.has(step.id) ? "Save this step as intentionally skipped." : "This step is required before continuing."}>
                   Skip for now

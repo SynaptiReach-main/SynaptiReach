@@ -30,7 +30,7 @@ function PlanCard({ plan }: { plan: any }) {
         <div className="flex justify-between gap-4"><dt>Email sends</dt><dd className="font-bold text-white">{plan.emails}</dd></div>
         <div className="flex justify-between gap-4"><dt>SMS sends</dt><dd className="font-bold text-white">{plan.sms}</dd></div>
         <div className="flex justify-between gap-4"><dt>Contacts</dt><dd className="font-bold text-white">{plan.contacts}</dd></div>
-        <div className="flex justify-between gap-4"><dt>AI agents</dt><dd className="font-bold text-white">{plan.agents}</dd></div>
+        <div className="flex justify-between gap-4"><dt>AI review checks</dt><dd className="font-bold text-white">{plan.agents}</dd></div>
       </dl>
       <Link href="/trial" className="mt-6 block rounded-2xl bg-gradient-to-r from-cyan-300 to-green-300 px-5 py-3 text-center font-black text-black">
         Start 14-Day Trial

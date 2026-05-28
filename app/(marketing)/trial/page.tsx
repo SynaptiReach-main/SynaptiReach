@@ -52,9 +52,9 @@ export default function TrialPage() {
                   <div className="flex justify-between gap-4"><dt>Emails</dt><dd className="font-bold text-white">{plan.emails}</dd></div>
                   <div className="flex justify-between gap-4"><dt>SMS</dt><dd className="font-bold text-white">{plan.sms}</dd></div>
                   <div className="flex justify-between gap-4"><dt>Contacts</dt><dd className="font-bold text-white">{plan.contacts}</dd></div>
-                  <div className="flex justify-between gap-4"><dt>AI agents</dt><dd className="font-bold text-white">{plan.agents}</dd></div>
+                  <div className="flex justify-between gap-4"><dt>AI review checks</dt><dd className="font-bold text-white">{plan.agents}</dd></div>
                   <div className="flex justify-between gap-4"><dt>Active workflows</dt><dd className="font-bold text-white">{MANAGED_TRIAL_CAPS.activeWorkflows}</dd></div>
-                  <div className="flex justify-between gap-4"><dt>Agent runs</dt><dd className="font-bold text-white">{MANAGED_TRIAL_CAPS.agentRuns}</dd></div>
+                  <div className="flex justify-between gap-4"><dt>AI review checks</dt><dd className="font-bold text-white">{MANAGED_TRIAL_CAPS.agentRuns}</dd></div>
                   <div className="flex justify-between gap-4"><dt>Staff invites</dt><dd className="font-bold text-white">{MANAGED_TRIAL_CAPS.staff}</dd></div>
                 </dl>
                 <Link href={plan.available ? "/signup?trial=managed" : "/contact"} className="mt-6 block rounded-2xl bg-gradient-to-r from-cyan-300 to-green-300 px-5 py-3 text-center font-black text-black">
@@ -100,7 +100,7 @@ export default function TrialPage() {
       <section className="mx-auto mt-16 max-w-4xl space-y-4 rounded-3xl border border-cyan-400/15 bg-slate-950/70 p-8 text-sm text-cyan-50/75">
         <h2 className="text-2xl font-black text-white">Trial FAQ</h2>
         <p><strong className="text-white">How long is the free trial?</strong> The free trial lasts 14 days.</p>
-        <p><strong className="text-white">Can I use managed SMS?</strong> Managed SMS is optional and approval-based. It requires Twilio/carrier fee approval plus a SynaptiReach $20 setup fee before readiness is marked complete.</p>
+        <p><strong className="text-white">Can I use managed SMS?</strong> Managed SMS is optional and approval-based. It requires approval for estimated Twilio/carrier registration and messaging costs plus a SynaptiReach $20 setup fee before readiness is marked complete.</p>
         <p><strong className="text-white">Are overages allowed?</strong> No. Trial caps are hard caps.</p>
         <p><strong className="text-white">What happens at the end?</strong> After the 14-day trial, your selected plan renews automatically unless canceled before the trial ends. Waitlist and contact submissions are never charged.</p>
       </section>

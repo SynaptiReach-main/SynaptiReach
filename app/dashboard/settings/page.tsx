@@ -1216,7 +1216,7 @@ export default function SettingsPage() {
                     <div>Email: <span className="text-white">{selectedPlan.emails}</span></div>
                     <div>SMS: <span className="text-white">{selectedPlan.sms}</span></div>
                     <div>Contacts: <span className="text-white">{selectedPlan.contacts}</span></div>
-                    <div>Agents: <span className="text-white">{selectedPlan.agents}</span></div>
+                    <div>AI review checks: <span className="text-white">{selectedPlan.agents}</span></div>
                   </div>
                 ) : (
                   <div className="mt-4 text-sm text-gray-400">No selected plan record found yet. Complete onboarding or billing setup to store the selected tier.</div>

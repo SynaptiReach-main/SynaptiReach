@@ -433,8 +433,8 @@ export default function DashboardPage() {
           <div className="rounded-3xl border border-white/10 bg-[#0b0b0b]/90 p-6 shadow-2xl shadow-cyan-500/5">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
               <div>
-                <h2 className="text-2xl font-black">Autonomous Agent Status</h2>
-                <p className="text-sm text-gray-500">Real CRM agents reviewing leads, campaigns, communications, and follow-up signals.</p>
+                <h2 className="text-2xl font-black">CRM Intelligence Status</h2>
+                <p className="text-sm text-gray-500">Built-in intelligence reviewing leads, campaigns, communications, and follow-up signals.</p>
               </div>
               <span className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-sm font-bold text-cyan-100">Review mode</span>
             </div>
@@ -446,7 +446,7 @@ export default function DashboardPage() {
                 ["Open Deals", agentSummary.open_deals || 0, Target],
                 ["Overdue Tasks", agentSummary.overdue_tasks || 0, ListTodo],
                 ["Active Workflows", agentSummary.active_workflows || 0, Workflow],
-                ["Agent Runs", metrics.agents?.runs || 0, Bot],
+                ["AI Reviews", metrics.agents?.runs || 0, Bot],
                 ["Appointments", agentSummary.upcoming_appointments || 0, CalendarDays],
                 ["Confidence", `${Math.round((data?.agents?.confidence || 0) * 100)}%`, Cpu],
               ].map(([label, value, Icon]: any) => (
@@ -655,14 +655,14 @@ export default function DashboardPage() {
           </div>
 
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-            <h2 className="text-xl font-black mb-5">Agent Run Log</h2>
+            <h2 className="text-xl font-black mb-5">AI Review Log</h2>
             <div className="space-y-3">
               {recentAgentRuns.length === 0 ? (
-                <div className="text-sm text-gray-400">No agent runs logged yet. Run an agent review from Workflow or AI Assistant.</div>
+                <div className="text-sm text-gray-400">No AI review checks logged yet. Run an AI review from Workflow or CRM Intelligence.</div>
               ) : recentAgentRuns.map((run: any) => (
                 <div key={run.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <div className="font-bold text-white">{run.agent || run.type || "CRM agent"}</div>
+                    <div className="font-bold text-white">{run.agent || run.type || "CRM intelligence"}</div>
                     <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2 py-1 text-xs text-cyan-100">{run.status || "completed"}</span>
                   </div>
                   <div className="text-sm text-gray-500 mt-1">{run.provider || "local"} {run.model ? `- ${run.model}` : ""}</div>

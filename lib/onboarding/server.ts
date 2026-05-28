@@ -380,12 +380,21 @@ async function upsertSession(supabase: any, input: any) {
   if (existingError) throw existingError;
 
   function valuesFor(options: { metadata: boolean; updatedAt: boolean }) {
+    const nextMetadata = { ...(existing?.metadata || {}), ...(input.metadata || {}) };
+    if (
+      existing?.metadata?.submitted_for_review &&
+      !input.completed &&
+      input.metadata?.submitted_for_review === false
+    ) {
+      nextMetadata.submitted_for_review = true;
+      nextMetadata.submitted_for_review_at = existing.metadata.submitted_for_review_at || new Date().toISOString();
+    }
     return {
       workspace_id: input.workspace_id,
       user_id: input.user_id,
       payload: input.payload,
       completed: Boolean(input.completed),
-      ...(options.metadata ? { metadata: input.metadata } : {}),
+      ...(options.metadata ? { metadata: nextMetadata } : {}),
       ...(options.updatedAt ? { updated_at: new Date().toISOString() } : {}),
     };
   }
@@ -435,6 +444,9 @@ async function upsertSettings(supabase: any, workspace: any, user: any, payload:
   const marketing = payload.marketing || {};
   const workflows = payload.workflows || {};
   const help = payload.help || {};
+  const analytics = payload.analytics || {};
+  const communications = payload.communications || {};
+  const calendar = payload.calendar || {};
 
   const values = {
     workspace_id: workspace.id,
@@ -469,21 +481,79 @@ async function upsertSettings(supabase: any, workspace: any, user: any, payload:
       address: profile.address || null,
       team_size: profile.teamSize || null,
       service_type: profile.serviceType || null,
+      service_areas: profile.serviceAreas || null,
+      business_hours: profile.businessHours || null,
       products_services: profile.productsServices || null,
+      common_customer_problems: profile.commonProblems || null,
       target_customer: profile.targetCustomer || profile.audience || null,
       main_offer: profile.mainOffer || null,
       preferred_cta: profile.preferredCta || null,
+      pricing_notes: profile.pricingNotes || null,
+      booking_process: profile.bookingProcess || null,
+      quote_process: profile.quoteProcess || null,
+      review_process: profile.reviewProcess || null,
       sales_process: crmSetup.salesProcess || profile.salesProcess || null,
       pipeline_stages: listFromText(crmSetup.pipelineStages),
       lead_statuses: listFromText(crmSetup.leadStatuses),
       lead_sources: listFromText(crmSetup.leadSources),
       lead_tags: listFromText(crmSetup.leadTags),
+      crm_defaults: {
+        typical_deal_value: crmSetup.typicalDealValue || null,
+        average_close_time: crmSetup.averageCloseTime || null,
+        priority_rules: crmSetup.priorityRules || null,
+        assignment_rules: crmSetup.assignmentRules || null,
+        won_reasons: listFromText(crmSetup.wonReasons),
+        lost_reasons: listFromText(crmSetup.lostReasons),
+        appointment_types: listFromText(crmSetup.appointmentTypes || calendar.appointmentTypes),
+        default_task_types: listFromText(crmSetup.defaultTaskTypes),
+        required_lead_fields: listFromText(crmSetup.requiredLeadFields),
+        required_deal_fields: listFromText(crmSetup.requiredDealFields),
+        required_task_fields: listFromText(crmSetup.requiredTaskFields),
+      },
       marketing_setup: {
         goals: marketing.goals || [],
         channels: marketing.channels || [],
         strategy: marketing.strategy || null,
         first_campaign_idea: marketing.firstCampaignIdea || null,
         notification_preferences: marketing.notificationPreferences || [],
+        monthly_budget: marketing.monthlyBudget || null,
+        lead_magnets: marketing.leadMagnets || null,
+        offers_promotions: marketing.offersPromotions || null,
+        seasonal_campaigns: marketing.seasonalCampaigns || null,
+        customer_segments: marketing.customerSegments || null,
+        approval_workflow: marketing.approvalWorkflow || null,
+      },
+      analytics_preferences: {
+        primary_kpi: analytics.primaryKpi || null,
+        monthly_lead_goal: analytics.monthlyLeadGoal || null,
+        monthly_revenue_goal: analytics.monthlyRevenueGoal || null,
+        appointment_goal: analytics.appointmentGoal || null,
+        conversion_goal: analytics.conversionGoal || null,
+        reporting_cadence: analytics.reportingCadence || null,
+        success_30: analytics.success30 || null,
+        success_60: analytics.success60 || null,
+        success_90: analytics.success90 || null,
+        pain_points: analytics.painPoints || null,
+      },
+      communications_setup: {
+        email_style: communications.emailStyle || null,
+        sms_style: communications.smsStyle || null,
+        common_questions: communications.commonQuestions || null,
+        common_objections: communications.commonObjections || null,
+        follow_up_messages: communications.followUpMessages || null,
+        escalation_rules: communications.escalationRules || null,
+        response_time_expectation: communications.responseTimeExpectation || null,
+        do_not_contact_preferences: communications.doNotContactPreferences || null,
+        disclaimers: communications.disclaimers || null,
+      },
+      calendar_setup: {
+        appointment_types: listFromText(calendar.appointmentTypes || crmSetup.appointmentTypes),
+        default_duration: calendar.defaultDuration || null,
+        booking_window: calendar.bookingWindow || null,
+        availability_notes: calendar.availabilityNotes || null,
+        reminder_preferences: calendar.reminderPreferences || null,
+        no_show_preference: calendar.noShowPreference || null,
+        confirmation_workflow: calendar.confirmationWorkflow || null,
       },
       workflow_setup: {
         recommended: workflows.recommended || [],
@@ -680,9 +750,9 @@ async function saveProviderSetup(supabase: any, workspace: any, user: any, paylo
   const emailChoice = integrations.emailReviewChoice || integrations.emailMode;
   const smsChoice = integrations.smsReviewChoice || integrations.smsMode;
   const normalizedEmailMode =
-    emailChoice === "setup_now" ? integrations.emailMode || "byok" : emailChoice === "not_using" ? "skip" : emailChoice === "managed_later" ? "managed" : emailChoice === "byok_later" ? "byok" : integrations.emailMode;
+    emailChoice === "setup_now" ? integrations.emailMode || "byok" : emailChoice === "not_using" ? "skip" : emailChoice === "managed_later" ? "managed" : emailChoice === "byok_later" ? "byok" : emailChoice === "reviewed_later" ? integrations.emailMode || "" : integrations.emailMode;
   const normalizedSmsMode =
-    smsChoice === "setup_now" ? integrations.smsMode || "byok" : smsChoice === "not_using" ? "skip" : smsChoice === "managed_later" ? "managed" : smsChoice === "byok_later" ? "byok" : integrations.smsMode;
+    smsChoice === "setup_now" ? integrations.smsMode || "byok" : smsChoice === "not_using" ? "skip" : smsChoice === "managed_later" ? "managed" : smsChoice === "byok_later" ? "byok" : smsChoice === "reviewed_later" ? integrations.smsMode || "" : integrations.smsMode;
 
   if (ai.mode) {
     const aiSecret = ai.openaiKey || ai.geminiKey || ai.openrouterKey || ai.anthropicKey || "";
@@ -1086,7 +1156,7 @@ export function calculateOnboardingReadiness(payload: Record<string, any>, snaps
       label: "Legal/company information reviewed",
       status: legalProfile.reviewed || payload.businessProfile?.legalReviewed ? "complete" : "pending",
       href: "/dashboard/settings#business",
-      detail: legalProfile.review_status || "Review the legal/company information or intentionally mark it for later review.",
+      detail: legalProfile.review_status || "Confirm the legal/company information provided is accurate to the best of your knowledge.",
     },
     {
       id: "sales_setup",

@@ -248,7 +248,7 @@ export default function WorkflowPage() {
         setAgents(agentData);
         if (runAgents) {
           setLastRunMessage(
-            `Agent review completed with ${agentData.recommendations?.length || 0} reviewable recommendation${agentData.recommendations?.length === 1 ? "" : "s"}.`
+            `AI review completed with ${agentData.recommendations?.length || 0} reviewable recommendation${agentData.recommendations?.length === 1 ? "" : "s"}.`
           );
         }
       }
@@ -511,7 +511,7 @@ export default function WorkflowPage() {
             className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-5 py-3 font-bold text-cyan-100 flex items-center gap-2"
           >
             {running ? <Loader2 className="animate-spin" size={18} /> : <PlayCircle size={18} />}
-            Run Agent Review
+            Run AI Review
           </button>
           <button
             onClick={() => createReviewWorkflow(workflowTemplates[0])}
@@ -572,7 +572,7 @@ export default function WorkflowPage() {
           ["Draft / Paused", `${draftWorkflows}/${pausedWorkflows}`, Clock],
           ["Failed Runs", failedRuns, AlertTriangle],
           ["Workflow Runs", metrics.workflows?.runs || workflowRuns.length || 0, PlayCircle],
-          ["Agent Confidence", `${Math.round((agents?.confidence || 0) * 100)}%`, Bot],
+          ["AI Confidence", `${Math.round((agents?.confidence || 0) * 100)}%`, Bot],
         ].map(([label, value, Icon]: any) => (
           <div key={label} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
             <Icon className="mb-4 text-cyan-300" size={20} />

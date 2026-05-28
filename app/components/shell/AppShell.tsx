@@ -18,7 +18,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           { id: "crm", label: "CRM" },
           { id: "pipeline", label: "Pipeline" },
           { id: "campaigns", label: "Marketing" },
-          { id: "ai", label: "AI Assistant" },
+          { id: "ai", label: "CRM Intelligence" },
         ].map((item, i) => (
           <button
             key={item.id}

@@ -20,7 +20,7 @@ export default function Home() {
   const faqs = [
     {
       q: "What does SynaptiReach actually do?",
-      a: "SynaptiReach combines CRM, AI agents, marketing automation, analytics, and customer communication into one intelligent operating system for service businesses."
+      a: "SynaptiReach combines CRM, built-in intelligence, marketing automation, analytics, and customer communication into one intelligent operating system for service businesses."
     },
     {
       q: "Do I need technical experience?",
@@ -32,7 +32,7 @@ export default function Home() {
     },
     {
       q: "How does the AI help?",
-      a: "AI agents handle follow-ups, conversations, appointment booking, and lead qualification automatically."
+      a: "CRM intelligence reviews follow-ups, conversations, appointment booking, and lead qualification opportunities automatically."
     },
     {
       q: "Is this only for large businesses?",
@@ -53,7 +53,7 @@ export default function Home() {
   ];
 
   const activities = [
-    { icon: "🤖", text: "AI agent booked appointment with Marcus T.", time: "2s ago" },
+    { icon: "🤖", text: "AI review recommended booking Marcus T.", time: "2s ago" },
     { icon: "📧", text: "Email campaign sent to 847 contacts", time: "1m ago" },
     { icon: "💬", text: "New inbound message from Sarah K.", time: "3m ago" },
     { icon: "✅", text: "Lead qualified: Riverside HVAC Co.", time: "5m ago" },
@@ -83,7 +83,7 @@ export default function Home() {
           </h1>
 
           <p className="text-gray-400 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-            SynaptiReach unifies CRM, automation, AI agents, messaging, campaigns,
+            SynaptiReach unifies CRM, automation, CRM intelligence, messaging, campaigns,
             and analytics into one intelligent operating system built for growth.
           </p>
 
@@ -116,7 +116,7 @@ export default function Home() {
             </h2>
 
             <p className="text-gray-400 text-sm max-w-xl mx-auto">
-              Real-time conversations, AI agents, campaigns, revenue,
+              Real-time conversations, CRM intelligence, campaigns, revenue,
               pipeline activity, and automation performance — all unified.
             </p>
           </div>
@@ -416,7 +416,7 @@ export default function Home() {
                       </div>
 
                       <span className="text-xs font-semibold text-cyan-400">
-                        AI Agent — Synapse
+                        CRM Intelligence — Synapse
                       </span>
 
                       <span className="ml-auto flex items-center gap-1 text-xs text-green-400">
@@ -601,8 +601,8 @@ export default function Home() {
               },
               {
                 icon: "🤖",
-                title: "AI Agents",
-                desc: "AI handles follow-ups, lead qualification, and appointment booking."
+                title: "CRM Intelligence",
+                desc: "AI reviews follow-ups, lead qualification, and appointment booking opportunities."
               },
               {
                 icon: "⚡",
@@ -637,7 +637,7 @@ export default function Home() {
           <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
             {[
               "Connect leads",
-              "Configure AI agents",
+              "Configure CRM intelligence",
               "Launch automations",
               "Scale revenue"
             ].map((step, i) => (
@@ -794,7 +794,7 @@ export default function Home() {
               <div className="space-y-2">
                 {[
                   "CRM",
-                  "AI Agents",
+                  "CRM Intelligence",
                   "Automation",
                   "Analytics",
                   "Pricing"

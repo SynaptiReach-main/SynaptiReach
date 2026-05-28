@@ -25,7 +25,7 @@ export default function Sidebar() {
         </Link>
 
         <Link href="/ai" className={linkClass("/ai")}>
-          AI Assistant
+          CRM Intelligence
         </Link>
 
         <Link href="/social" className={linkClass("/social")}>

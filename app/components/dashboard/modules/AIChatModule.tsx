@@ -12,7 +12,7 @@ export default function AIChatModule({ dispatch }: any) {
         }
         className="px-3 py-1 bg-purple-500 text-white rounded"
       >
-        Ask AI Assistant
+        Ask CRM Intelligence
       </button>
     </div>
   );

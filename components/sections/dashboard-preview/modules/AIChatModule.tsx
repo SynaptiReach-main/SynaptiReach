@@ -7,7 +7,7 @@ export default function AIChatModule() {
 
   return (
     <div className="bg-[#0B0F14] p-4 rounded-2xl border border-white/5">
-      <h2 className="text-white text-lg mb-4">AI Assistant</h2>
+      <h2 className="text-white text-lg mb-4">CRM Intelligence</h2>
 
       <div className="space-y-2 text-sm">
         {state.aiMessages.map((msg: string, i: number) => (

@@ -16,34 +16,57 @@ The current wizard collects:
 
 - account owner details
 - business profile, legal/company details, industry, service type, target customer, main offer, preferred CTA, sales process, and brand voice
-- legal/company review acknowledgement and optional service/product menu upload
+- service areas, business hours, common customer problems, booking/quote/review notes, legal/company acknowledgement, and optional service/product menu upload
 - trial path, post-trial plan, Stripe card acknowledgement, auto-renewal acknowledgement, usage caps, and managed SMS approval intent
-- AI processing mode, provider setup, assistant behavior, and rule-based intelligence preference
+- AI processing mode, provider setup, recommendation behavior, communication defaults, and rule-based intelligence preference
 - email, SMS, social, and calendar integration setup states
 - lead import/manual starter lead intent and CSV mapping notes
-- pipeline stages, lead statuses, sources, and tags
+- pipeline stages, lead statuses, sources, tags, appointment types, task defaults, assignment guidance, deal value/close-time expectations, and won/lost reasons
 - staff invite rows and requested permissions
-- marketing goals, channels, campaign notes, notification preferences, and workflow draft recommendations
+- marketing goals, channels, campaign notes, budget/offer/segment guidance, analytics preferences, notification preferences, and workflow draft recommendations
 - free guidance, guided setup call, and paid DFY assistance preference
 
 The wizard writes to existing structures where possible:
 
 - `workspaces` and `workspace_members` for workspace ownership.
 - `onboarding_sessions` for save/resume payload, current step, completed steps, skipped steps, and launch readiness score.
-- `crm_settings` for business profile, audience, sales setup, pipeline defaults, marketing preferences, help preference, brand voice, timezone, and automation safety policy.
+- `crm_settings` for business profile, audience, service profile, sales setup, CRM defaults, analytics preferences, communication defaults, calendar setup, marketing preferences, help preference, brand voice, timezone, and automation safety policy.
 - `crm_billing_accounts` for selected plan, trial path, usage caps, managed SMS readiness, and billing intent only. Paid, subscribed, and trialing states still require Stripe Checkout and webhook confirmation.
 - `crm_provider_connections` for AI, email, SMS, social, and calendar setup states. Provider secrets are encrypted server-side and not returned to the browser.
 - `leads`, `crm_csv_imports`, `marketing_events`, and `crm_ai_recommendations` for real lead CSV/manual starter setup.
 - `crm_staff` and `crm_staff_permissions` for pending staff invite rows and requested access. No invite email is sent automatically.
 - `crm_workflows` for onboarding-created workflow drafts only. Draft workflows remain review-gated and do not send externally.
 - `crm_ai_recommendations` for launch-readiness recommendations generated from missing or pending real setup state.
-- `crm_service_menu_uploads` for onboarding service/product menu metadata, private storage path, and pending analysis/review state.
+- `crm_service_menu_uploads` for onboarding service/product menu metadata, private storage path, and pending analysis/review state. Uploads also create a review recommendation and best-effort task; no extraction success is inferred unless a real analyzer is available.
+
+## Status and Routing
+
+`/onboarding/status` is the submitted-review holding page. Submitted-but-not-complete users see grouped state for submission, billing/webhook, providers, legal/company, email/SMS, calendar, menu, staff, leads, workflows, and help. Incomplete users that have not submitted are redirected back to `/onboarding?step=<saved step>`. Completed users are sent to `/dashboard`.
+
+Dashboard layout checks onboarding state before showing CRM pages. Submitted sessions go to `/onboarding/status`; incomplete unsubmitted sessions resume onboarding from the saved step. The status page provides Edit onboarding and Finish Later actions.
+
+## Service Menu Storage
+
+The onboarding menu upload route uses a private Supabase Storage bucket named `onboarding-files`.
+
+Required setup:
+
+- Bucket name: `onboarding-files`.
+- Visibility: private.
+- Accepted MIME types: `application/pdf`, `image/png`, `image/jpeg`, `image/webp`.
+- Accepted extensions: PDF, PNG, JPG/JPEG, WEBP.
+- Suggested file size limit: 25 MB.
+- Access pattern: server-side upload/read using the service role; do not expose public URLs.
+- Path format: `<workspace_id>/service-menu/<timestamp>-<uuid>.<ext>`.
+- Metadata includes workspace id, user id, company id when present, content type, size, bucket, storage path, and pending analysis state.
+
+If the bucket is missing, `/api/onboarding/upload` attempts to create it privately. If creation fails because storage is not provisioned or permissions are unavailable, the route returns setup-required instructions instead of pretending the upload or analysis succeeded.
 
 ## Trial Paths
 
 Onboarding supports two 14-day trial paths:
 
-- SynaptiReach-Managed Trial: full software access with hard free caps for managed AI, email, SMS, contacts, workflows, and agents. A Stripe card is required before the trial starts. The selected paid plan controls post-trial renewal only; higher managed tiers do not expand trial exposure. Managed SMS is optional and approval-based, and readiness requires Twilio/carrier fee approval plus the SynaptiReach $20 setup fee approval.
+- SynaptiReach-Managed Trial: full software access with hard free caps for managed AI, email, SMS, contacts, workflows, and AI review checks. A Stripe card is required before the trial starts. The selected paid plan controls post-trial renewal only; higher managed tiers do not expand trial exposure. Managed SMS is optional and approval-based, and readiness requires approval for estimated Twilio/carrier registration and messaging costs plus the SynaptiReach $20 setup fee approval.
 - BYOK Trial: full software access while the customer connects their own Gemini/OpenAI/OpenRouter, Resend, Twilio, and Ayrshare accounts as needed. The customer pays providers directly. SynaptiReach has no managed AI/email/SMS credit exposure. A Stripe card is still required before the trial starts, and optional self-imposed caps can be saved.
 
 Stripe Checkout remains the only card collection path. Onboarding-originated subscription checkout now returns to `/onboarding?checkout=success&session_id={CHECKOUT_SESSION_ID}&step=billing` or `/onboarding?checkout=cancelled&step=billing`; Settings-originated checkout still returns to Settings. Onboarding records checkout submission as `pending_webhook`/submitted state and shows "Stripe checkout submitted. Waiting for webhook confirmation." Trial start/end timestamps and active/trialing/subscribed states are left empty until Stripe webhook confirmation supplies them.

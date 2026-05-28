@@ -58,12 +58,12 @@ export default function AIAssistantPage() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data?.error || "Failed to run CRM agents.");
+        throw new Error(data?.error || "Failed to run CRM intelligence.");
       }
 
       setAgentData(data);
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Failed to run CRM agents.");
+      setError(error instanceof Error ? error.message : "Failed to run CRM intelligence.");
     } finally {
       setAgentLoading(false);
     }
@@ -79,10 +79,10 @@ export default function AIAssistantPage() {
         body: JSON.stringify({ agent: "executive" }),
       });
       const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data?.error || "Executive agent failed.");
+      if (!response.ok || !data.success) throw new Error(data?.error || "Executive review failed.");
       setAgentData(data);
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Executive agent failed.");
+      setError(error instanceof Error ? error.message : "Executive review failed.");
     } finally {
       setAgentLoading(false);
     }
@@ -108,7 +108,7 @@ export default function AIAssistantPage() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data?.error || "AI assistant failed.");
+        throw new Error(data?.error || "CRM intelligence failed.");
       }
 
       setMessages((current) => [
@@ -123,7 +123,7 @@ export default function AIAssistantPage() {
         },
       ]);
     } catch (error) {
-      setError(error instanceof Error ? error.message : "AI assistant failed.");
+      setError(error instanceof Error ? error.message : "CRM intelligence failed.");
     } finally {
       setLoading(false);
     }
@@ -138,7 +138,7 @@ export default function AIAssistantPage() {
             <Bot className="text-cyan-300" size={30} />
           </div>
           <div>
-            <h1 className="text-4xl font-black">AI Assistant Control Center</h1>
+            <h1 className="text-4xl font-black">CRM Intelligence Control Center</h1>
             <p className="text-sm text-gray-500 mt-1">
               Server-side CRM intelligence using real leads, campaigns, activity, and communications.
             </p>
@@ -197,7 +197,7 @@ export default function AIAssistantPage() {
                 disabled={agentLoading}
                 className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm font-bold text-cyan-100 disabled:opacity-60"
               >
-                {agentLoading ? "Running..." : "Run Executive Agent"}
+                {agentLoading ? "Running..." : "Run Executive Review"}
               </button>
             </div>
             <div className="grid gap-3 md:grid-cols-4">
@@ -288,7 +288,7 @@ export default function AIAssistantPage() {
           <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/[0.05] p-6">
             <div className="flex items-center gap-3 mb-5">
               <Brain className="text-cyan-300" size={22} />
-              <h2 className="text-xl font-black">Autonomous Agents</h2>
+              <h2 className="text-xl font-black">CRM Intelligence</h2>
             </div>
             {agentLoading ? (
               <Loader2 className="animate-spin text-cyan-300" />
@@ -309,7 +309,7 @@ export default function AIAssistantPage() {
                       title: label,
                       value,
                       records,
-                      description: `CRM agent metric generated from workspace data. ${label === "Confidence" ? "Confidence reflects deterministic signal coverage and available records." : "Open the related page to review records and safe next actions."}`,
+                      description: `CRM intelligence metric generated from workspace data. ${label === "Confidence" ? "Confidence reflects deterministic signal coverage and available records." : "Open the related page to review records and safe next actions."}`,
                       href,
                     })}
                     className="rounded-2xl border border-white/10 bg-black/30 p-4 flex items-center justify-between text-left transition hover:border-cyan-400/30 hover:bg-cyan-500/10"
@@ -341,7 +341,7 @@ export default function AIAssistantPage() {
                   disabled={agentLoading}
                   className="w-full rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3 font-bold text-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {agentLoading ? "Running..." : "Run Executive Agent"}
+                  {agentLoading ? "Running..." : "Run Executive Review"}
                 </button>
               </div>
             )}

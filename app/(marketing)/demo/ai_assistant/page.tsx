@@ -32,7 +32,7 @@ export default function AIAssistantPage() {
     {
       role: "assistant",
       text:
-        "Welcome to SynaptiReach AI Assistant. I can help with CRM management, campaigns, workflows, automations, reporting, onboarding, lead tracking, and platform guidance.",
+        "Welcome to SynaptiReach CRM Intelligence. I can help with CRM management, campaigns, workflows, automations, reporting, onboarding, lead tracking, and platform guidance.",
     },
   ]);
 
@@ -146,7 +146,7 @@ export default function AIAssistantPage() {
 
           <div>
             <h1 className="text-4xl font-bold text-white tracking-tight">
-              AI Assistant
+              CRM Intelligence
             </h1>
 
             <p className="text-gray-400 mt-2 max-w-2xl">
@@ -191,7 +191,7 @@ export default function AIAssistantPage() {
 
             <div>
               <h2 className="text-2xl font-bold text-white">
-                SynaptiReach AI Assistant
+                SynaptiReach CRM Intelligence
               </h2>
 
               <p className="text-sm text-gray-400 mt-1">
@@ -237,7 +237,7 @@ export default function AIAssistantPage() {
 
                   <span className="text-xs uppercase tracking-widest text-gray-500">
                     {message.role === "assistant"
-                      ? "AI Assistant"
+                      ? "CRM Intelligence"
                       : "User"}
                   </span>
                 </div>
@@ -258,7 +258,7 @@ export default function AIAssistantPage() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask the AI assistant anything about your platform..."
+              placeholder="Ask CRM intelligence anything about your platform..."
               className="
                 flex-1
                 bg-black/40

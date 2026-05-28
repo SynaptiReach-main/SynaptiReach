@@ -4,6 +4,8 @@ import { getOnboardingUser } from "@/lib/onboarding/server";
 
 const ACCEPTED_TYPES = new Set(["application/pdf", "image/png", "image/jpeg", "image/webp"]);
 const BUCKET = "onboarding-files";
+const BUCKET_SETUP =
+  "Create a private Supabase Storage bucket named onboarding-files. Allow PDF, PNG, JPG/JPEG, and WEBP uploads. Keep it private; files are written and read through server-side routes using workspace/user metadata.";
 
 function extensionFor(file: File) {
   const name = file.name || "";
@@ -46,6 +48,25 @@ export async function POST(request: Request) {
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120);
     const path = `${workspace.id}/service-menu/${Date.now()}-${crypto.randomUUID()}.${ext}`;
     const bytes = await file.arrayBuffer();
+    const { data: buckets, error: bucketListError } = await supabase.storage.listBuckets();
+    if (bucketListError) throw bucketListError;
+    if (!(buckets || []).some((bucket: any) => bucket.name === BUCKET)) {
+      const createBucket = await supabase.storage.createBucket(BUCKET, {
+        public: false,
+        allowedMimeTypes: Array.from(ACCEPTED_TYPES),
+        fileSizeLimit: "25MB",
+      });
+      if (createBucket.error) {
+        return NextResponse.json(
+          {
+            success: false,
+            setupRequired: true,
+            error: `${BUCKET_SETUP} Supabase returned: ${createBucket.error.message}`,
+          },
+          { status: 503 }
+        );
+      }
+    }
     const upload = await supabase.storage.from(BUCKET).upload(path, bytes, {
       contentType: file.type,
       upsert: false,
@@ -55,7 +76,7 @@ export async function POST(request: Request) {
         {
           success: false,
           setupRequired: true,
-          error: `Onboarding file storage is not ready. Create the ${BUCKET} bucket and retry. ${upload.error.message}`,
+          error: `${BUCKET_SETUP} Supabase returned: ${upload.error.message}`,
         },
         { status: 503 }
       );
@@ -99,7 +120,7 @@ export async function POST(request: Request) {
         workspace_id: workspace.id,
         type: "onboarding_setup",
         title: "Review uploaded service/product menu",
-        description: "A service/product menu was uploaded during onboarding. Analyze it into CRM knowledge before using it for AI assistant, communications, or campaign drafting.",
+        description: "A service/product menu was uploaded during onboarding. Analyze it into CRM knowledge before using it for CRM intelligence, communications, or campaign drafting.",
         action: "review_service_menu",
         status: "open",
         confidence: 0.9,
@@ -107,6 +128,23 @@ export async function POST(request: Request) {
       });
     } catch {
       // The upload metadata row is the source of truth; recommendations are best-effort.
+    }
+
+    try {
+      await supabase.from("crm_tasks").insert({
+        workspace_id: workspace.id,
+        title: "Review uploaded service/product menu",
+        details: "Analyze the onboarding menu upload into CRM knowledge before using it for communications, campaign drafts, workflow reviews, or AI recommendations.",
+        status: "open",
+        priority: "medium",
+        metadata: {
+          ...metadata,
+          source: "onboarding_service_menu_review_task",
+          upload_id: uploadRow.id,
+        },
+      });
+    } catch {
+      // Task creation is best-effort; the upload row and recommendation remain available.
     }
 
     return NextResponse.json({

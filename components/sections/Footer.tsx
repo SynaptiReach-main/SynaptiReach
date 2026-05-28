@@ -8,7 +8,7 @@ const footerSections = [
     title: "Product",
     links: [
       { label: "CRM", href: "/demo/dashboard" },
-      { label: "AI Agents", href: "/ai-agents" },
+      { label: "CRM Intelligence", href: "/ai-agents" },
       { label: "Automation", href: "/automation" },
       { label: "Analytics", href: "/analytics" },
       { label: "Pricing", href: "/pricing" },
@@ -64,7 +64,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="max-w-xs text-sm leading-relaxed text-cyan-50/60">
-              Autonomous CRM, AI agents, marketing automation, analytics, and communications for service businesses.
+              Autonomous CRM, built-in intelligence, marketing automation, analytics, and communications for service businesses.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link

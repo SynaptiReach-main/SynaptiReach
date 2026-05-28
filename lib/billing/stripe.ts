@@ -103,6 +103,76 @@ async function stripePost(path: string, params: URLSearchParams) {
   };
 }
 
+async function stripeGet(path: string) {
+  const secretKey = process.env.STRIPE_SECRET_KEY || "";
+  if (!secretKey) {
+    return {
+      ok: false,
+      setupRequired: true,
+      status: 0,
+      body: null,
+      error: "Stripe is not configured.",
+    };
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`https://api.stripe.com/v1/${path}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+        "Stripe-Version": STRIPE_API_VERSION,
+      },
+    });
+  } catch {
+    return {
+      ok: false,
+      setupRequired: false,
+      status: 0,
+      body: null,
+      error: "Stripe request failed. Verify network access and Stripe test-mode configuration.",
+    };
+  }
+
+  const body = await response.json().catch(() => ({}));
+  return {
+    ok: response.ok,
+    setupRequired: false,
+    status: response.status,
+    body,
+    error: response.ok ? null : safeStripeError(response.status, body),
+  };
+}
+
+export async function retrieveStripeCheckoutSession(sessionId: string) {
+  if (!sessionId || !sessionId.startsWith("cs_")) {
+    return { success: false, setupRequired: false, error: "A valid Stripe Checkout session id is required." };
+  }
+
+  const result = await stripeGet(`checkout/sessions/${encodeURIComponent(sessionId)}?expand[]=subscription`);
+  if (!result.ok) {
+    return {
+      success: false,
+      setupRequired: Boolean(result.setupRequired),
+      error: result.error,
+    };
+  }
+
+  const subscription = result.body?.subscription;
+  return {
+    success: true,
+    setupRequired: false,
+    session: {
+      id: result.body.id,
+      status: result.body.status || null,
+      payment_status: result.body.payment_status || null,
+      customer: typeof result.body.customer === "string" ? result.body.customer : null,
+      subscription_id: typeof subscription === "string" ? subscription : subscription?.id || null,
+      subscription_status: typeof subscription === "object" ? subscription?.status || null : null,
+    },
+  };
+}
+
 export async function createCreditPackCheckoutSession(input: CheckoutInput) {
   const secretKey = process.env.STRIPE_SECRET_KEY || "";
   if (!secretKey) {

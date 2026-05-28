@@ -659,3 +659,17 @@ Files changed: `app/onboarding/page.tsx`, `app/api/billing/subscription/checkout
 Build result: Passed. `npm.cmd run build` completed successfully and generated 151/151 static pages. Two earlier attempts timed out before process exit; the final longer run completed.
 Tests run: `npm.cmd run build`; local production route smoke returned 200 for `/trial`, `/signup?trial=managed`, `/signup?trial=byok`, `/onboarding`, `/dashboard`, `/dashboard/settings`, and `/dashboard/workflow`. `npx.cmd tsc --noEmit --pretty false --ignoreDeprecations 6.0` still reports pre-existing project-wide TypeScript issues outside this pass plus no remaining new upload/onboarding-server issue after fixes.
 Next recommended task: Apply SQL/storage bucket in Supabase, then complete authenticated managed/BYOK Stripe return and webhook manual tests.
+
+### 2026-05-28 - SynaptiReach Onboarding CRM Population Stabilization
+
+Date: 2026-05-28
+Model: Codex
+Prompt/Goal: Execute `docs/codex/synaptireach_onboarding_crm_population_stabilization_prompt.md` exactly while preserving existing CRM usability work and making onboarding populate/configure the User CRM wherever possible.
+Completed: Expanded onboarding as a CRM-population/configuration layer without redesigning the wizard. Added CRM defaults for service profile, business hours/areas, common customer problems, pipeline, assignment rules, appointment types, task defaults, analytics preferences, communication style, calendar setup, marketing offers/segments/budget, and workflow notes. Persisted those values into `crm_settings.metadata` for real workspace reuse. Added `/onboarding/status` for submitted review state, dashboard redirects for incomplete/submitted users, Finish Later actions, viewport toast notifications, strict legal wording, reviewed/handle-later email/SMS choices, server-side Stripe session refresh metadata, private service-menu bucket auto-create/setup guidance, and service-menu review task creation. Replaced customer-facing agent/agents language with CRM intelligence, AI reviews, and AI review checks while preserving internal route/table/API names.
+Skipped: No onboarding redesign from scratch; no fake leads/deals/analytics/service orders/revenue; no fake service menu extraction; no replacement of Stripe webhook ownership.
+Partial: Live Stripe Checkout/webhook, live Supabase Storage permissions, authenticated browser walkthrough, provider credentials, managed SMS carrier/Twilio approval, and real service-menu analysis remain external/manual.
+Blocked: None at code level before verification.
+Files changed: `app/onboarding/page.tsx`, `app/onboarding/status/page.tsx`, `app/api/onboarding/stripe-session/route.ts`, `app/api/onboarding/upload/route.ts`, `app/dashboard/layout.tsx`, dashboard/marketing/demo copy surfaces, `lib/onboarding/server.ts`, `lib/billing/stripe.ts`, `lib/billing/plans.ts`, onboarding/architecture/decisions/knowledge-map docs, ledger, and final checklist.
+Build result: Pending verification.
+Tests run: Pending verification.
+Next recommended task: Run build and local smoke for `/trial`, `/signup?trial=managed`, `/signup?trial=byok`, `/onboarding`, `/onboarding/status`, `/dashboard`, `/dashboard/settings`, and `/dashboard/workflow`.

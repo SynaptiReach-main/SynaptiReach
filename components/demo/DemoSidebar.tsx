@@ -28,7 +28,7 @@ const navItems = [
   { label: "Leads", href: "/demo/leads", icon: Users },
   { label: "Marketing", href: "/demo/marketing", icon: Megaphone },
   { label: "Communications", href: "/demo/communications", icon: MessageSquare },
-  { label: "AI Assistant", href: "/demo/ai_assistant", icon: Bot },
+  { label: "CRM Intelligence", href: "/demo/ai_assistant", icon: Bot },
   { label: "Workflow", href: "/demo/workflow", icon: Workflow },
   { label: "Settings", href: "/demo/settings", icon: Settings },
 ];

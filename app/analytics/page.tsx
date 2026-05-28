@@ -14,7 +14,7 @@ export default function AnalyticsPage() {
         { title: "Pipeline", body: "Monitor pipeline value, weighted value, open deals, won/lost deals, stale deals, close dates, and deal health." },
         { title: "Tasks & Appointments", body: "Measure open, overdue, high-priority, completed, upcoming, no-show, canceled, and appointment-intent signals." },
         { title: "Workflows", body: "Track active workflows, paused workflows, workflow runs, failures, live signals, and approval queues." },
-        { title: "Intelligence", body: "Surface built-in recommendations, agent runs, pending actions, confidence, related records, and review-gated next steps." },
+        { title: "Intelligence", body: "Surface built-in recommendations, AI review checks, pending actions, confidence, related records, and review-gated next steps." },
         { title: "Billing & Usage", body: "Show trial status, usage used versus caps, provider readiness, credit-pack history, and billing events where configured." },
         { title: "Dashboards & Detail Modals", body: "Dashboard cards and modal details use real records when available and should show clean loading, empty, and error states." },
       ]}

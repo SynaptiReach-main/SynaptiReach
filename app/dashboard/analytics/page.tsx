@@ -250,13 +250,13 @@ export default function AnalyticsPage() {
       href: "/dashboard/calendar",
     },
     {
-      key: "ai_agents",
-      label: "AI Agent Activity",
+      key: "ai_reviews",
+      label: "AI Review Activity",
       value: formatNumber(analytics.agentRuns.length),
       icon: Bot,
       records: analytics.agentRuns,
-      context: `${formatNumber(analytics.agentRuns.filter((run: any) => run.status === "failed").length)} failed agent runs in range. Provider metadata is shown when available.`,
-      action: "Open AI Assistant",
+      context: `${formatNumber(analytics.agentRuns.filter((run: any) => run.status === "failed").length)} failed AI review checks in range. Provider metadata is shown when available.`,
+      action: "Open CRM Intelligence",
       href: "/dashboard/ai_assistant",
     },
     {
@@ -360,7 +360,7 @@ export default function AnalyticsPage() {
           <div>
             <h1 className="text-3xl font-black md:text-4xl">Analytics & Reporting</h1>
             <p className="mt-1 text-sm text-gray-500">
-              Real CRM performance across leads, campaigns, pipeline, communications, workflows, and AI agents.
+              Real CRM performance across leads, campaigns, pipeline, communications, workflows, and CRM intelligence.
             </p>
           </div>
         </div>
@@ -445,7 +445,7 @@ export default function AnalyticsPage() {
           <BarChart3 className="mx-auto mb-4 text-cyan-300" size={34} />
           <h2 className="text-2xl font-black">No real analytics data yet</h2>
           <p className="mx-auto mt-2 max-w-2xl text-sm text-gray-500">
-            Analytics will populate from real leads, deals, campaigns, communications, workflow runs, tasks, appointments, and AI agent runs.
+            Analytics will populate from real leads, deals, campaigns, communications, workflow runs, tasks, appointments, and AI review checks.
           </p>
         </div>
       ) : (
@@ -519,11 +519,11 @@ export default function AnalyticsPage() {
             </div>
 
             <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-              <h2 className="mb-5 text-xl font-black">Agent & Workflow Health</h2>
+              <h2 className="mb-5 text-xl font-black">AI Review & Workflow Health</h2>
               <div className="space-y-3">
                 {[
-                  ["Completed agent runs", analytics.agentRuns.filter((run: any) => run.status !== "failed").length],
-                  ["Failed agent runs", analytics.agentRuns.filter((run: any) => run.status === "failed").length],
+                  ["Completed AI review checks", analytics.agentRuns.filter((run: any) => run.status !== "failed").length],
+                  ["Failed AI review checks", analytics.agentRuns.filter((run: any) => run.status === "failed").length],
                   ["Active workflows", analytics.workflows.filter((workflow: any) => workflow.status === "active").length],
                   ["Paused workflows", analytics.workflows.filter((workflow: any) => workflow.status === "paused").length],
                   ["Failed workflow runs", analytics.workflowRuns.filter((run: any) => run.status === "failed").length],

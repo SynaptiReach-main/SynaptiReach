@@ -461,7 +461,7 @@ export default function TasksPage() {
 
       <section className="grid gap-4">
         {filtered.length === 0 ? (
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-10 text-center text-gray-400">No real tasks yet. Add a follow-up task or run the agent review to find next actions.</div>
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-10 text-center text-gray-400">No real tasks yet. Add a follow-up task or run the AI review to find next actions.</div>
         ) : filtered.map((task) => (
           <div key={task.id} data-record-id={task.id} className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>

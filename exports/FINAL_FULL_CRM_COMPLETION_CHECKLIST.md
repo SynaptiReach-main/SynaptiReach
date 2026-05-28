@@ -1908,3 +1908,25 @@ Reminder: the Resend API key was previously pasted into chat during setup. Rotat
 - [ ] Run authenticated BYOK signup -> onboarding -> billing -> Stripe -> onboarding billing return.
 - [ ] Verify signed Stripe webhook confirmation changes billing to eligible/completed state.
 - [ ] Verify Complete Onboarding / Submit onboarding for review with production auth and webhook state.
+
+## SynaptiReach Onboarding CRM Population Stabilization - 2026-05-28
+
+- [x] Onboarding remains the existing wizard and was not redesigned from scratch.
+- [x] Onboarding now captures CRM-population defaults for:
+  - service areas, business hours, customer problems, pricing/booking/quote/review notes
+  - pipeline stages, statuses, sources, tags, deal value, close-time expectations, assignment/priority rules, appointment types, and task defaults
+  - marketing budget, offers, lead magnets, segments, seasonal campaign notes, and approval workflow
+  - analytics KPIs/goals/reporting cadence and 30/60/90-day success notes
+  - email/SMS style, common questions/objections, escalation rules, and calendar preferences
+- [x] CRM-population values persist into `crm_settings.metadata` without creating fake leads, deals, revenue, analytics, service orders, or activity.
+- [x] Added `/onboarding/status` for submitted-review state across billing/webhook, providers, legal/company, email/SMS, service menu, staff, leads, workflows, and help.
+- [x] Dashboard redirects submitted pending-review users to `/onboarding/status`, incomplete unsubmitted users to saved-step onboarding, and completed users to `/dashboard`.
+- [x] Added Finish Later actions next to Save and in footer navigation.
+- [x] Added viewport-positioned onboarding toasts and clears stale step messages when navigating.
+- [x] Replaced loose legal wording with strict accuracy/clarification acknowledgement.
+- [x] Added Email/SMS `Reviewed / handle later` choices that count as reviewed without requiring Resend/Twilio unless setup-now is selected.
+- [x] Added safe Stripe Checkout session refresh metadata without replacing webhook ownership.
+- [x] Service menu uploads use private `onboarding-files` storage setup, create upload metadata, a review recommendation, and a best-effort review task; no extraction success is faked.
+- [x] Customer-facing agent/agents language was replaced with CRM intelligence, AI reviews, and AI review checks while internal routes/tables remain unchanged.
+- [ ] Build and local route smoke for this CRM-population pass.
+- [ ] Live authenticated Stripe/webhook, provider, storage, and service-menu analysis verification.

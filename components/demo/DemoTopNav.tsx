@@ -18,7 +18,7 @@ const demoTabs = [
   { label: "Dashboard", href: "/demo/dashboard", icon: LayoutDashboard },
   { label: "Leads", href: "/demo/leads", icon: Users },
   { label: "Marketing", href: "/demo/marketing", icon: Megaphone },
-  { label: "AI Assistant", href: "/demo/ai_assistant", icon: Bot },
+  { label: "CRM Intelligence", href: "/demo/ai_assistant", icon: Bot },
   { label: "Workflow", href: "/demo/workflow", icon: Workflow },
   { label: "Communications", href: "/demo/communications", icon: MessageSquare },
   { label: "Settings", href: "/demo/settings", icon: Settings },

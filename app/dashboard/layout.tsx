@@ -57,7 +57,7 @@ const navItems = [
     group: "Growth",
   },
   {
-    label: "AI Assistant",
+    label: "CRM Intelligence",
     href: "/dashboard/ai_assistant",
     icon: Bot,
     group: "Growth",
@@ -227,9 +227,18 @@ export default function DashboardLayout({
         });
         const data = await response.json();
         if (response.ok && data.success && ((data.session && !data.session.completed) || (data.workspace && !data.session))) {
+          const currentStep = data.session?.metadata?.current_step || data.payload?.__onboardingProgress?.current_step || "welcome";
+          if (data.session?.metadata?.submitted_for_review) {
+            router.replace("/onboarding/status");
+            return;
+          }
+          if (data.workspace) {
+            router.replace(`/onboarding?step=${encodeURIComponent(currentStep)}`);
+            return;
+          }
           setOnboardingPrompt({
             score: data.readiness?.score || 0,
-            currentStep: data.session?.metadata?.current_step || data.payload?.__onboardingProgress?.current_step || "setup",
+            currentStep,
           });
         } else {
           setOnboardingPrompt(null);
@@ -308,7 +317,7 @@ export default function DashboardLayout({
     { label: "Import Leads CSV", href: "/dashboard/leads", type: "action" },
     { label: "Create Campaign", href: "/dashboard/marketing", type: "action" },
     { label: "Create Workflow", href: "/dashboard/workflow", type: "action" },
-    { label: "Ask AI Assistant", href: "/dashboard/ai_assistant", type: "action" },
+    { label: "Open CRM Intelligence", href: "/dashboard/ai_assistant", type: "action" },
     { label: "Add Task", href: "/dashboard/tasks", type: "action" },
     { label: "View Pipeline", href: "/dashboard/pipeline", type: "action" },
   ];

@@ -440,7 +440,7 @@ export default function LeadsPage() {
           lead_id: lead.id,
           type: "ai_review",
           title: "AI next-step review",
-          details: data.summary?.text || data.summary || "AI agent review completed for this lead.",
+          details: data.summary?.text || data.summary || "AI review completed for this lead.",
           metadata: { provider: data.provider, model: data.model, fallback_used: data.fallback_used },
         }),
       });
@@ -651,7 +651,7 @@ export default function LeadsPage() {
                 <p className="text-sm text-gray-300">
                   {agentLead
                     ? `${agentLead.temperature} lead. Recommended score ${agentLead.recommended_score}. ${agentLead.temperature === "hot" ? "Prioritize direct follow-up." : agentLead.temperature === "warm" ? "Send a value-focused nurture message." : "Add to a low-pressure nurture segment."}`
-                    : "Run CRM agents or add more activity to generate a stronger recommendation."}
+                    : "Run CRM intelligence or add more activity to generate a stronger recommendation."}
                 </p>
                 <button
                   onClick={() => runAINextStepReview(selected)}
